@@ -343,8 +343,8 @@ $('presets').innerHTML=PRESETS.map((x,i)=>'<button class="chip" data-p="'+i+'">'
 $('presets').addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(!b)return;const x=PRESETS[+b.dataset.p];$('mealName').value=x[0];$('mealKcal').value=x[1]});
 let aiImage=null,aiBusy=false;
 function shrink(img,max,q){const s=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);return c.toDataURL('image/jpeg',q)}
-// 記録用の小さい写真（320px）と、AIに送る写真（1024px）を作る
-function readPhoto(file){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const img=new Image();img.onload=()=>{res({thumb:shrink(img,320,0.72),ai:shrink(img,1024,0.8)})};img.onerror=rej;img.src=fr.result};fr.onerror=rej;fr.readAsDataURL(file)})}
+// 記録用の小さい写真（320px）と、AIに送る写真（768px）を作る
+function readPhoto(file){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const img=new Image();img.onload=()=>{res({thumb:shrink(img,320,0.72),ai:shrink(img,768,0.7)})};img.onerror=rej;img.src=fr.result};fr.onerror=rej;fr.readAsDataURL(file)})}
 function setAiStatus(t){$('aiStatus').textContent=t}
 $('photo').addEventListener('change',async e=>{
   const f=e.target.files&&e.target.files[0];if(!f)return;
@@ -358,22 +358,27 @@ function resetForm(){pendingPhoto=null;aiImage=null;$('photo').value='';$('photo
 $('aiBtn').addEventListener('click',async()=>{
   if(aiBusy||!aiImage)return;
   if(!AI_ENDPOINT){toast('AIのURLがまだ設定されていません。手入力で記録できます');return}
-  aiBusy=true;const btn=$('aiBtn');btn.disabled=true;btn.setAttribute('aria-busy','true');btn.textContent='推定中…';setAiStatus('AIが写真を見ています（数秒〜20秒）');
-  const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),40000);
+  aiBusy=true;const btn=$('aiBtn');btn.disabled=true;btn.setAttribute('aria-busy','true');setAiStatus('AIが写真を見ています');
+  const t0=Date.now(),tick=()=>{btn.textContent='推定中… '+Math.floor((Date.now()-t0)/1000)+'秒'};tick();const ticker=setInterval(tick,1000);
+  const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),60000);
+  // 写真は base64 の文字列だけを text/plain で送る（事前確認の通信が省けて少し速くなる）
+  const send=()=>fetch(AI_ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain'},body:aiImage.split(',')[1],signal:ctrl.signal});
   try{
-    const r=await fetch(AI_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:aiImage.split(',')[1],mimeType:'image/jpeg'}),signal:ctrl.signal});
+    let r;
+    try{r=await send();if(r.status===503||r.status===504)throw new TypeError('retry')}
+    catch(e){if(e.name==='AbortError')throw e;setAiStatus('もう一度送っています');r=await send()} // 通信エラーは1回だけ自動でやり直す
     const d=await r.json().catch(()=>null);
     if(!r.ok||!d){
       if(r.status===429)throw new Error('AIの利用回数の上限に達しました。少し待ってからもう一度押すか、手入力してください');
       throw new Error((d&&d.error)?'AIでの推定に失敗しました：'+d.error:'AIでの推定に失敗しました（'+r.status+'）');
     }
-    showAiResult(d);
+    showAiResult(d,Math.round((Date.now()-t0)/1000));
   }catch(err){
-    const msg=err.name==='AbortError'?'時間がかかりすぎたので中止しました。もう一度押すか、手入力してください':(err instanceof TypeError?'通信できませんでした。ネット接続を確認してください':err.message);
+    const msg=err.name==='AbortError'?'60秒待っても返事がなかったので中止しました。もう一度押すか、手入力してください':(err instanceof TypeError?'通信できませんでした。ネット接続を確認してください':err.message);
     setAiStatus(msg);toast(msg);
-  }finally{clearTimeout(timer);aiBusy=false;btn.removeAttribute('aria-busy');btn.textContent='AIでカロリーを推定';btn.disabled=!aiImage||!S.cat.alive}
+  }finally{clearTimeout(timer);clearInterval(ticker);aiBusy=false;btn.removeAttribute('aria-busy');btn.textContent='AIでカロリーを推定';btn.disabled=!aiImage||!S.cat.alive}
 });
-function showAiResult(d){
+function showAiResult(d,secs){
   const box=$('aiResult');
   const items=Array.isArray(d.items)?d.items.filter(x=>x&&x.name&&Number(x.kcal)>0):[];
   if(d.is_food===false||!items.length){box.hidden=true;setAiStatus('食べ物が見つかりませんでした。別の写真か手入力でどうぞ');return}
@@ -382,7 +387,7 @@ function showAiResult(d){
   $('mealKcal').value=total;
   box.innerHTML='<ul>'+items.map(x=>'<li><span>'+esc(x.name)+(x.amount?' <small>'+esc(x.amount)+'</small>':'')+'</span><span>'+Math.round(Number(x.kcal))+' kcal</span></li>').join('')+'</ul>'+
     '<div class="total"><span>合計</span><span>'+total+' kcal</span></div>'+(d.note?'<small>'+esc(d.note)+'</small>':'');
-  box.hidden=false;setAiStatus('入力しました。違っていたら直してから「記録する」');
+  box.hidden=false;setAiStatus('入力しました（'+secs+'秒）。違っていたら直してから「記録する」');
 }
 $('addBtn').addEventListener('click',()=>{
   const name=$('mealName').value.trim()||'食事',kcal=Math.round(+$('mealKcal').value);
