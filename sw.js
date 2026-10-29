@@ -1,7 +1,7 @@
 // ねこカロリー service worker
 // アプリ本体はキャッシュしてオフラインでも起動できるようにする。
 // 更新したら VERSION の数字を上げると、利用者のスマホに新しい版が届く。
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = 'nekocal-' + VERSION;
 const APP_FILES = [
   './',

@@ -105,6 +105,15 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid 
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btn.small{padding:6px 12px;font-size:.85rem}
 .hint{font-size:.78rem;color:var(--muted);margin:0}
+.airow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn.ai{border-color:var(--accent);color:var(--accent)}
+.btn.ai[aria-busy="true"]{cursor:progress}
+.ai-result{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:6px;font-size:.88rem}
+.ai-result ul{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.ai-result li{display:flex;justify-content:space-between;gap:10px}
+.ai-result li span:last-child,.ai-result .total span:last-child{font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ai-result .total{display:flex;justify-content:space-between;gap:10px;border-top:1px dashed var(--line);padding-top:4px;font-weight:700}
+.ai-result small{color:var(--muted)}
 
 .meals{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .meal{display:grid;grid-template-columns:56px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:6px;border-radius:12px;background:var(--bg)}
@@ -186,10 +195,15 @@ th:first-child,td:first-child{text-align:left}
             <label class="f">カロリー（kcal）<input id="mealKcal" type="number" inputmode="numeric" min="1" max="5000" placeholder="例：750"></label>
           </div>
         </div>
+        <div class="airow">
+          <button class="btn ai" id="aiBtn" disabled>AIでカロリーを推定</button>
+          <span class="hint" id="aiStatus" role="status" aria-live="polite">写真を選ぶと使えます</span>
+        </div>
+        <div class="ai-result" id="aiResult" hidden></div>
         <div class="chips" id="presets" aria-label="よく食べるもの"></div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <button class="btn primary" id="addBtn">記録する</button>
-          <p class="hint">カロリーは目安です。写真からの自動推定はまだ入っていません。</p>
+          <p class="hint">カロリーは目安です。AIの推定値は直してから記録できます。</p>
         </div>
       </section>
 
@@ -233,6 +247,8 @@ th:first-child,td:first-child{text-align:left}
 <script>
 (function(){
 const KEY='nekocal-v1';
+// ↓ Cloudflare Worker のURL（例: https://nekocal-ai.xxxx.workers.dev）
+const AI_ENDPOINT='https://nekocal-ai.liyiming060423.workers.dev';
 const RM=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 const PRESETS=[['ご飯（茶碗1杯）',250],['おにぎり',180],['食パン1枚',160],['味噌汁',40],['サラダ',60],['ラーメン',500],['カレーライス',750],['牛丼（並）',650],['唐揚げ定食',850],['ハンバーガー',300],['ケーキ1切れ',350],['缶ジュース',140]];
 const $=id=>document.getElementById(id);
@@ -307,6 +323,7 @@ function render(){
   $('calc').innerHTML='摂取 '+it+' − 目標 '+tg+' = <span class="'+cls(diff)+'">'+sign(diff)+' kcal</span><br>締めると体型 <span class="'+cls(ch)+'">'+sign(ch)+'</span>（いま '+sign(S.cat.idx)+' → '+sign(Math.max(-100,Math.min(100,S.cat.idx+ch)))+'）';
   const sb=$('settleBtn');sb.disabled=!S.cat.alive;if(!armed)sb.textContent='今日を締めて猫に反映';
   $('addBtn').disabled=!S.cat.alive;
+  $('aiBtn').disabled=!S.cat.alive||!aiImage||aiBusy;
   const h=S.history.slice().reverse();
   $('histWrap').innerHTML=h.length?'<table><thead><tr><th>日</th><th>摂取</th><th>目標</th><th>差</th><th>体型</th><th>結果</th></tr></thead><tbody>'+
     h.map(r=>'<tr><td>'+r.day+'日目</td><td>'+r.intake+'</td><td>'+r.target+'</td><td class="'+cls(r.diff)+'">'+sign(r.diff)+'</td><td class="'+cls(r.change)+'">'+sign(r.change)+'</td><td>'+sign(Math.max(-100,Math.min(100,r.idx)))+'</td></tr>').join('')+'</tbody></table>'
@@ -324,13 +341,49 @@ function fillSettings(){
 let pendingPhoto=null;
 $('presets').innerHTML=PRESETS.map((x,i)=>'<button class="chip" data-p="'+i+'">'+x[0]+'<span>'+x[1]+'</span></button>').join('');
 $('presets').addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(!b)return;const x=PRESETS[+b.dataset.p];$('mealName').value=x[0];$('mealKcal').value=x[1]});
-function readPhoto(file){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const img=new Image();img.onload=()=>{const s=Math.min(1,320/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',0.72))};img.onerror=rej;img.src=fr.result};fr.onerror=rej;fr.readAsDataURL(file)})}
+let aiImage=null,aiBusy=false;
+function shrink(img,max,q){const s=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);return c.toDataURL('image/jpeg',q)}
+// 記録用の小さい写真（320px）と、AIに送る写真（1024px）を作る
+function readPhoto(file){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const img=new Image();img.onload=()=>{res({thumb:shrink(img,320,0.72),ai:shrink(img,1024,0.8)})};img.onerror=rej;img.src=fr.result};fr.onerror=rej;fr.readAsDataURL(file)})}
+function setAiStatus(t){$('aiStatus').textContent=t}
 $('photo').addEventListener('change',async e=>{
   const f=e.target.files&&e.target.files[0];if(!f)return;
-  try{pendingPhoto=await readPhoto(f);$('photoPrev').src=pendingPhoto;$('photoPrev').hidden=false;$('photoLabel').hidden=true}
+  try{const p=await readPhoto(f);pendingPhoto=p.thumb;aiImage=p.ai;$('photoPrev').src=pendingPhoto;$('photoPrev').hidden=false;$('photoLabel').hidden=true;
+    $('aiResult').hidden=true;$('aiBtn').disabled=!S.cat.alive;setAiStatus(AI_ENDPOINT?'押すと料理名とカロリーが入ります':'AIのURLがまだ設定されていません')}
   catch(err){toast('この画像は読み込めませんでした。別の写真を選んでください')}
 });
-function resetForm(){pendingPhoto=null;$('photo').value='';$('photoPrev').hidden=true;$('photoLabel').hidden=false;$('mealName').value='';$('mealKcal').value=''}
+function resetForm(){pendingPhoto=null;aiImage=null;$('photo').value='';$('photoPrev').hidden=true;$('photoLabel').hidden=false;$('mealName').value='';$('mealKcal').value='';
+  $('aiBtn').disabled=true;$('aiResult').hidden=true;setAiStatus('写真を選ぶと使えます')}
+
+$('aiBtn').addEventListener('click',async()=>{
+  if(aiBusy||!aiImage)return;
+  if(!AI_ENDPOINT){toast('AIのURLがまだ設定されていません。手入力で記録できます');return}
+  aiBusy=true;const btn=$('aiBtn');btn.disabled=true;btn.setAttribute('aria-busy','true');btn.textContent='推定中…';setAiStatus('AIが写真を見ています（数秒〜20秒）');
+  const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),40000);
+  try{
+    const r=await fetch(AI_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:aiImage.split(',')[1],mimeType:'image/jpeg'}),signal:ctrl.signal});
+    const d=await r.json().catch(()=>null);
+    if(!r.ok||!d){
+      if(r.status===429)throw new Error('AIの利用回数の上限に達しました。少し待ってからもう一度押すか、手入力してください');
+      throw new Error((d&&d.error)?'AIでの推定に失敗しました：'+d.error:'AIでの推定に失敗しました（'+r.status+'）');
+    }
+    showAiResult(d);
+  }catch(err){
+    const msg=err.name==='AbortError'?'時間がかかりすぎたので中止しました。もう一度押すか、手入力してください':(err instanceof TypeError?'通信できませんでした。ネット接続を確認してください':err.message);
+    setAiStatus(msg);toast(msg);
+  }finally{clearTimeout(timer);aiBusy=false;btn.removeAttribute('aria-busy');btn.textContent='AIでカロリーを推定';btn.disabled=!aiImage||!S.cat.alive}
+});
+function showAiResult(d){
+  const box=$('aiResult');
+  const items=Array.isArray(d.items)?d.items.filter(x=>x&&x.name&&Number(x.kcal)>0):[];
+  if(d.is_food===false||!items.length){box.hidden=true;setAiStatus('食べ物が見つかりませんでした。別の写真か手入力でどうぞ');return}
+  const total=items.reduce((a,x)=>a+Math.round(Number(x.kcal)),0);
+  $('mealName').value=items.map(x=>x.name).join('・').slice(0,30);
+  $('mealKcal').value=total;
+  box.innerHTML='<ul>'+items.map(x=>'<li><span>'+esc(x.name)+(x.amount?' <small>'+esc(x.amount)+'</small>':'')+'</span><span>'+Math.round(Number(x.kcal))+' kcal</span></li>').join('')+'</ul>'+
+    '<div class="total"><span>合計</span><span>'+total+' kcal</span></div>'+(d.note?'<small>'+esc(d.note)+'</small>':'');
+  box.hidden=false;setAiStatus('入力しました。違っていたら直してから「記録する」');
+}
 $('addBtn').addEventListener('click',()=>{
   const name=$('mealName').value.trim()||'食事',kcal=Math.round(+$('mealKcal').value);
   if(!(kcal>0&&kcal<=5000)){toast('カロリーを1〜5000の数字で入れてください');$('mealKcal').focus();return}
