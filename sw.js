@@ -1,16 +1,16 @@
 // ねこカロリー service worker
 // アプリ本体はキャッシュしてオフラインでも起動できるようにする。
 // 更新したら VERSION の数字を上げると、利用者のスマホに新しい版が届く。
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = 'nekocal-' + VERSION;
 const APP_FILES = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/icon-maskable-512.png',
-  './icons/apple-touch-icon.png'
+  './icon-192.png',
+  './icon-512.png',
+  './icon-maskable-512.png',
+  './apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (e) => {
