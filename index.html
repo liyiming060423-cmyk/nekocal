@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#D8E7E0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141B19" media="(prefers-color-scheme: dark)">
+<meta name="description" content="食べたものの写真とカロリーで猫の体型が変わる育成ゲーム">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ねこカロリー">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>ねこカロリー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=DotGothic16&family=Zen+Maru+Gothic:wght@500;700&display=swap">
+<style>
+/* Layout: phone-first single column; from 820px the cat stage sits sticky on the left, records on the right */
+:root{
+  --bg:#ECF2EF; --surface:#FFFFFF; --ink:#1F2A27; --muted:#5C6C67; --line:#D2DDD8;
+  --stage:#D8E7E0; --accent:#D93A6F; --accent-ink:#FFFFFF;
+  --thin:#3A72D0; --fat:#DD7A16; --ok:#2B9363; --danger:#CC3434;
+  --f-display:"Dela Gothic One","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-body:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-num:"DotGothic16",ui-monospace,"Courier New",monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141B19; --surface:#1D2624; --ink:#E7EEEB; --muted:#9AAAA4; --line:#2F3C38;
+  --stage:#22302C; --accent:#FF6C9B; --accent-ink:#1A0D12;
+  --thin:#77A3F2; --fat:#F3A04F; --ok:#4FC48C; --danger:#F26A6A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141B19; --surface:#1D2624; --ink:#E7EEEB; --muted:#9AAAA4; --line:#2F3C38;
+  --stage:#22302C; --accent:#FF6C9B; --accent-ink:#1A0D12;
+  --thin:#77A3F2; --fat:#F3A04F; --ok:#4FC48C; --danger:#F26A6A; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 48px}
+.app{max-width:1060px;margin:0 auto;display:grid;gap:16px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--f-display);font-weight:400;font-size:1.7rem;margin:0;letter-spacing:.02em}
+h1 small{font-family:var(--f-body);font-size:.8rem;color:var(--muted);margin-left:8px;letter-spacing:0}
+h2{font-family:var(--f-display);font-weight:400;font-size:1.05rem;margin:0;text-wrap:balance}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.banner{background:var(--surface);border:2px dashed var(--accent);border-radius:14px;padding:10px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.banner p{margin:0;font-size:.9rem}
+
+.cols{display:grid;gap:16px}
+@media (min-width:820px){.cols{grid-template-columns:380px minmax(0,1fr);align-items:start}
+  .stage-col{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}}
+.col{display:grid;gap:16px;min-width:0}
+
+.stage{background:var(--stage);border-radius:22px;padding:14px 16px 16px;position:relative;display:grid;gap:10px}
+.stage canvas{width:100%;max-width:360px;aspect-ratio:320/270;display:block;margin:0 auto}
+.catline{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.catname{font-family:var(--f-display);font-size:1.25rem}
+.pill{font-size:.8rem;font-weight:700;padding:3px 10px;border-radius:999px;color:var(--surface);background:var(--ok);white-space:nowrap}
+.pill.thin{background:var(--thin)} .pill.fat{background:var(--fat)} .pill.danger{background:var(--danger)}
+.meter{position:relative;height:14px;border-radius:999px;background:linear-gradient(90deg,var(--danger) 0 6%,var(--thin) 6% 38%,var(--ok) 38% 62%,var(--fat) 62% 94%,var(--danger) 94%);opacity:.9}
+.meter .mark{position:absolute;top:-5px;width:6px;height:24px;margin-left:-3px;border-radius:3px;background:var(--ink);border:2px solid var(--stage);transition:left .8s ease}
+.meter-labels{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-top:2px}
+.msg{margin:0;font-size:.92rem;min-height:2.9em}
+
+.dead{position:absolute;inset:0;border-radius:22px;background:color-mix(in srgb,var(--stage) 55%,transparent);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:10px;padding:16px;text-align:center}
+.dead strong{font-family:var(--f-display);font-weight:400;font-size:1.15rem;background:var(--surface);padding:6px 12px;border-radius:10px}
+
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.stat{background:var(--surface);border-radius:12px;padding:8px 12px}
+.stat .k{font-size:.72rem;color:var(--muted);letter-spacing:.04em}
+.stat .v{font-family:var(--f-num);font-size:1.25rem;font-variant-numeric:tabular-nums}
+.stat .v small{font-size:.75rem;color:var(--muted);margin-left:2px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;display:grid;gap:12px;min-width:0}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+
+.addrow{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px}
+.photo-btn{width:110px;height:110px;border-radius:14px;border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;text-align:center;font-size:.8rem;color:var(--muted);cursor:pointer;overflow:hidden;background:var(--bg);padding:6px}
+.photo-btn:hover{border-color:var(--accent)}
+.photo-btn img{width:100%;height:100%;object-fit:cover;border-radius:10px}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+#photo:focus-visible + .photo-btn, .photo-btn:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+.fields{display:grid;gap:8px;min-width:0}
+label.f{display:grid;gap:2px;font-size:.78rem;color:var(--muted)}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:100%;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:inherit;font-size:.8rem;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:4px 10px;cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.chip span{font-family:var(--f-num);color:var(--muted);margin-left:4px}
+
+.btn{font:inherit;font-weight:700;border-radius:12px;padding:10px 16px;border:2px solid var(--ink);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.warn{background:var(--danger);border-color:var(--danger);color:var(--surface)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.small{padding:6px 12px;font-size:.85rem}
+.hint{font-size:.78rem;color:var(--muted);margin:0}
+
+.meals{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.meal{display:grid;grid-template-columns:56px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:6px;border-radius:12px;background:var(--bg)}
+.meal img,.meal .noimg{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--stage);display:flex;align-items:center;justify-content:center}
+.meal .noimg svg{width:28px;height:28px;color:var(--muted)}
+.meal .name{min-width:0;overflow-wrap:anywhere}
+.meal .name small{display:block;color:var(--muted);font-size:.75rem}
+.meal .kc{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.x{font:inherit;border:0;background:transparent;color:var(--muted);cursor:pointer;padding:6px 8px;border-radius:8px}
+.x:hover{color:var(--danger)}
+.empty{color:var(--muted);font-size:.9rem;margin:0;padding:10px;text-align:center;border:1px dashed var(--line);border-radius:12px}
+
+.settle{border-top:1px dashed var(--line);padding-top:12px;display:grid;gap:10px}
+.calc{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:.95rem;line-height:1.9;margin:0}
+.plus{color:var(--fat)} .minus{color:var(--thin)} .zero{color:var(--ok)}
+
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:360px}
+th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+th{font-weight:700;color:var(--muted);font-size:.75rem}
+td{font-family:var(--f-num)}
+th:first-child,td:first-child{text-align:left}
+
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg label{flex:1;min-width:90px}
+.seg input{position:absolute;opacity:0;width:1px;height:1px}
+.seg span{display:block;text-align:center;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--bg);cursor:pointer;font-size:.88rem}
+.seg input:checked + span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.seg input:focus-visible + span{outline:3px solid var(--accent);outline-offset:2px}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.9rem;max-width:calc(100% - 32px);z-index:20}
+@media (prefers-reduced-motion: reduce){.meter .mark{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>ねこカロリー<small>食べた分だけ、猫が変わる</small></h1>
+    <span class="muted num" id="dayLabel"></span>
+  </header>
+
+  <div class="banner" id="sampleBanner" hidden>
+    <p>いま表示しているのはサンプルデータです。自分の数値で始めるには「サンプルを消して始める」を押してください。</p>
+    <button class="btn small primary" id="startFresh">サンプルを消して始める</button>
+  </div>
+
+  <div class="cols">
+    <div class="col stage-col">
+      <section class="stage" aria-label="猫">
+        <div class="catline"><span class="catname" id="catName"></span><span class="pill" id="pill"></span></div>
+        <canvas id="cv" width="320" height="270" role="img" aria-label="猫の様子"></canvas>
+        <div>
+          <div class="meter"><div class="mark" id="mark"></div></div>
+          <div class="meter-labels"><span>骸骨</span><span>ちょうどいい</span><span>爆発</span></div>
+        </div>
+        <p class="msg" id="msg"></p>
+        <div class="dead" id="dead" hidden>
+          <strong id="deadText"></strong>
+          <button class="btn primary" id="newCat">新しい猫を迎える</button>
+        </div>
+      </section>
+      <div class="stats">
+        <div class="stat"><div class="k">基礎代謝</div><div class="v" id="sBmr"></div></div>
+        <div class="stat"><div class="k">1日の目標</div><div class="v" id="sTarget"></div></div>
+        <div class="stat"><div class="k">今日の摂取</div><div class="v" id="sIntake"></div></div>
+        <div class="stat"><div class="k">目標との差</div><div class="v" id="sDiff"></div></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <section class="panel" aria-labelledby="hAdd">
+        <div class="panel-head"><h2 id="hAdd">食べたものを記録</h2></div>
+        <div class="addrow">
+          <input type="file" id="photo" accept="image/*" class="vh">
+          <label class="photo-btn" for="photo" id="photoBtn"><span id="photoLabel">写真を撮る<br>／選ぶ</span><img id="photoPrev" alt="選んだ料理の写真" hidden></label>
+          <div class="fields">
+            <label class="f">料理名<input id="mealName" placeholder="例：カレーライス" maxlength="30"></label>
+            <label class="f">カロリー（kcal）<input id="mealKcal" type="number" inputmode="numeric" min="1" max="5000" placeholder="例：750"></label>
+          </div>
+        </div>
+        <div class="chips" id="presets" aria-label="よく食べるもの"></div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button class="btn primary" id="addBtn">記録する</button>
+          <p class="hint">カロリーは目安です。写真からの自動推定はまだ入っていません。</p>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="hToday">
+        <div class="panel-head"><h2 id="hToday">今日の食事</h2><span class="muted num" id="todayTotal"></span></div>
+        <ul class="meals" id="meals"></ul>
+        <div class="settle">
+          <p class="calc" id="calc"></p>
+          <button class="btn" id="settleBtn">今日を締めて猫に反映</button>
+          <p class="hint">締めると今日の記録が猫の体型に反映され、次の日に進みます。目標から±100kcal以内なら体型は「ちょうどいい」に少し戻ります。</p>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="hHist">
+        <div class="panel-head"><h2 id="hHist">これまでの記録</h2></div>
+        <div class="tablewrap" id="histWrap"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="hSet" id="settingsPanel">
+        <div class="panel-head"><h2 id="hSet">わたしの設定</h2><span class="muted" style="font-size:.8rem">基礎代謝は Mifflin-St Jeor 式で計算</span></div>
+        <div class="settings">
+          <label class="f">猫の名前<input id="pCat" maxlength="12"></label>
+          <label class="f">性別<select id="pSex"><option value="male">男性</option><option value="female">女性</option></select></label>
+          <label class="f">年齢<input id="pAge" type="number" min="10" max="100" inputmode="numeric"></label>
+          <label class="f">身長（cm）<input id="pHeight" type="number" min="100" max="230" inputmode="decimal"></label>
+          <label class="f">体重（kg）<input id="pWeight" type="number" min="25" max="250" inputmode="decimal"></label>
+          <label class="f">1日あたりの増減<select id="pDelta"><option value="200">200 kcal</option><option value="300">300 kcal</option><option value="500">500 kcal</option></select></label>
+        </div>
+        <div class="seg" role="radiogroup" aria-label="目標">
+          <label><input type="radio" name="goal" value="lose" id="gLose"><span>減らしたい（−）</span></label>
+          <label><input type="radio" name="goal" value="keep" id="gKeep"><span>キープ</span></label>
+          <label><input type="radio" name="goal" value="gain" id="gGain"><span>増やしたい（＋）</span></label>
+        </div>
+        <div><button class="btn primary" id="saveSet">設定を保存</button></div>
+      </section>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function(){
+const KEY='nekocal-v1';
+const RM=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const PRESETS=[['ご飯（茶碗1杯）',250],['おにぎり',180],['食パン1枚',160],['味噌汁',40],['サラダ',60],['ラーメン',500],['カレーライス',750],['牛丼（並）',650],['唐揚げ定食',850],['ハンバーガー',300],['ケーキ1切れ',350],['缶ジュース',140]];
+const $=id=>document.getElementById(id);
+
+function uid(){return Math.random().toString(36).slice(2,9)}
+function sampleState(){
+  return {sample:true,
+    profile:{sex:'male',age:20,height:170,weight:62,goal:'lose',delta:300},
+    cat:{name:'もち',idx:-13,alive:true,death:null,day:4},
+    meals:[{id:uid(),name:'おにぎり',kcal:180,photo:null,time:'08:10'},{id:uid(),name:'牛丼（並）',kcal:650,photo:null,time:'12:30'},{id:uid(),name:'サラダ',kcal:60,photo:null,time:'19:05'}],
+    history:[{day:1,intake:1650,target:1288,diff:362,change:18,idx:18},{day:2,intake:1320,target:1288,diff:32,change:-5,idx:13},{day:3,intake:760,target:1288,diff:-528,change:-26,idx:-13}]};
+}
+function freshState(prev){
+  return {sample:false,profile:prev?prev.profile:{sex:'male',age:20,height:170,weight:60,goal:'keep',delta:300},
+    cat:{name:'もち',idx:0,alive:true,death:null,day:1},meals:[],history:[]};
+}
+function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null}catch(e){return null}}
+let S=load()||sampleState();
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){
+    try{const c=JSON.parse(JSON.stringify(S));c.meals.forEach(m=>m.photo=null);localStorage.setItem(KEY,JSON.stringify(c));toast('容量がいっぱいのため、写真は保存されませんでした')}catch(e2){}
+  }
+}
+let toastT;function toast(t){const el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,2600)}
+
+function bmr(p){return Math.round(10*p.weight+6.25*p.height-5*p.age+(p.sex==='male'?5:-161))}
+function target(p){return bmr(p)+(p.goal==='lose'?-p.delta:p.goal==='gain'?+p.delta:0)}
+function intake(){return S.meals.reduce((a,m)=>a+m.kcal,0)}
+function change(diff,idx){
+  if(Math.abs(diff)<=100){return idx===0?0:-Math.sign(idx)*Math.min(5,Math.abs(idx))}
+  return Math.max(-40,Math.min(40,Math.round(diff/20)));
+}
+function sign(n){return n>0?'+'+n:String(n)}
+function cls(n){return n>0?'plus':n<0?'minus':'zero'}
+function status(idx){
+  if(idx<=-100)return['骸骨','danger'];if(idx<-70)return['骸骨寸前','danger'];if(idx<-35)return['やせすぎ','thin'];
+  if(idx<-12)return['ほっそり','thin'];if(idx<=12)return['ちょうどいい',''];if(idx<=35)return['ぽっちゃり','fat'];
+  if(idx<=70)return['でぶ猫','fat'];if(idx<100)return['破裂寸前','danger'];return['爆発','danger'];
+}
+function message(idx,n){
+  if(idx<-70)return n+'はガリガリで震えている。今日はしっかり食べないと骸骨になってしまう。';
+  if(idx<-35)return n+'のあばら骨が見えてきた。少し食べる量を増やそう。';
+  if(idx<-12)return n+'は少しほっそりしてきた。';
+  if(idx<=12)return n+'はちょうどいい体型でごきげん。この調子でキープしよう。';
+  if(idx<=35)return n+'は少しぽっちゃりしてきた。';
+  if(idx<=70)return n+'のおなかがパンパン。汗をかいている。';
+  return n+'は今にも破裂しそう！ 食べすぎると爆発してしまう。';
+}
+
+/* ---------- render DOM ---------- */
+const plateSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="13" r="7"/><circle cx="12" cy="13" r="3.5"/><path d="M4 3v6M2.5 3v4.5a1.5 1.5 0 003 0V3M20 3c-1.5 1-2 3-2 5h2v13"/></svg>';
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+function render(){
+  const p=S.profile,tg=target(p),it=intake(),diff=it-tg,ch=change(diff,S.cat.idx);
+  $('sampleBanner').hidden=!S.sample;
+  $('dayLabel').textContent=S.cat.day+'日目';
+  $('catName').textContent=S.cat.name;
+  const st=status(S.cat.alive?S.cat.idx:(S.cat.death==='boom'?100:-100));
+  const pill=$('pill');pill.textContent=S.cat.alive?st[0]:(S.cat.death==='boom'?'爆発':'骸骨');pill.className='pill '+(S.cat.alive?st[1]:'danger');
+  $('mark').style.left=((Math.max(-100,Math.min(100,S.cat.idx))+100)/2)+'%';
+  $('msg').textContent=S.cat.alive?message(S.cat.idx,S.cat.name):'';
+  $('sBmr').innerHTML=bmr(p)+'<small>kcal</small>';
+  $('sTarget').innerHTML=tg+'<small>kcal</small>';
+  $('sIntake').innerHTML=it+'<small>kcal</small>';
+  $('sDiff').innerHTML='<span class="'+cls(diff)+'">'+sign(diff)+'</span><small>kcal</small>';
+  $('todayTotal').textContent='合計 '+it+' kcal';
+  const ul=$('meals');
+  if(!S.meals.length){ul.innerHTML='<li class="empty">まだ記録がありません。上から食べたものを追加してください。</li>'}
+  else ul.innerHTML=S.meals.map(m=>'<li class="meal">'+(m.photo?'<img src="'+m.photo+'" alt="'+esc(m.name)+'の写真">':'<div class="noimg">'+plateSvg+'</div>')+
+    '<div class="name">'+esc(m.name)+'<small>'+esc(m.time)+'</small></div><span class="kc">'+m.kcal+' kcal</span><button class="x" data-del="'+m.id+'" aria-label="'+esc(m.name)+'を削除">✕</button></li>').join('');
+  $('calc').innerHTML='摂取 '+it+' − 目標 '+tg+' = <span class="'+cls(diff)+'">'+sign(diff)+' kcal</span><br>締めると体型 <span class="'+cls(ch)+'">'+sign(ch)+'</span>（いま '+sign(S.cat.idx)+' → '+sign(Math.max(-100,Math.min(100,S.cat.idx+ch)))+'）';
+  const sb=$('settleBtn');sb.disabled=!S.cat.alive;if(!armed)sb.textContent='今日を締めて猫に反映';
+  $('addBtn').disabled=!S.cat.alive;
+  const h=S.history.slice().reverse();
+  $('histWrap').innerHTML=h.length?'<table><thead><tr><th>日</th><th>摂取</th><th>目標</th><th>差</th><th>体型</th><th>結果</th></tr></thead><tbody>'+
+    h.map(r=>'<tr><td>'+r.day+'日目</td><td>'+r.intake+'</td><td>'+r.target+'</td><td class="'+cls(r.diff)+'">'+sign(r.diff)+'</td><td class="'+cls(r.change)+'">'+sign(r.change)+'</td><td>'+sign(Math.max(-100,Math.min(100,r.idx)))+'</td></tr>').join('')+'</tbody></table>'
+    :'<p class="empty">1日を締めると、ここに記録が並びます。</p>';
+  const dead=$('dead');
+  if(!S.cat.alive&&!anim){dead.hidden=false;$('deadText').textContent=S.cat.name+(S.cat.death==='boom'?'は食べすぎて爆発してしまった…':'は食べなさすぎて骸骨になってしまった…')}
+  else dead.hidden=true;
+}
+function fillSettings(){
+  const p=S.profile;$('pCat').value=S.cat.name;$('pSex').value=p.sex;$('pAge').value=p.age;$('pHeight').value=p.height;$('pWeight').value=p.weight;$('pDelta').value=String(p.delta);
+  ({lose:$('gLose'),keep:$('gKeep'),gain:$('gGain')})[p.goal].checked=true;
+}
+
+/* ---------- inputs ---------- */
+let pendingPhoto=null;
+$('presets').innerHTML=PRESETS.map((x,i)=>'<button class="chip" data-p="'+i+'">'+x[0]+'<span>'+x[1]+'</span></button>').join('');
+$('presets').addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(!b)return;const x=PRESETS[+b.dataset.p];$('mealName').value=x[0];$('mealKcal').value=x[1]});
+function readPhoto(file){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const img=new Image();img.onload=()=>{const s=Math.min(1,320/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',0.72))};img.onerror=rej;img.src=fr.result};fr.onerror=rej;fr.readAsDataURL(file)})}
+$('photo').addEventListener('change',async e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  try{pendingPhoto=await readPhoto(f);$('photoPrev').src=pendingPhoto;$('photoPrev').hidden=false;$('photoLabel').hidden=true}
+  catch(err){toast('この画像は読み込めませんでした。別の写真を選んでください')}
+});
+function resetForm(){pendingPhoto=null;$('photo').value='';$('photoPrev').hidden=true;$('photoLabel').hidden=false;$('mealName').value='';$('mealKcal').value=''}
+$('addBtn').addEventListener('click',()=>{
+  const name=$('mealName').value.trim()||'食事',kcal=Math.round(+$('mealKcal').value);
+  if(!(kcal>0&&kcal<=5000)){toast('カロリーを1〜5000の数字で入れてください');$('mealKcal').focus();return}
+  const d=new Date();S.meals.push({id:uid(),name,kcal,photo:pendingPhoto,time:String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')});
+  resetForm();save();render();toast(name+'（'+kcal+' kcal）を記録しました');
+});
+$('meals').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(!b)return;S.meals=S.meals.filter(m=>m.id!==b.dataset.del);save();render()});
+
+let armed=false,armT;
+$('settleBtn').addEventListener('click',()=>{
+  if(!S.cat.alive)return;
+  if(!S.meals.length&&!armed){armed=true;$('settleBtn').textContent='記録0件です。0kcalで締める？（もう一度押す）';clearTimeout(armT);armT=setTimeout(()=>{armed=false;render()},4000);return}
+  armed=false;clearTimeout(armT);
+  const tg=target(S.profile),it=intake(),diff=it-tg,ch=change(diff,S.cat.idx);
+  S.cat.idx+=ch;
+  S.history.push({day:S.cat.day,intake:it,target:tg,diff,change:ch,idx:S.cat.idx});
+  S.meals=[];S.cat.day++;S.sample=S.sample&&true;
+  if(S.cat.idx<=-100){S.cat.alive=false;S.cat.death='skel';startDeath('skel')}
+  else if(S.cat.idx>=100){S.cat.alive=false;S.cat.death='boom';startDeath('boom')}
+  else toast('締めました。体型 '+sign(ch));
+  save();render();
+});
+$('saveSet').addEventListener('click',()=>{
+  const age=+$('pAge').value,h=+$('pHeight').value,w=+$('pWeight').value;
+  if(!(age>=10&&age<=100&&h>=100&&h<=230&&w>=25&&w<=250)){toast('年齢・身長・体重の値を確認してください');return}
+  const g=document.querySelector('input[name="goal"]:checked');
+  S.profile={sex:$('pSex').value,age,height:h,weight:w,goal:g?g.value:'keep',delta:+$('pDelta').value};
+  S.cat.name=$('pCat').value.trim()||'もち';save();render();toast('設定を保存しました。目標は '+target(S.profile)+' kcal/日');
+});
+$('startFresh').addEventListener('click',()=>{S=freshState(null);resetDebris();save();fillSettings();render();shownIdx=0;$('settingsPanel').scrollIntoView({behavior:RM?'auto':'smooth'});toast('まず自分の設定を入れて保存してください')});
+$('newCat').addEventListener('click',()=>{const n=S.cat.name;S=freshState(S);S.cat.name=n;anim=null;shownIdx=0;resetDebris();save();fillSettings();render()});
+
+/* ---------- canvas ---------- */
+const cv=$('cv'),ctx=cv.getContext('2d'),W=320,H=270,G=240;
+function fitCanvas(){const d=Math.min(3,window.devicePixelRatio||1);cv.width=W*d;cv.height=H*d;ctx.setTransform(d,0,0,d,0,0)}
+fitCanvas();
+function hex(c){return[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)]}
+function mix(a,b,t){const A=hex(a),B=hex(b);return'rgb('+A.map((v,i)=>Math.round(v+(B[i]-v)*t)).join(',')+')'}
+function ell(x,y,rx,ry){ctx.beginPath();ctx.ellipse(x,y,Math.max(1,rx),Math.max(1,ry),0,0,Math.PI*2)}
+const DARK='#3B2A20',FUR='#F2A65A',STRIPE='#D7843A',BELLY='#FBE3C4',PINK='#F29BB0';
+
+function drawCat(idx,t,alpha,shakeAmp){
+  const f=Math.max(-1.1,Math.min(1.45,idx/100));
+  ctx.save();ctx.globalAlpha=alpha;
+  const sh=RM?0:((f<-0.7?Math.sin(t/35)*1.6:0)+(shakeAmp||0)*Math.sin(t/22));
+  const br=RM?0:Math.sin(t/650)*1.5;
+  const cx=160+sh;
+  const bw=f>=0?62+f*58:62+f*36;
+  const bh=(f>=0?54+f*16:54+f*8)+br;
+  const fur=f<0?mix(FUR,'#CDBCA6',Math.min(1,-f)):FUR;
+  ctx.lineJoin='round';ctx.lineCap='round';
+  ctx.fillStyle='rgba(0,0,0,0.13)';ell(cx,G+3,bw+8,7);ctx.fill();
+  // tail
+  const tw=Math.max(5,11+f*6),tx=cx+bw*0.75,ty=G-12,sw=RM?0:Math.sin(t/520)*8;
+  ctx.beginPath();ctx.moveTo(tx,ty);ctx.bezierCurveTo(tx+40,ty,tx+48,ty-50,tx+26+sw,ty-86);
+  ctx.strokeStyle=DARK;ctx.lineWidth=tw+5;ctx.stroke();ctx.strokeStyle=fur;ctx.lineWidth=tw;ctx.stroke();
+  // body
+  ell(cx,G-bh,bw,bh);ctx.fillStyle=fur;ctx.fill();ctx.strokeStyle=DARK;ctx.lineWidth=3;ctx.stroke();
+  // back stripes
+  ctx.strokeStyle=STRIPE;ctx.lineWidth=4;
+  for(const s of[-1,1]){for(let i=0;i<2;i++){ctx.beginPath();const x=cx+s*bw*(0.62+i*0.15);ctx.moveTo(x,G-bh*1.55+i*10);ctx.quadraticCurveTo(x+s*8,G-bh*1.35+i*10,x+s*4,G-bh*1.15+i*10);ctx.stroke()}}
+  // belly
+  ell(cx,G-bh*0.72,bw*0.52,bh*0.58);ctx.fillStyle=BELLY;ctx.fill();
+  // ribs
+  if(f<-0.3){const sev=Math.min(1,(-f-0.3)/0.6);ctx.strokeStyle='rgba(59,42,32,'+(0.25+0.5*sev)+')';ctx.lineWidth=2;
+    for(let i=0;i<4;i++){const y=G-bh*1.45+i*bh*0.26;for(const s of[-1,1]){ctx.beginPath();ctx.moveTo(cx+s*3,y);ctx.quadraticCurveTo(cx+s*bw*0.7,y+3,cx+s*bw*0.82,y+13);ctx.stroke()}}}
+  // fat rolls
+  if(f>0.45){ctx.strokeStyle='rgba(59,42,32,0.35)';ctx.lineWidth=2.5;for(const s of[-1,1]){for(let i=0;i<2;i++){ctx.beginPath();ctx.arc(cx+s*bw*0.62,G-bh*0.7+i*16,bw*0.22,s>0?Math.PI*0.6:Math.PI*0.1,s>0?Math.PI*0.9:Math.PI*0.4);ctx.stroke()}}}
+  // paws
+  for(const s of[-1,1]){ell(cx+s*Math.max(16,bw*0.32),G-5,13+Math.max(0,f)*4,8);ctx.fillStyle=fur;ctx.fill();ctx.strokeStyle=DARK;ctx.lineWidth=2.5;ctx.stroke()}
+  // head
+  const hr=f>=0?44+f*10:44+f*5,hsx=1+Math.max(0,f)*0.28,hx=cx,hy=G-2*bh-hr*0.3;
+  for(const s of[-1,1]){
+    ctx.beginPath();ctx.moveTo(hx+s*hr*0.88*hsx,hy-hr*0.3);ctx.lineTo(hx+s*hr*0.62*hsx,hy-hr*1.18);ctx.lineTo(hx+s*hr*0.12*hsx,hy-hr*0.82);ctx.closePath();
+    ctx.fillStyle=fur;ctx.fill();ctx.strokeStyle=DARK;ctx.lineWidth=3;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(hx+s*hr*0.72*hsx,hy-hr*0.45);ctx.lineTo(hx+s*hr*0.6*hsx,hy-hr*0.98);ctx.lineTo(hx+s*hr*0.3*hsx,hy-hr*0.78);ctx.closePath();ctx.fillStyle=PINK;ctx.fill();
+  }
+  ell(hx,hy,hr*hsx,hr*0.9);ctx.fillStyle=fur;ctx.fill();ctx.strokeStyle=DARK;ctx.lineWidth=3;ctx.stroke();
+  ctx.strokeStyle=STRIPE;ctx.lineWidth=4;for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(hx+i*11,hy-hr*0.82);ctx.lineTo(hx+i*9,hy-hr*0.55);ctx.stroke()}
+  // cheeks
+  ctx.fillStyle='rgba(242,120,140,0.35)';for(const s of[-1,1]){ell(hx+s*hr*0.58*hsx,hy+hr*0.28,8+Math.max(0,f)*6,5+Math.max(0,f)*3);ctx.fill()}
+  // eyes
+  const ex=hr*0.38*hsx,ey=hy-hr*0.05,blink=!RM&&(t%4200)<130;
+  for(const s of[-1,1]){
+    const x=hx+s*ex;
+    if(f<-0.6){ell(x,ey,hr*0.2,hr*0.22);ctx.fillStyle='rgba(60,40,30,0.28)';ctx.fill()}
+    if(blink||f>0.8){ctx.beginPath();ctx.strokeStyle=DARK;ctx.lineWidth=3;if(f>0.8){ctx.moveTo(x-s*6,ey-4);ctx.lineTo(x+s*5,ey);ctx.lineTo(x-s*6,ey+4)}else{ctx.moveTo(x-6,ey);ctx.lineTo(x+6,ey)}ctx.stroke()}
+    else{const r=f<-0.6?3.5:5;ell(x,ey,r,r*1.35);ctx.fillStyle=DARK;ctx.fill();ell(x+1.5,ey-2.5,1.6,1.6);ctx.fillStyle='#fff';ctx.fill()}
+  }
+  // nose, mouth, whiskers
+  const ny=hy+hr*0.2;ctx.beginPath();ctx.moveTo(hx-4,ny);ctx.lineTo(hx+4,ny);ctx.lineTo(hx,ny+4);ctx.closePath();ctx.fillStyle=PINK;ctx.fill();
+  ctx.strokeStyle=DARK;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(hx,ny+4);ctx.quadraticCurveTo(hx-4,ny+10,hx-8,ny+7);ctx.moveTo(hx,ny+4);ctx.quadraticCurveTo(hx+4,ny+10,hx+8,ny+7);ctx.stroke();
+  ctx.lineWidth=1.4;for(const s of[-1,1]){for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(hx+s*hr*0.35*hsx,ny+2+i*4);ctx.lineTo(hx+s*(hr*hsx+14),ny-2+i*8);ctx.stroke()}}
+  // sweat
+  if(f>0.55){const dy=RM?0:(t/12)%22;ctx.fillStyle='#7FC4F2';ctx.beginPath();const sx=hx+hr*hsx*0.95,sy=hy-hr*0.45+dy;ctx.moveTo(sx,sy-8);ctx.quadraticCurveTo(sx+6,sy,sx,sy+4);ctx.quadraticCurveTo(sx-6,sy,sx,sy-8);ctx.fill()}
+  ctx.restore();
+}
+
+function drawSkeleton(t,alpha){
+  ctx.save();ctx.globalAlpha=alpha;ctx.lineCap='round';ctx.lineJoin='round';
+  const BONE='#F1EEE4',EDGE='#6E6A5E',cx=160;
+  ctx.fillStyle='rgba(0,0,0,0.13)';ell(cx,G+3,50,6);ctx.fill();
+  // tail bones
+  for(let i=0;i<9;i++){const a=i/8;const x=cx+30+a*40-Math.pow(a,2)*14,y=G-10-a*a*80;ell(x,y,5-a*1.5,4-a);ctx.fillStyle=BONE;ctx.fill();ctx.strokeStyle=EDGE;ctx.lineWidth=1.5;ctx.stroke()}
+  // spine
+  for(let i=0;i<8;i++){const y=150+i*11;ctx.beginPath();ctx.roundRect?ctx.roundRect(cx-6,y,12,8,3):ctx.rect(cx-6,y,12,8);ctx.fillStyle=BONE;ctx.fill();ctx.strokeStyle=EDGE;ctx.lineWidth=1.5;ctx.stroke()}
+  // ribs
+  ctx.strokeStyle=EDGE;for(let i=0;i<4;i++){const y=160+i*12,w=30-i*3;for(const s of[-1,1]){ctx.beginPath();ctx.moveTo(cx+s*6,y);ctx.quadraticCurveTo(cx+s*w,y-2,cx+s*(w-4),y+14);ctx.lineWidth=6;ctx.strokeStyle=EDGE;ctx.stroke();ctx.lineWidth=3.5;ctx.strokeStyle=BONE;ctx.stroke()}}
+  // pelvis
+  ell(cx,G-12,24,9);ctx.fillStyle=BONE;ctx.fill();ctx.strokeStyle=EDGE;ctx.lineWidth=1.5;ctx.stroke();
+  // legs
+  for(const s of[-1,1]){ctx.beginPath();ctx.moveTo(cx+s*20,165);ctx.lineTo(cx+s*24,G-4);ctx.lineWidth=8;ctx.strokeStyle=EDGE;ctx.stroke();ctx.lineWidth=5;ctx.strokeStyle=BONE;ctx.stroke();
+    ell(cx+s*24,G-3,7,4);ctx.fillStyle=BONE;ctx.fill();ctx.strokeStyle=EDGE;ctx.lineWidth=1.5;ctx.stroke()}
+  // skull
+  const hx=cx,hy=118;
+  for(const s of[-1,1]){ctx.beginPath();ctx.moveTo(hx+s*30,hy-14);ctx.lineTo(hx+s*26,hy-44);ctx.lineTo(hx+s*8,hy-30);ctx.closePath();ctx.fillStyle=BONE;ctx.fill();ctx.strokeStyle=EDGE;ctx.lineWidth=2;ctx.stroke()}
+  ell(hx,hy,38,33);ctx.fillStyle=BONE;ctx.fill();ctx.strokeStyle=EDGE;ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle='#2A2622';for(const s of[-1,1]){ell(hx+s*14,hy-4,9,11);ctx.fill()}
+  ctx.beginPath();ctx.moveTo(hx-4,hy+10);ctx.lineTo(hx+4,hy+10);ctx.lineTo(hx,hy+15);ctx.closePath();ctx.fill();
+  ctx.strokeStyle=EDGE;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(hx-12,hy+22);ctx.lineTo(hx+12,hy+22);for(let i=-9;i<=9;i+=6){ctx.moveTo(hx+i,hy+19);ctx.lineTo(hx+i,hy+25)}ctx.stroke();
+  // ghost
+  const gy=RM?40:46+Math.sin(t/700)*6,gx=232;
+  ctx.globalAlpha=alpha*0.55;ctx.fillStyle='#FFFFFF';ctx.strokeStyle=EDGE;ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(gx-16,gy+22);ctx.lineTo(gx-16,gy);ctx.lineTo(gx-14,gy-16);ctx.lineTo(gx-6,gy-10);ctx.lineTo(gx+6,gy-10);ctx.lineTo(gx+14,gy-16);ctx.lineTo(gx+16,gy);ctx.lineTo(gx+16,gy+22);
+  for(let i=0;i<4;i++){ctx.quadraticCurveTo(gx+12-i*8,gy+16,gx+8-i*8,gy+22)}ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle='#2A2622';ell(gx-6,gy+2,2,2.5);ctx.fill();ell(gx+6,gy+2,2,2.5);ctx.fill();
+  ctx.strokeStyle='#E8C24A';ctx.lineWidth=2;ell(gx,gy-20,12,3.5);ctx.stroke();
+  ctx.restore();
+}
+
+/* explosion particles */
+let debris=null;
+function seeded(seed){return()=>{seed=(seed*16807)%2147483647;return(seed-1)/2147483646}}
+function makeParticles(){
+  const r=seeded(7+S.cat.day),cols=[FUR,STRIPE,BELLY,'#FFD27A',FUR],ps=[];
+  for(let i=0;i<90;i++){const a=r()*Math.PI*2,sp=2+r()*7;ps.push({x:160,y:170,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-3,r:2.5+r()*6,c:cols[i%cols.length]})}
+  return ps;
+}
+function stepParticles(ps){for(const p of ps){p.vy+=0.25;p.x+=p.vx;p.y+=p.vy;if(p.x<p.r){p.x=p.r;p.vx*=-0.5}if(p.x>W-p.r){p.x=W-p.r;p.vx*=-0.5}if(p.y>G+4-p.r*0.4){p.y=G+4-p.r*0.4;p.vy*=-0.3;p.vx*=0.75}}}
+function resetDebris(){debris=null}
+function settledDebris(){if(!debris){debris=makeParticles();for(let i=0;i<260;i++)stepParticles(debris)}return debris}
+function drawParticles(ps){for(const p of ps){ell(p.x,p.y,p.r,p.r*0.8);ctx.fillStyle=p.c;ctx.fill()}}
+function drawAftermath(t,ps){
+  drawParticles(ps);
+  ctx.save();ctx.fillStyle='rgba(120,110,100,0.22)';
+  for(let i=0;i<4;i++){const y=RM?150-i*22:((t/30+i*40)%140);ell(150+i*8+Math.sin(t/900+i)*10,G-30-y,18+i*3,12+i*2);ctx.fill()}
+  // collar + bell
+  ctx.strokeStyle='#C8324F';ctx.lineWidth=4;ctx.beginPath();ctx.arc(176,G-4,10,Math.PI*1.1,Math.PI*1.9);ctx.stroke();
+  ell(176,G-2,5,5);ctx.fillStyle='#E8C24A';ctx.fill();ctx.restore();
+}
+
+let anim=null,shownIdx=S.cat.idx,live=null;
+function startDeath(type){
+  if(RM){anim=null;return}
+  anim={type,t0:performance.now()};
+  if(type==='boom')live=null;
+}
+function frame(t){
+  ctx.clearRect(0,0,W,H);
+  if(anim){
+    const e=t-anim.t0;
+    if(anim.type==='skel'){
+      const k=Math.min(1,e/1500);drawCat(-100,t,1-k,0);drawSkeleton(t,k);
+      if(e>1900){anim=null;render()}
+    }else{
+      if(e<750){drawCat(100+e/750*45,t,1,e/750*5)}
+      else{
+        if(!live){live=makeParticles()}
+        stepParticles(live);drawParticles(live);
+        const fe=e-750;if(fe<260){ctx.save();ctx.globalAlpha=1-fe/260;ell(160,170,40+fe*0.8,40+fe*0.8);ctx.fillStyle='#FFF6D8';ctx.fill();ctx.restore()}
+        if(e>2600){debris=live;anim=null;render()}
+      }
+    }
+  }else if(S.cat.alive){
+    shownIdx+=(S.cat.idx-shownIdx)*(RM?1:0.07);
+    drawCat(shownIdx,t,1,0);
+  }else if(S.cat.death==='skel'){drawSkeleton(t,1)}
+  else{drawAftermath(t,settledDebris())}
+  requestAnimationFrame(frame);
+}
+
+fillSettings();render();requestAnimationFrame(frame);
+})();
+</script>
+
+<script>
+if('serviceWorker' in navigator && location.protocol!=='file:'){
+  window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})});
+}
+</script>
+</body>
+</html>
