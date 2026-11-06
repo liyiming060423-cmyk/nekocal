@@ -1,12 +1,16 @@
-// ねこカロリー service worker
+// にゃんカロ service worker
 // アプリ本体はキャッシュしてオフラインでも起動できるようにする。
 // 更新したら VERSION の数字を上げると、利用者のスマホに新しい版が届く。
-const VERSION = 'v4';
+const VERSION = 'v5';
 const CACHE = 'nekocal-' + VERSION;
 const APP_FILES = [
   './',
   './index.html',
   './manifest.webmanifest',
+  './style.css',
+  './data.js',
+  './cat.js',
+  './app.js',
   './icon-192.png',
   './icon-512.png',
   './icon-maskable-512.png',
