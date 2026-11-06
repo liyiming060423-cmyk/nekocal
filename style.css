@@ -119,7 +119,7 @@ h2 { margin: 0; font-weight: 900; font-size: 18px; }
 .stam-fill::after { content: ""; position: absolute; left: 6px; top: 8px; bottom: 8px; width: 6px; border-radius: 4px; background: rgba(255,255,255,.4); }
 .stam-label { font-size: 11px; font-weight: 900; }
 .stam-val { font-size: 18px; font-weight: 900; line-height: 1; }
-.cat-wrap { justify-self: center; height: clamp(250px, 46dvh, 420px); aspect-ratio: 300 / 440; max-width: 100%; animation: bob 2.4s ease-in-out infinite; transform-origin: 50% 100%; }
+.cat-wrap { justify-self: center; height: clamp(250px, 46dvh, 420px); aspect-ratio: 600 / 813; max-width: 100%; }
 .cat-wrap svg { width: 100%; height: 100%; display: block; }
 .cat-wrap.punch { animation: punch .5s ease; }
 @keyframes bob { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-4px) scaleY(1.01); } }
@@ -286,3 +286,36 @@ label.f { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font
 @media (prefers-reduced-motion: reduce) {
   .cat-wrap, .cat-wrap.punch, .sheet { animation: none; }
 }
+
+/* ===== イラスト版（B案） ===== */
+.bubble { z-index: 3; pointer-events: none; }
+.bubble.pop { animation: pcSay .35s cubic-bezier(.3, 1.6, .5, 1); }
+.tr-cat { width: 170px; }
+.tr-cat .pc-act { animation: aPunchR .45s ease-out 3; }
+.tr-tread .pc-act { animation: aStep 1.6s ease-in-out; }
+.tr-weight .pc-act { animation: aPuff .6s ease-in-out 3; }
+
+.scene { position: relative; border: 3px solid var(--ink); border-radius: 20px; overflow: hidden; box-shadow: 0 4px 0 var(--ink); background: var(--paper); }
+.scene img { display: block; width: 100%; height: auto; }
+.gym-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.gym-card2 { display: flex; flex-direction: column; border: 3px solid var(--ink); border-radius: 16px; overflow: hidden; background: var(--white); box-shadow: 0 4px 0 var(--ink); min-width: 0; }
+.gc-head { background: var(--yellow); border-bottom: 3px solid var(--ink); padding: 6px 4px; text-align: center; font-weight: 900; font-size: 12.5px; line-height: 1.25; min-height: 48px; display: flex; align-items: center; justify-content: center; }
+.gc-body { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px 10px; text-align: center; }
+.gc-ico svg { width: 40px; height: 40px; display: block; }
+.gc-cost { font-weight: 900; font-size: 13px; color: var(--orange-d); }
+.gc-label { font-size: 11px; font-weight: 700; background: #FFF1C9; border-radius: 999px; padding: 2px 8px; }
+.gc-start { margin-top: auto; width: 100%; padding: 0 4px; font-weight: 900; letter-spacing: .04em; }
+
+.shop-scene .shop-say { position: absolute; left: 43.4%; top: 22.6%; width: 23.6%; height: 15.6%; display: flex; align-items: center; justify-content: center; text-align: center;
+  background: var(--white); border-radius: 50%; font-weight: 900; font-size: clamp(10px, 3vw, 14px); line-height: 1.2; color: var(--ink); padding: 0 6px; }
+.bag-hit { position: absolute; top: 55%; height: 28%; border: 0; background: transparent; border-radius: 40% 40% 30% 30%; padding: 0; }
+.bag-hit.b0 { left: 7%; width: 21%; } .bag-hit.b1 { left: 29.5%; width: 19.5%; } .bag-hit.b2 { left: 52%; width: 22%; } .bag-hit.b3 { left: 75%; width: 17.5%; }
+.bag-hit:focus-visible { outline: 4px solid var(--blue); }
+.bag-hit::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(circle, rgba(255, 240, 160, .7), transparent 70%); opacity: 0; transition: opacity .2s; }
+.bag-hit:active::after, .bag-hit.picked::after { opacity: 1; }
+.bag-hit.picked { animation: bagShake .35s ease; }
+@keyframes bagShake { 25% { transform: rotate(-6deg) scale(1.05); } 75% { transform: rotate(6deg) scale(1.05); } }
+.gacha-info { margin-top: 12px; padding: 12px 14px; display: grid; gap: 4px; }
+.gacha-cost { font-weight: 900; font-size: 16px; }
+.gacha-cost b { font-size: 22px; color: var(--red); }
+@media (prefers-reduced-motion: reduce) { .tr-cat .pc-act, .bag-hit.picked { animation: none; } }

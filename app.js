@@ -169,6 +169,41 @@ function se(type) {
     });
   } catch (e) {}
 }
+// 猫をさわったときの音
+function petSound(n) {
+  if (!S.settings.sound) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+    const c = actx, now = c.currentTime;
+    const tone = (type, f0, f1, dur, vol, at = 0) => {
+      const t = now + at, o = c.createOscillator(), g = c.createGain(); o.type = type;
+      o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + 0.05);
+    };
+    const noise = (dur, vol, type, freq) => {
+      const b = c.createBuffer(1, Math.floor(c.sampleRate * dur), c.sampleRate), d = b.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+      s.buffer = b; f.type = type; f.frequency.value = freq; g.gain.setValueAtTime(vol, now); g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      s.connect(f); f.connect(g); g.connect(c.destination); s.start(now);
+    };
+    if (n === 'purr') {
+      const o = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(), g = c.createGain(), f = c.createBiquadFilter();
+      o.type = 'sawtooth'; o.frequency.value = 52; lfo.frequency.value = 24; lg.gain.value = 0.12; f.type = 'lowpass'; f.frequency.value = 380;
+      g.gain.setValueAtTime(0.0001, now); g.gain.linearRampToValueAtTime(0.13, now + 0.08); g.gain.linearRampToValueAtTime(0.0001, now + 0.7);
+      lfo.connect(lg); lg.connect(g.gain); o.connect(f); f.connect(g); g.connect(c.destination);
+      o.start(now); lfo.start(now); o.stop(now + 0.75); lfo.stop(now + 0.75);
+    }
+    else if (n === 'meow') { tone('triangle', 620, 1050, 0.16, 0.18); tone('triangle', 1050, 560, 0.25, 0.16, 0.15); }
+    else if (n === 'punch') { noise(0.12, 0.35, 'lowpass', 900); tone('sine', 140, 55, 0.14, 0.3); }
+    else if (n === 'giggle') [0, 0.09, 0.18].forEach((a, i) => tone('triangle', 880 + i * 120, 760 + i * 120, 0.07, 0.14, a));
+    else if (n === 'hiss') noise(0.45, 0.2, 'highpass', 2800);
+    else if (n === 'pop') tone('sine', 480, 920, 0.09, 0.2);
+    else if (n === 'dizzy') tone('sine', 900, 260, 0.6, 0.15);
+  } catch (e) {}
+}
 function buzz(ms = 30) { if (S.settings.vibrate && navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} } }
 let toastT;
 function toast(t) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 2600); }
@@ -206,6 +241,23 @@ function bubbleText() {
   if (!d.trains) return 'ジム行くにゃ！';
   return 'いい感じにゃ！';
 }
+function homeMood() {
+  const h = new Date().getHours();
+  if (S.stamina < 20) return 'tired';
+  if (!day().meals.length && h >= 10) return 'hungry';
+  return 'normal';
+}
+// ホームの猫：見た目が変わったときだけ作り直す（動きやタップ反応を止めないため）
+let homeCat = null, homeCatKey = '';
+function mountHomeCat() {
+  const key = JSON.stringify([S.cat.idx, S.cat.dead, S.cat.equip, homeMood()]);
+  if (homeCat && key === homeCatKey && $('catWrap').querySelector('.pc')) { homeCat.rest(); return; }
+  if (homeCat) homeCat.stop();
+  homeCatKey = key;
+  $('catWrap').innerHTML = petCatHTML({ idx: S.cat.idx, equip: S.cat.equip, dead: S.cat.dead, mood: homeMood() });
+  homeCat = petCatBind($('catWrap'), { sayEl: $('bubble'), status: bubbleText, mood: homeMood, sound: petSound, vibrate: p => buzz(p) });
+  const b = bubbleText(); $('bubble').textContent = b; $('bubble').hidden = !b;
+}
 function renderHome() {
   const d = day(), t = todayStr(), tg = target(S.user), it = intake(t);
   $('btnUser').innerHTML = I.user;
@@ -222,8 +274,7 @@ function renderHome() {
   $('stamFill').style.backgroundColor = S.stamina < 20 ? 'var(--red)' : S.stamina < 50 ? 'var(--yellow)' : 'var(--green)';
   $('stamVal').textContent = S.stamina + '%';
   $('stamMeter').setAttribute('aria-valuenow', S.stamina);
-  $('catWrap').innerHTML = catSVG({ idx: S.cat.idx, equip: S.cat.equip, face: catFace(), dead: S.cat.dead });
-  const b = bubbleText(); $('bubble').textContent = b; $('bubble').hidden = !b;
+  mountHomeCat();
   $('pillCoins').innerHTML = `${I.coin}<span class="num">${fmt(S.coins)}</span>`;
   $('pillSteps').innerHTML = `${I.steps}<span class="num">${fmt(d.steps)}歩</span>`;
   $('pillLevel').innerHTML = `<span style="padding-left:6px">猫Lv.${S.cat.level}</span>`;
@@ -383,7 +434,7 @@ function openCapture() {
       d.meals.push({ id: Math.random().toString(36).slice(2, 9), slot: slotV, name, kcal, photo: cap ? cap.thumb : null, time: `${pad(now.getHours())}:${pad(now.getMinutes())}` });
       let msg = `${name}（${kcal} kcal）を記録`;
       if (d.mealRewards < 5) { d.mealRewards++; addStamina(RULE.staminaPerMeal); addExp(RULE.expPerMeal); msg += `・スタミナ +${RULE.staminaPerMeal}`; }
-      save(); se('get'); buzz(40); UI.face = 'happy'; setTimeout(() => { UI.face = null; renderHome(); }, 4000);
+      save(); se('get'); buzz(40); setTimeout(() => { if (homeCat) homeCat.react('head', 440, 260); }, 400);
       closeModal(); toast(msg);
     };
   }, () => { cap = null; $('photoInput').value = ''; });
@@ -448,13 +499,13 @@ function renderShop() {
         <div class="buy-row"><button class="btn small white" data-stone="${p.n}">購入</button></div></div>`).join('')}</div>
       <p class="demo-note">学校の制作アプリなので、石の購入（お金を使う機能）は動きません。見た目だけのサンプルです。</p>`;
   } else {
-    $('shopBody').innerHTML = `<div class="card gacha-stage">
-      <div class="gacha-top"><span class="pill">1回 ${I.coin}<span class="num">${GACHA_COST}</span></span><span class="pill">${I.coin}<span class="num">${fmt(S.coins)}</span></span></div>
-      <p class="gacha-title">福袋ガチャ</p>
-      <div class="gacha-cat">${catSVG({ idx: 0, equip: { head: 'cap_red', top: 'gi_white', hand: 'gloves_red' }, face: 'happy' })}</div>
-      <div class="bags">${['#3E8E5A', '#C9A227', '#D33A3A', '#F2F2F2'].map((c, i) => `<button class="bag" data-bag="${i}" aria-label="福袋${i + 1}をえらぶ">${bagSVG(c)}</button>`).join('')}</div>
-      <p class="pick-note">↑ えらんでね ↑</p>
-      <p class="hint">きせかえが出ます。SR ${GACHA_RATE.SR}%・R ${GACHA_RATE.R}%・N ${GACHA_RATE.N}%　かぶったら ${DUP_REFUND}コインに交換</p></div>`;
+    $('shopBody').innerHTML = `<div class="scene shop-scene">
+      <img src="shop-bg.jpg" alt="猫の店員がいる福袋ガチャのお店の絵" width="900" height="762">
+      <span class="shop-say">いらっしゃいだニャ！</span>
+      ${['緑の福袋', '麻の福袋', '赤の福袋', '白の福袋'].map((n, i) => `<button class="bag-hit b${i}" data-bag="${i}" aria-label="${n}をえらぶ（${GACHA_COST}コイン）"></button>`).join('')}
+    </div>
+    <div class="card gacha-info"><div class="gacha-cost">1回引く：<b class="num">${GACHA_COST}</b>コイン<span class="muted">　もっている ${fmt(S.coins)}</span></div>
+      <p class="hint">福袋をタップすると引けます。きせかえが出ます。SR ${GACHA_RATE.SR}%・R ${GACHA_RATE.R}%・N ${GACHA_RATE.N}%　かぶったら ${DUP_REFUND}コインに交換</p></div>`;
   }
 }
 $('shopSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; UI.shopTab = b.dataset.v; se('tap'); renderShop(); });
@@ -468,7 +519,7 @@ $('shopBody').addEventListener('click', e => {
     S.coins -= cost; S.items[it.id] = (S.items[it.id] || 0) + n; shopQty[it.id] = 1; save(); se('coin'); buzz(); toast(`${it.name} ×${n} を買いました`); renderAll();
   }
   else if (t.dataset.stone) { toast('学校の制作アプリなので、石は買えません'); }
-  else if (t.dataset.bag) pullGacha();
+  else if (t.dataset.bag) { t.classList.add('picked'); setTimeout(pullGacha, 350); }
 });
 function pullGacha() {
   if (S.coins < GACHA_COST) { toast(`コインが ${fmt(GACHA_COST - S.coins)} 足りません`); se('bad'); return; }
@@ -497,9 +548,10 @@ function renderTrain() {
   const d = day();
   if (UI.trainTab === 'gym') {
     $('trainBody').innerHTML = `${S.protein ? '<p class="boost">プロテイン効果中：次のトレーニングが1.5倍</p>' : ''}
-      <div class="list">${TRAININGS.map(t => `<div class="card gym-card"><div class="ico">${I[{ bag: 'sandbag', tread: 'tread', weight: 'barbell' }[t.id]]}</div>
-        <div><div style="font-weight:900">${esc(t.name)}</div><div class="hint">${esc(t.label)}</div><div class="cost">スタミナ −${t.cost}</div></div>
-        <button class="btn small ${S.stamina >= t.cost && !S.cat.dead ? '' : 'white'}" data-train="${t.id}" ${S.stamina >= t.cost && !S.cat.dead ? '' : 'disabled'}>START</button></div>`).join('')}</div>
+      <div class="scene gym-scene"><img src="gym-bg.jpg" alt="ジムで猫たちがトレーニングしている絵" width="900" height="718"></div>
+      <div class="gym-cards">${TRAININGS.map(t => { const ok = S.stamina >= t.cost && !S.cat.dead; return `<div class="gym-card2"><div class="gc-head">${{ bag: 'サンドバッグ<br>連打', tread: 'トレッドミル', weight: 'ウェイト<br>トレーニング' }[t.id] || esc(t.name)}</div>
+        <div class="gc-body"><span class="gc-ico">${I[{ bag: 'sandbag', tread: 'tread', weight: 'barbell' }[t.id]]}</span><span class="gc-cost">スタミナ −${t.cost}</span><span class="gc-label">${esc(t.label)}</span>
+        <button class="btn small red gc-start" data-train="${t.id}" ${ok ? '' : 'disabled'}>START</button></div></div>`; }).join('')}</div>
       <div class="section-title">もちもの</div>
       <div class="list">${SHOP_ITEMS.map(it => `<div class="card row"><span style="width:40px;height:40px;flex:none">${I[it.id]}</span><div class="grow"><div class="name">${esc(it.name)} ×${S.items[it.id] || 0}</div><div class="hint">${esc(it.desc)}</div></div><button class="btn small yellow" data-use="${it.id}" ${(S.items[it.id] || 0) > 0 ? '' : 'disabled'}>使う</button></div>`).join('')}</div>
       <p class="hint" style="margin-top:10px">スタミナは、ごはんを記録したり歩いたりすると回復します。</p>`;
@@ -512,7 +564,7 @@ function renderTrain() {
       </div><p class="hint" style="margin-top:10px">ミニゲームはスタミナを使いません。カロリーは一般的な目安です。</p>`;
   } else {
     const eq = S.cat.equip;
-    $('trainBody').innerHTML = `<div class="locker"><div class="card preview">${catSVG({ idx: S.cat.idx, equip: eq, face: 'happy', dead: S.cat.dead })}</div>
+    $('trainBody').innerHTML = `<div class="locker"><div class="card preview">${petCatHTML({ idx: S.cat.idx, equip: eq, dead: S.cat.dead })}</div>
       <div class="card stats"><div style="font-weight:900">${esc(S.cat.name)}　Lv.${S.cat.level}</div>${statRows()}</div></div>
       ${['head', 'top', 'hand'].map(sl => `<div class="section-title">${SLOT_NAME[sl]}</div><div class="wear-grid">${S.owned.filter(k => WEAR[k] && WEAR[k].slot === sl).map(k => `<button class="wear" data-wear="${k}" aria-pressed="${eq[sl] === k}">${wearIcon(k)}<span>${esc(WEAR[k].name)}</span><span class="rar ${WEAR[k].rar}">${WEAR[k].rar}</span></button>`).join('')}</div>`).join('')}
       <p class="hint" style="margin-top:10px">ガチャで新しいきせかえが手に入ります。</p>`;
@@ -542,12 +594,11 @@ function doTraining(t) {
   if (S.stamina < t.cost) { toast('スタミナが足りません。ごはんを記録するか歩こう'); se('bad'); return; }
   S.stamina -= t.cost;
   const mult = S.protein ? 1.5 : 1, g = Math.round(rand(t.gain[0], t.gain[1]) * mult);
-  S.cat.stats[t.stat] += g; S.protein = false; S.coins += t.coin; day().trains++; addExp(t.exp); save(); se('get'); buzz([30, 30, 30]);
-  openModal(`<h2 id="modalTitle">${esc(t.name)}</h2><div class="reveal"><div style="width:180px">${catSVG({ idx: S.cat.idx, equip: S.cat.equip, face: 'shout' })}</div>
+  S.cat.stats[t.stat] += g; S.protein = false; S.coins += t.coin; day().trains++; addExp(t.exp); save(); se('get'); buzz([30, 30, 30]); petSound(t.id === 'bag' ? 'punch' : 'pop');
+  openModal(`<h2 id="modalTitle">${esc(t.name)}</h2><div class="reveal"><div class="tr-cat tr-${t.id}">${petCatHTML({ idx: S.cat.idx, equip: S.cat.equip })}</div>
     <div style="font-weight:900;font-size:24px">${STAT_NAME[t.stat]} +${g}${mult > 1 ? ' <small style="color:var(--orange-d)">プロテイン×1.5</small>' : ''}</div>
     <div class="hint">EXP +${t.exp}${t.coin ? `　コイン +${t.coin}` : ''}　スタミナ −${t.cost}</div>
     <button class="btn block" id="trOk">OK</button></div>`, root => {
-    root.querySelector('div[style="width:180px"]').classList.add('cat-wrap', 'punch');
     root.querySelector('#trOk').onclick = closeModal;
   });
 }
@@ -663,7 +714,7 @@ function renderHistory() {
     const st = bodyState(S.cat.idx), recDays = Object.values(S.days).filter(d => d.meals.length).length;
     const meals = Object.values(S.days).reduce((a, d) => a + d.meals.length, 0), steps = Object.values(S.days).reduce((a, d) => a + (d.steps || 0), 0);
     $('histBody').innerHTML = `${tabs}
-      <div class="locker" style="margin-top:12px"><div class="card preview">${catSVG({ idx: S.cat.idx, equip: S.cat.equip, face: 'happy', dead: S.cat.dead })}</div>
+      <div class="locker" style="margin-top:12px"><div class="card preview">${petCatHTML({ idx: S.cat.idx, equip: S.cat.equip, dead: S.cat.dead })}</div>
       <div class="card stats"><div style="font-weight:900">${esc(S.cat.name)}　Lv.${S.cat.level}</div>${statRows()}</div></div>
       <div class="section-title">体型</div>
       <div class="card" style="padding:12px 14px"><div style="display:flex;justify-content:space-between;font-weight:900;margin-bottom:8px"><span>${st[0]}</span><span class="num">${S.cat.idx > 0 ? '+' : ''}${S.cat.idx}</span></div>

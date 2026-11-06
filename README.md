@@ -8,9 +8,12 @@
 | index.html | 画面の骨組み | 画面担当 |
 | style.css | 色・大きさ・配置 | デザイン担当 |
 | data.js | アイテム・値段・ミッション・クイズ問題などの数字 | 企画担当（ここだけ直せばバランス調整できる） |
-| cat.js | 猫の絵（体型・着せかえ・骸骨・爆発） | 絵担当 |
+| cat.js | 骸骨・爆発の絵、頭の着せかえの絵 | 絵担当 |
+| petcat.js / petcat.css | イラスト猫の動き・タップ反応・着せかえの色 | 絵担当・プログラム担当 |
+| cat-body.png / cat-tail.png / cat-shirt.png / cat-gloves.png | 猫のイラスト（体・しっぽ・服・手袋に分けた透過PNG） | 絵担当（同じ名前で差しかえ） |
+| gym-bg.jpg / shop-bg.jpg | ジムとガチャのお店の絵 | 絵担当 |
 | app.js | 計算・保存・各タブの動き | プログラム担当 |
 | sw.js / manifest.webmanifest | オフライン起動・アプリ名とアイコン | 触らなくてOK |
 
 ## 更新するとき
-ファイルを GitHub にアップロードし直したら、sw.js の `const VERSION = 'v5';` の数字を上げる。
+ファイルを GitHub にアップロードし直したら、sw.js の `const VERSION = 'v6';` の数字を上げる。

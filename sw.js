@@ -1,7 +1,7 @@
 // にゃんカロ service worker
 // アプリ本体はキャッシュしてオフラインでも起動できるようにする。
 // 更新したら VERSION の数字を上げると、利用者のスマホに新しい版が届く。
-const VERSION = 'v5';
+const VERSION = 'v6';
 const CACHE = 'nekocal-' + VERSION;
 const APP_FILES = [
   './',
@@ -10,6 +10,14 @@ const APP_FILES = [
   './style.css',
   './data.js',
   './cat.js',
+  './petcat.js',
+  './petcat.css',
+  './cat-body.png',
+  './cat-tail.png',
+  './cat-shirt.png',
+  './cat-gloves.png',
+  './gym-bg.jpg',
+  './shop-bg.jpg',
   './app.js',
   './icon-192.png',
   './icon-512.png',
