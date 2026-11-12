@@ -25,6 +25,16 @@ const I = {
   gift: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="8" y="20" width="32" height="22" rx="3" fill="#E0573F" stroke="#4A2A1A" stroke-width="2.5"/><rect x="5" y="14" width="38" height="9" rx="3" fill="#F7C64B" stroke="#4A2A1A" stroke-width="2.5"/><path d="M24 14 V42" stroke="#F7C64B" stroke-width="6"/><path d="M24 14 V42" stroke="#4A2A1A" stroke-width="1.5" stroke-dasharray="0"/><path d="M24 14 C18 4 10 8 14 13 Z M24 14 C30 4 38 8 34 13 Z" fill="#F7C64B" stroke="#4A2A1A" stroke-width="2.5" stroke-linejoin="round"/></svg>`,
   mission: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="10" y="8" width="28" height="34" rx="4" fill="#FFFFFF" stroke="#4A2A1A" stroke-width="2.5"/><rect x="17" y="4" width="14" height="8" rx="3" fill="#F0943F" stroke="#4A2A1A" stroke-width="2.5"/><path d="M16 22 l3 3 5 -6 M16 32 l3 3 5 -6" fill="none" stroke="#4FAE5B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 23 h6 M27 33 h6" stroke="#4A2A1A" stroke-width="2.5" stroke-linecap="round"/></svg>`,
   camera: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg>`,
+  flame: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4-1-6 1-9z" fill="#F0943F" stroke="#4A2A1A" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 12c1 2 3 3 3 5a3 3 0 0 1-6 0c0-1.5 1-2.5 3-5z" fill="#F7C64B"/></svg>`,
+  bolt: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-2 8 9-12h-7z" fill="#4C8FD6" stroke="#4A2A1A" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+  heart: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z" fill="#E8577A" stroke="#4A2A1A" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+  pencil: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="#7E6150" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13 7 4 4"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#F7C64B" stroke="#4A2A1A" stroke-width="1.6"/><path d="M12 7v10M7 12h10" stroke="#4A2A1A" stroke-width="2.6" stroke-linecap="round"/></svg>`,
+  shoe: `<svg viewBox="0 0 48 32" aria-hidden="true"><path d="M4 22c0-8 4-14 10-14 2 4 8 4 10 0l4 6c6 0 16 2 16 8v2H4z" fill="#4C8FD6" stroke="#4A2A1A" stroke-width="2.5" stroke-linejoin="round"/><path d="M4 24h40v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" fill="#FFFFFF" stroke="#4A2A1A" stroke-width="2.5"/><path d="M17 14l5 2M19 11l5 2" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/></svg>`,
+  paw: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="#FFFFFF"><ellipse cx="12" cy="16" rx="5" ry="4"/><circle cx="6" cy="10.5" r="2.2"/><circle cx="9.5" cy="6.5" r="2.2"/><circle cx="14.5" cy="6.5" r="2.2"/><circle cx="18" cy="10.5" r="2.2"/></svg>`,
+  gachaMachine: `<svg viewBox="0 0 48 56" aria-hidden="true"><circle cx="24" cy="20" r="16" fill="#E6F4FB" stroke="#4A2A1A" stroke-width="2.5"/><circle cx="17" cy="16" r="4" fill="#E0573F"/><circle cx="27" cy="13" r="4" fill="#4C8FD6"/><circle cx="30" cy="23" r="4" fill="#F7C64B"/><circle cx="20" cy="25" r="4" fill="#4FAE5B"/><path d="M10 34h28l3 18H7z" fill="#E0573F" stroke="#4A2A1A" stroke-width="2.5" stroke-linejoin="round"/><circle cx="24" cy="42" r="4" fill="#F7C64B" stroke="#4A2A1A" stroke-width="2"/></svg>`,
+  luckyBag: `<svg viewBox="0 0 48 52" aria-hidden="true"><path d="M10 18h28l4 30H6z" fill="#D33A3A" stroke="#4A2A1A" stroke-width="2.5" stroke-linejoin="round"/><path d="M17 18c0-8 14-8 14 0" fill="none" stroke="#4A2A1A" stroke-width="2.5"/><text x="24" y="40" text-anchor="middle" font-size="13" font-weight="900" fill="#F7C64B" font-family="sans-serif">福袋</text></svg>`,
+  goldbag: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 2v6" stroke="#4A2A1A" stroke-width="2.5"/><rect x="14" y="8" width="20" height="34" rx="8" fill="#F7C64B" stroke="#4A2A1A" stroke-width="2.5"/><path d="M14 16h20M14 34h20" stroke="#C9971E" stroke-width="2.5"/><path d="M20 22l3 2-3 2M27 22l-3 2 3 2" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/></svg>`,
   pad: `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="#4A2A1A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="11" rx="5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="16" cy="11.5" r="1" fill="#4A2A1A"/><circle cx="18" cy="13.8" r="1" fill="#4A2A1A"/></svg>`,
   coin: `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#F7C64B" stroke="#4A2A1A" stroke-width="1.6"/><ellipse cx="12" cy="15" rx="4.2" ry="3.4" fill="#8A5A12"/><circle cx="7.4" cy="10" r="1.7" fill="#8A5A12"/><circle cx="10.4" cy="7.4" r="1.7" fill="#8A5A12"/><circle cx="13.6" cy="7.4" r="1.7" fill="#8A5A12"/><circle cx="16.6" cy="10" r="1.7" fill="#8A5A12"/></svg>`,
   stone: `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M12 2 L21 9 L12 22 L3 9 Z" fill="#7FC4F2" stroke="#4A2A1A" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 9 h18 M12 2 L8 9 L12 22 L16 9 Z" fill="none" stroke="#4A2A1A" stroke-width="1.2"/></svg>`,
@@ -66,9 +76,9 @@ function defaultState() {
   return {
     v: 1,
     user: { name: 'プレイヤー', sex: 'male', age: 20, height: 170, weight: 60, goal: 'keep', delta: 300 },
-    cat: { name: 'もち', idx: 0, dead: null, level: 1, exp: 0, stats: { pow: 20, spd: 20, sta: 20 }, equip: { head: 'band_none', top: 'tee_orange', hand: 'gloves_brown' } },
+    cat: { name: 'もち', breed: 'tabby', idx: 0, dead: null, level: 1, exp: 0, stats: { pow: 20, spd: 20, sta: 20 }, equip: { head: 'band_none', top: 'tee_orange', hand: 'gloves_brown' } },
     stamina: 65, coins: 850, stones: 0,
-    items: { drink: 0, protein: 0 }, protein: false,
+    items: { drink: 0, protein: 0, goldbag: 0 }, protein: false, goldbag: 0, mood: RULE.moodStart,
     owned: ['band_none', 'tee_orange', 'gloves_brown'],
     start: t, last: t, days: {}, history: [],
     login: { last: '', streak: 0 },
@@ -131,7 +141,7 @@ function rollover() {
   const t = todayStr();
   if (S.last === t) return;
   let d = S.last;
-  while (d < t) { settleDay(d); d = addDays(d, 1); }
+  while (d < t) { settleDay(d); S.mood = clamp((S.mood ?? RULE.moodStart) + RULE.moodPerDay, 0, 100); d = addDays(d, 1); }
   S.last = t;
   // 7日より前の写真は消して容量を節約
   Object.keys(S.days).forEach(k => { if (daysBetween(k, t) > 7) S.days[k].meals.forEach(m => { m.photo = null; }); if (daysBetween(k, t) > 60) delete S.days[k]; });
@@ -152,6 +162,7 @@ function addExp(n) {
   while (S.cat.exp >= expNeed(S.cat.level)) { S.cat.exp -= expNeed(S.cat.level); S.cat.level++; S.coins += 50; setTimeout(() => { toast(`猫レベル ${S.cat.level} にアップ！ コイン +50`); se('get'); }, 700); }
 }
 function addStamina(n) { S.stamina = clamp(S.stamina + n, 0, 100); }
+function addMood(n) { S.mood = clamp((S.mood ?? RULE.moodStart) + n, 0, 100); }
 
 /* =========================================================
    5. 効果音・バイブ・トースト
@@ -212,15 +223,17 @@ function toast(t) { const el = $('toast'); el.textContent = t; el.hidden = false
    6. モーダル
    ========================================================= */
 let modalClose = null;
-function openModal(html, onMount, onClose) {
+let modalLocked = false;   // はじめての設定中は × や外側タップで閉じない
+function openModal(html, onMount, onClose, locked) {
+  modalLocked = !!locked; $('modalClose').hidden = modalLocked;
   $('modalBody').innerHTML = html; $('modal').hidden = false; modalClose = onClose || null;
   if (onMount) onMount($('modalBody'));
   const f = $('modalBody').querySelector('input,button,select'); if (f && !('ontouchstart' in window)) f.focus();
 }
-function closeModal() { $('modal').hidden = true; $('modalBody').innerHTML = ''; const c = modalClose; modalClose = null; if (c) c(); renderAll(); }
+function closeModal() { modalLocked = false; $('modalClose').hidden = false; $('modal').hidden = true; $('modalBody').innerHTML = ''; const c = modalClose; modalClose = null; if (c) c(); renderAll(); }
 $('modalClose').addEventListener('click', closeModal);
-$('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('modal').hidden) closeModal(); });
+$('modal').addEventListener('click', e => { if (e.target === $('modal') && !modalLocked) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('modal').hidden && !modalLocked) closeModal(); });
 
 /* =========================================================
    7. ホーム
@@ -235,10 +248,13 @@ function bubbleText() {
   if (S.cat.dead === 'skel') return '';
   if (S.cat.dead === 'boom') return '';
   if (S.stamina < 20) return 'つかれたにゃ…';
-  if (!d.meals.length && h >= 10) return '飯くれ！';
+  const nm = S.user.name && S.user.name !== 'プレイヤー' ? S.user.name + '、' : '';
+  if (!d.meals.length && h >= 10) return nm + '飯くれ！';
+  if ((S.mood ?? 60) < 30) return nm + 'かまってほしいニャ…';
   if (f > 0.5) return 'おなかパンパン…';
   if (f < -0.5) return 'おなかすいた…';
-  if (!d.trains) return 'ジム行くにゃ！';
+  if (!d.trains) return nm + 'ジム行くにゃ！';
+  if ((S.mood ?? 60) >= 80) return 'ごきげんニャ♪';
   return 'いい感じにゃ！';
 }
 function homeMood() {
@@ -249,68 +265,159 @@ function homeMood() {
 }
 // ホームの猫：見た目が変わったときだけ作り直す（動きやタップ反応を止めないため）
 let homeCat = null, homeCatKey = '';
+function touchCat() {
+  const d = day(); d.pets = d.pets || 0;
+  if (d.pets >= RULE.moodTouchMax) return;
+  d.pets += RULE.moodPerTouch; addMood(RULE.moodPerTouch); save(); renderMeters();
+}
+function renderMeters() {
+  const m = S.mood ?? RULE.moodStart;
+  $('stamFill').style.width = S.stamina + '%';
+  $('stamFill').style.backgroundColor = S.stamina < 20 ? 'var(--red)' : S.stamina < 50 ? 'var(--yellow)' : 'var(--green)';
+  $('stamVal').textContent = S.stamina + '%'; $('stamMeter').setAttribute('aria-valuenow', S.stamina);
+  $('moodFill').style.width = m + '%'; $('moodVal').textContent = m + '%'; $('moodMeter').setAttribute('aria-valuenow', m);
+}
 function mountHomeCat() {
-  const key = JSON.stringify([S.cat.idx, S.cat.dead, S.cat.equip, homeMood()]);
+  const key = JSON.stringify([S.cat.breed, S.cat.idx, S.cat.dead, S.cat.equip, homeMood()]);
   if (homeCat && key === homeCatKey && $('catWrap').querySelector('.pc')) { homeCat.rest(); return; }
   if (homeCat) homeCat.stop();
   homeCatKey = key;
-  $('catWrap').innerHTML = petCatHTML({ idx: S.cat.idx, equip: S.cat.equip, dead: S.cat.dead, mood: homeMood() });
-  homeCat = petCatBind($('catWrap'), { sayEl: $('bubble'), status: bubbleText, mood: homeMood, sound: petSound, vibrate: p => buzz(p) });
+  $('catWrap').innerHTML = petCatHTML({ breed: S.cat.breed, idx: S.cat.idx, equip: S.cat.equip, dead: S.cat.dead, mood: homeMood() });
+  homeCat = petCatBind($('catWrap'), { sayEl: $('bubble'), status: bubbleText, mood: homeMood, sound: petSound, vibrate: p => buzz(p), onReact: touchCat });
   const b = bubbleText(); $('bubble').textContent = b; $('bubble').hidden = !b;
 }
 function renderHome() {
   const d = day(), t = todayStr(), tg = target(S.user), it = intake(t);
-  $('btnUser').innerHTML = I.user;
+  $('pillCoins').innerHTML = `${I.coin.replace('width="24" height="24"', '')}<span class="num">${fmt(S.coins)}</span><span class="plus">${I.plus}</span>`;
+  $('btnUser').innerHTML = `<span class="nc-ico">${I.user}</span><span class="nc-name">${esc(S.user.name || 'プレイヤー')}</span>${I.pencil}`;
   if (!$('btnLogin').querySelector('svg')) $('btnLogin').insertAdjacentHTML('afterbegin', I.gift);
   if (!$('btnMission').querySelector('svg')) $('btnMission').insertAdjacentHTML('afterbegin', I.mission);
-  $('dayWeek').textContent = `（${WEEK[new Date().getDay()]}）`;
-  $('dayNum').textContent = daysBetween(S.start, t) + 1;
+  $('kcalIco').innerHTML = I.flame;
+  $('dayChip').textContent = `${daysBetween(S.start, t) + 1}日目`;
   $('kcalIntake').textContent = fmt(it); $('kcalTarget').textContent = fmt(tg);
   const scale = tg * 1.5;
   $('kcalBar').style.width = Math.min(100, it / scale * 100) + '%';
   $('kcalBar').style.background = Math.abs(it - tg) <= 100 ? 'var(--green)' : it > tg ? 'var(--orange)' : 'var(--blue)';
   $('kcalMark').style.left = (tg / scale * 100) + '%';
-  $('stamFill').style.height = S.stamina + '%';
-  $('stamFill').style.backgroundColor = S.stamina < 20 ? 'var(--red)' : S.stamina < 50 ? 'var(--yellow)' : 'var(--green)';
-  $('stamVal').textContent = S.stamina + '%';
-  $('stamMeter').setAttribute('aria-valuenow', S.stamina);
+  $('eventBanner').innerHTML = `<span class="ev-ico">${I.luckyBag}</span><span class="ev-txt"><small>${esc(EVENT.tag)}</small>${EVENT.title}</span>`;
+  $('stamIco').innerHTML = I.bolt; $('moodIco').innerHTML = I.heart;
+  renderMeters();
   mountHomeCat();
-  $('pillCoins').innerHTML = `${I.coin}<span class="num">${fmt(S.coins)}</span>`;
-  $('pillSteps').innerHTML = `${I.steps}<span class="num">${fmt(d.steps)}歩</span>`;
-  $('pillLevel').innerHTML = `<span style="padding-left:6px">猫Lv.${S.cat.level}</span>`;
+  if (!$('btnGacha').querySelector('svg')) $('btnGacha').insertAdjacentHTML('afterbegin', `${I.gachaMachine}<span>ガチャ</span>`);
+  $('dotGacha').hidden = S.coins < GACHA_COST;
+  $('btnCamera').innerHTML = I.camera;
+  const km = d.steps * (S.user.height || 165) * RULE.strideRate / 100000;
+  $('pillSteps').innerHTML = `<span class="sc-ico">${I.shoe}</span><span class="sc-main"><small>歩数</small><b><span class="num">${km.toFixed(1)}</span> km</b><small class="num">${fmt(d.steps)}歩</small></span><span class="sc-arrow" aria-hidden="true">›</span>`;
   const st = bodyState(S.cat.idx);
-  $('bodyPill').textContent = `${S.cat.name}　${st[0]}`; $('bodyPill').style.background = st[1];
+  $('bodyPill').innerHTML = `<span class="sb-ico">${I.paw}</span><span class="sb-main"><small>${esc(S.cat.name)}　Lv.${S.cat.level}</small><b>${st[0]}</b><span class="sb-bar"><i style="left:${(S.cat.idx + 100) / 2}%"></i></span></span>`;
+  $('bodyPill').style.background = st[1];
   $('btnRevive').hidden = !S.cat.dead;
   $('dotLogin').hidden = S.login.last === t;
   $('dotMission').hidden = !MISSIONS.some(m => m.check(d) >= m.goal && !claimedToday().includes(m.id));
-  $('btnMini').innerHTML = `${I.pad}ミニゲーム`;
-  $('btnCamera').innerHTML = I.camera;
 }
 function claimedToday() { if (S.claimed.date !== todayStr()) S.claimed = { date: todayStr(), ids: [] }; return S.claimed.ids; }
 
 $('btnUser').addEventListener('click', () => openProfile(false));
 $('kcalCard').addEventListener('click', () => { UI.histTab = 'week'; UI.histDate = todayStr(); setTab('history'); });
-$('pillCoins').addEventListener('click', () => setTab('shop'));
+$('pillCoins').addEventListener('click', () => { UI.shopTab = 'shop'; setTab('shop'); });
+$('btnGacha').addEventListener('click', () => { UI.shopTab = 'gacha'; setTab('shop'); });
+$('eventBanner').addEventListener('click', () => { UI.shopTab = 'gacha'; setTab('shop'); });
+$('bodyPill').addEventListener('click', () => { UI.histTab = 'status'; setTab('history'); });
 $('pillSteps').addEventListener('click', openSteps);
 $('btnLogin').addEventListener('click', openLogin);
 $('btnMission').addEventListener('click', openMissions);
-$('btnMini').addEventListener('click', () => { UI.trainTab = 'mini'; setTab('train'); });
 $('btnCamera').addEventListener('click', openCapture);
 $('btnRevive').addEventListener('click', () => {
   openModal(`<h2 id="modalTitle">新しい猫を迎える</h2><div class="stack"><p style="margin:0">${esc(S.cat.name)}とはお別れです。コイン・アイテム・きせかえはそのまま引きつぎます。</p>
-  <label class="f">新しい猫の名前<input type="text" id="newCatName" maxlength="10" value="もち"></label><button class="btn block" id="doRevive">この名前で迎える</button></div>`, root => {
+  ${catPickerHTML(S.cat.breed)}
+  <label class="f">新しい猫の名前<input type="text" id="newCatName" maxlength="10" value="もち"></label><button class="btn block" id="doRevive">この猫を迎える</button></div>`, root => {
+    const pick = bindCatPicker(root, S.cat.breed);
     root.querySelector('#doRevive').onclick = () => {
       const n = root.querySelector('#newCatName').value.trim() || 'もち';
-      S.cat = Object.assign(S.cat, { name: n, idx: 0, dead: null, level: 1, exp: 0, stats: { pow: 20, spd: 20, sta: 20 } });
+      S.cat = Object.assign(S.cat, { name: n, breed: pick(), idx: 0, dead: null, level: 1, exp: 0, stats: { pow: 20, spd: 20, sta: 20 } });
       S.stamina = 65; save(); closeModal(); toast(`${n}がやってきた！`); se('get');
     };
   });
 });
 
+/* ---------- 猫えらび ---------- */
+function catArtHTML(b) {
+  const c = CATS[b];
+  return `<span class="cp-art"><span class="pc-art" style="left:${(c.x / 600 * 100).toFixed(2)}%;width:${(c.w / 600 * 100).toFixed(2)}%"><img src="${pcImg(b, 'tail')}" alt=""><img src="${pcImg(b, 'body')}" alt="${esc(c.name)}"></span></span>`;
+}
+function catPickerHTML(sel) {
+  return `<div class="cat-pick" role="radiogroup" aria-label="猫の種類">${CAT_KEYS.map(k => `<button type="button" role="radio" data-breed="${k}" aria-checked="${k === sel}">${catArtHTML(k)}<b>${esc(CATS[k].name)}</b><small>${esc(CATS[k].desc)}</small></button>`).join('')}</div>`;
+}
+function bindCatPicker(root, sel, onPick) {
+  let v = CATS[sel] ? sel : 'tabby';
+  root.querySelector('.cat-pick').addEventListener('click', e => {
+    const b = e.target.closest('[data-breed]'); if (!b) return;
+    v = b.dataset.breed; se('tap'); buzz(10); petSound('meow');
+    root.querySelectorAll('.cat-pick [data-breed]').forEach(x => x.setAttribute('aria-checked', x === b));
+    if (onPick) onPick(v);
+  });
+  return () => v;
+}
+function openCatPicker() {
+  openModal(`<h2 id="modalTitle">猫の種類</h2><div class="stack">${catPickerHTML(S.cat.breed)}
+    <p class="hint" style="margin:0">見た目だけが変わります。名前・レベル・きせかえはそのままです。</p>
+    <button class="btn block" id="cpSave">この猫にする</button></div>`, root => {
+    const pick = bindCatPicker(root, S.cat.breed);
+    root.querySelector('#cpSave').onclick = () => { S.cat.breed = pick(); save(); closeModal(); se('get'); toast(`${CATS[S.cat.breed].name}になりました`); };
+  });
+}
+
+/* ---------- タイトル画面・はじめての設定 ---------- */
+function renderTitle() {
+  const box = $('titleCats');
+  if (S.onboarded) {
+    box.className = 't-cats one';
+    box.innerHTML = petCatHTML({ breed: S.cat.breed, idx: S.cat.dead ? 0 : S.cat.idx, equip: S.cat.equip });
+    $('titleHello').textContent = `おかえり、${S.user.name || 'プレイヤー'}！`;
+  } else {
+    box.className = 't-cats';
+    box.innerHTML = CAT_KEYS.map(k => catArtHTML(k)).join('');
+    $('titleHello').textContent = 'ようこそ！';
+  }
+}
+function startFromTitle() {
+  const t = $('title'); if (t.classList.contains('out')) return;
+  se('get'); buzz(20);
+  t.classList.add('out'); setTimeout(() => { t.hidden = true; }, 350);
+  if (!S.onboarded) openWelcome();
+}
+function openWelcome() {
+  let name = S.user.name && S.user.name !== 'プレイヤー' ? S.user.name : '', breed = S.cat.breed || 'tabby', catName = S.cat.name || 'もち';
+  const step1 = root => {
+    root.innerHTML = `<h2 id="modalTitle">はじめまして！（1/3）</h2><div class="stack">
+      <p style="margin:0">あなたの名前を教えてね。猫がこの名前で呼んでくれます。</p>
+      <label class="f">あなたの名前<input type="text" id="wName" maxlength="12" value="${esc(name)}" placeholder="例：かいり" autocomplete="nickname"></label>
+      <button class="btn block" id="wNext1">つぎへ</button></div>`;
+    const inp = root.querySelector('#wName');
+    root.querySelector('#wNext1').onclick = () => { name = inp.value.trim(); if (!name) { toast('名前を入れてね'); inp.focus(); return; } se('tap'); step2(root); };
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') root.querySelector('#wNext1').click(); });
+  };
+  const step2 = root => {
+    root.innerHTML = `<h2 id="modalTitle">猫をえらぶ（2/3）</h2><div class="stack">
+      <p style="margin:0">いっしょに暮らす猫をえらんでね。あとから「せってい」で変えられます。</p>
+      ${catPickerHTML(breed)}
+      <label class="f">猫の名前<input type="text" id="wCat" maxlength="10" value="${esc(catName)}"></label>
+      <div class="w-nav"><button type="button" class="btn white" id="wBack">もどる</button><button type="button" class="btn" id="wNext2">つぎへ</button></div></div>`;
+    const pick = bindCatPicker(root, breed, v => { breed = v; });
+    root.querySelector('#wBack').onclick = () => { catName = root.querySelector('#wCat').value.trim() || 'もち'; step1(root); };
+    root.querySelector('#wNext2').onclick = () => {
+      breed = pick(); catName = root.querySelector('#wCat').value.trim() || 'もち';
+      S.user.name = name; S.cat.breed = breed; S.cat.name = catName; save(); se('tap');
+      openProfile(true);
+    };
+  };
+  openModal('', step1, null, true);
+}
+
 /* ---------- ユーザー（プロフィール） ---------- */
 function openProfile(first) {
   const u = S.user;
-  openModal(`<h2 id="modalTitle">${first ? 'はじめまして！' : 'ユーザー'}</h2>
+  openModal(`<h2 id="modalTitle">${first ? 'あなたのこと（3/3）' : 'ユーザー'}</h2>
   <div class="stack">
     ${first ? '<p style="margin:0">あなたに合った1日の目標カロリーを計算します。</p>' : ''}
     <div class="form-grid">
@@ -340,7 +447,7 @@ function openProfile(first) {
       if (!(v.age >= 10 && v.age <= 100 && v.height >= 100 && v.height <= 230 && v.weight >= 25 && v.weight <= 250)) { toast('年齢・身長・体重を確かめてください'); return; }
       S.user = v; S.cat.name = root.querySelector('#pCat').value.trim() || 'もち'; S.onboarded = true; save(); closeModal(); toast(`目標は 1日 ${fmt(target(v))} kcal`);
     };
-  });
+  }, null, first);
 }
 
 /* ---------- 歩数 ---------- */
@@ -419,22 +526,31 @@ function openCapture() {
       <label class="f">料理名<input type="text" id="capName" maxlength="30" placeholder="例：カレーライス"></label>
       <label class="f">kcal<input type="number" id="capKcal" inputmode="numeric" min="1" max="5000" placeholder="750"></label>
     </div>
+    <div class="form-grid pfc-in">
+      <label class="f">糖質 g<input type="number" id="capC" inputmode="numeric" min="0" max="1000" placeholder="－"></label>
+      <label class="f">たんぱく質 g<input type="number" id="capP" inputmode="numeric" min="0" max="500" placeholder="－"></label>
+      <label class="f">脂質 g<input type="number" id="capF" inputmode="numeric" min="0" max="500" placeholder="－"></label>
+    </div>
     <div class="chips" id="capPresets">${PRESETS.map((p, i) => `<button type="button" class="chip" data-p="${i}">${esc(p[0])} ${p[1]}</button>`).join('')}</div>
     <button class="btn block" id="capSave">記録する</button>
     <p class="hint">カロリーは目安です。AIの結果は直してから記録できます。</p></div>`, root => {
     let slotV = slot;
     root.querySelector('#capPhoto').onclick = () => $('photoInput').click();
     root.querySelector('#capSlot').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; slotV = b.dataset.v; root.querySelectorAll('#capSlot button').forEach(x => x.setAttribute('aria-pressed', x === b)); });
-    root.querySelector('#capPresets').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; const p = PRESETS[+b.dataset.p]; root.querySelector('#capName').value = p[0]; root.querySelector('#capKcal').value = p[1]; });
+    root.querySelector('#capPresets').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; const p = PRESETS[+b.dataset.p]; root.querySelector('#capName').value = p[0]; root.querySelector('#capKcal').value = p[1]; ['#capC', '#capP', '#capF'].forEach(q => { root.querySelector(q).value = ''; }); });
     root.querySelector('#capAI').onclick = () => runAI(root);
     root.querySelector('#capSave').onclick = () => {
       const name = root.querySelector('#capName').value.trim() || '食事', kcal = Math.round(+root.querySelector('#capKcal').value);
       if (!(kcal > 0 && kcal <= 5000)) { toast('カロリーを1〜5000の数字で入れてください'); return; }
       const d = day(), now = new Date();
-      d.meals.push({ id: Math.random().toString(36).slice(2, 9), slot: slotV, name, kcal, photo: cap ? cap.thumb : null, time: `${pad(now.getHours())}:${pad(now.getMinutes())}` });
+      const g = q => { const v = root.querySelector(q).value; return v === '' ? null : clamp(Math.round(+v) || 0, 0, 1000); };
+      const meal = { id: Math.random().toString(36).slice(2, 9), slot: slotV, name, kcal, photo: cap ? cap.thumb : null, time: `${pad(now.getHours())}:${pad(now.getMinutes())}` };
+      const pc = g('#capC'), pp = g('#capP'), pf = g('#capF');
+      if (pc != null || pp != null || pf != null) Object.assign(meal, { carbs: pc || 0, protein: pp || 0, fat: pf || 0 });
+      d.meals.push(meal);
       let msg = `${name}（${kcal} kcal）を記録`;
-      if (d.mealRewards < 5) { d.mealRewards++; addStamina(RULE.staminaPerMeal); addExp(RULE.expPerMeal); msg += `・スタミナ +${RULE.staminaPerMeal}`; }
-      save(); se('get'); buzz(40); setTimeout(() => { if (homeCat) homeCat.react('head', 440, 260); }, 400);
+      if (d.mealRewards < 5) { d.mealRewards++; addStamina(RULE.staminaPerMeal); addExp(RULE.expPerMeal); addMood(RULE.moodPerMeal); msg += `・スタミナ +${RULE.staminaPerMeal}`; }
+      save(); se('get'); buzz(40); setTimeout(() => { if (homeCat) homeCat.react('head'); }, 400);
       closeModal(); toast(msg);
     };
   }, () => { cap = null; $('photoInput').value = ''; });
@@ -470,11 +586,15 @@ async function runAI(root) {
     }
     const items = Array.isArray(d.items) ? d.items.filter(x => x && x.name && +x.kcal > 0) : [];
     if (d.is_food === false || !items.length) { st.textContent = '食べ物が見つかりませんでした。手で入力してください'; return; }
-    const total = items.reduce((a, x) => a + Math.round(+x.kcal), 0);
+    const sum = k => items.reduce((a, x) => a + (Math.round(+x[k]) || 0), 0);
+    const total = sum('kcal'), hasPfc = items.some(x => x.carbs != null || x.protein != null || x.fat != null);
     root.querySelector('#capName').value = items.map(x => x.name).join('・').slice(0, 30);
     root.querySelector('#capKcal').value = total;
+    if (hasPfc) { root.querySelector('#capC').value = sum('carbs'); root.querySelector('#capP').value = sum('protein'); root.querySelector('#capF').value = sum('fat'); }
+    const pfcTxt = x => hasPfc ? `<small class="pfc-mini">糖質${Math.round(+x.carbs) || 0}g・たんぱく質${Math.round(+x.protein) || 0}g・脂質${Math.round(+x.fat) || 0}g</small>` : '';
     const box = root.querySelector('#capResult');
-    box.innerHTML = items.map(x => `<div class="r"><span>${esc(x.name)}${x.amount ? ` <small class="muted">${esc(x.amount)}</small>` : ''}</span><b>${Math.round(+x.kcal)} kcal</b></div>`).join('') + `<div class="r t"><span>合計</span><span>${total} kcal</span></div>` + (d.note ? `<small class="muted">${esc(d.note)}</small>` : '');
+    box.innerHTML = items.map(x => `<div class="r"><span>${esc(x.name)}${x.amount ? ` <small class="muted">${esc(x.amount)}</small>` : ''}${pfcTxt(x)}</span><b>${Math.round(+x.kcal)} kcal</b></div>`).join('') +
+      `<div class="r t"><span>合計${pfcTxt({ carbs: sum('carbs'), protein: sum('protein'), fat: sum('fat') })}</span><span>${total} kcal</span></div>` + (d.note ? `<small class="muted">${esc(d.note)}</small>` : '');
     box.hidden = false; st.textContent = `入力しました（${Math.round((Date.now() - t0) / 1000)}秒）。違っていたら直してね`; se('coin');
   } catch (err) {
     st.textContent = err.name === 'AbortError' ? '時間がかかりすぎたので中止しました。もう一度押すか、手で入力してください' : (err instanceof TypeError ? '通信できませんでした。ネットを確認してください' : err.message);
@@ -485,14 +605,14 @@ async function runAI(root) {
    8. ショップ
    ========================================================= */
 function balanceHTML() { return `<span class="pill">${I.coin}<span class="num">${fmt(S.coins)}</span></span><span class="pill">${I.stone}<span class="num">${fmt(S.stones)}</span></span>`; }
-const shopQty = { drink: 1, protein: 1 };
+const shopQty = { drink: 1, protein: 1, goldbag: 1 };
 function renderShop() {
   $('shopBalance').innerHTML = balanceHTML();
   $('shopSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === UI.shopTab));
   if (UI.shopTab === 'shop') {
     $('shopBody').innerHTML = `
       <div class="section-title">アイテム</div>
-      <div class="list">${SHOP_ITEMS.map(it => `<div class="card shop-item"><div class="ico">${I[it.id]}</div><div><div class="name" style="font-weight:900">${esc(it.name)}</div><div class="hint">${esc(it.desc)}　もっている：${S.items[it.id] || 0}</div><div class="price">${I.coin.replace('width="24" height="24"', 'width="18" height="18" style="vertical-align:-3px"')} ${fmt(it.price)}</div></div>
+      <div class="list">${SHOP_ITEMS.filter(it => it.shop !== false).map(it => `<div class="card shop-item"><div class="ico">${I[it.id]}</div><div><div class="name" style="font-weight:900">${esc(it.name)}</div><div class="hint">${esc(it.desc)}　もっている：${S.items[it.id] || 0}</div><div class="price">${I.coin.replace('width="24" height="24"', 'width="18" height="18" style="vertical-align:-3px"')} ${fmt(it.price)}</div></div>
         <div class="buy-row"><span class="stepper"><button type="button" data-dec="${it.id}" aria-label="へらす">−</button><output>${shopQty[it.id]}</output><button type="button" data-inc="${it.id}" aria-label="ふやす">＋</button></span><button class="btn small" data-buy="${it.id}">購入</button></div></div>`).join('')}</div>
       <div class="section-title">石</div>
       <div class="list">${STONE_PACKS.map(p => `<div class="card shop-item"><div class="ico">${I.stone.replace('width="24" height="24"', 'width="38" height="38"')}</div><div><div style="font-weight:900">石 ×${p.n}</div><div class="price">¥${fmt(p.yen)}</div></div>
@@ -505,7 +625,7 @@ function renderShop() {
       ${['緑の福袋', '麻の福袋', '赤の福袋', '白の福袋'].map((n, i) => `<button class="bag-hit b${i}" data-bag="${i}" aria-label="${n}をえらぶ（${GACHA_COST}コイン）"></button>`).join('')}
     </div>
     <div class="card gacha-info"><div class="gacha-cost">1回引く：<b class="num">${GACHA_COST}</b>コイン<span class="muted">　もっている ${fmt(S.coins)}</span></div>
-      <p class="hint">福袋をタップすると引けます。きせかえが出ます。SR ${GACHA_RATE.SR}%・R ${GACHA_RATE.R}%・N ${GACHA_RATE.N}%　かぶったら ${DUP_REFUND}コインに交換</p></div>`;
+      <p class="hint">福袋をタップすると引けます。きせかえとトレーニングアイテムが出ます。SR ${GACHA_RATE.SR}%・R ${GACHA_RATE.R}%・N ${GACHA_RATE.N}%　かぶったら ${DUP_REFUND}コインに交換</p></div>`;
   }
 }
 $('shopSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; UI.shopTab = b.dataset.v; se('tap'); renderShop(); });
@@ -519,23 +639,48 @@ $('shopBody').addEventListener('click', e => {
     S.coins -= cost; S.items[it.id] = (S.items[it.id] || 0) + n; shopQty[it.id] = 1; save(); se('coin'); buzz(); toast(`${it.name} ×${n} を買いました`); renderAll();
   }
   else if (t.dataset.stone) { toast('学校の制作アプリなので、石は買えません'); }
-  else if (t.dataset.bag) { t.classList.add('picked'); setTimeout(pullGacha, 350); }
+  else if (t.dataset.bag) { t.classList.add('picked'); setTimeout(() => confirmGacha(+t.dataset.bag), 300); }
 });
+const BAG_NAMES = ['緑の福袋', '麻の福袋', '赤の福袋', '白の福袋'];
+function confirmGacha(bag) {
+  bag = bag ?? rand(0, 3);
+  const enough = S.coins >= GACHA_COST;
+  openModal(`<h2 id="modalTitle">${BAG_NAMES[bag]}を引く？</h2><div class="reveal">
+    <div class="item-big">${I.luckyBag}</div>
+    <div style="font-weight:900;font-size:18px">${I.coin.replace('width="24" height="24"', 'width="20" height="20" style="vertical-align:-4px"')} ${fmt(GACHA_COST)}コインを使います</div>
+    <div class="hint">もっているコイン：${fmt(S.coins)} → ${enough ? fmt(S.coins - GACHA_COST) : 'たりません'}</div>
+    <button class="btn block" id="gYes" ${enough ? '' : 'disabled'}>はい、引く！</button>
+    <button class="btn white block" id="gNo">やめる</button></div>`, root => {
+    root.querySelector('#gYes').onclick = () => { closeModal(); pullGacha(); };
+    root.querySelector('#gNo').onclick = closeModal;
+  });
+}
 function pullGacha() {
   if (S.coins < GACHA_COST) { toast(`コインが ${fmt(GACHA_COST - S.coins)} 足りません`); se('bad'); return; }
   S.coins -= GACHA_COST;
   const r = Math.random() * 100, rar = r < GACHA_RATE.SR ? 'SR' : r < GACHA_RATE.SR + GACHA_RATE.R ? 'R' : 'N';
-  const pool = Object.keys(WEAR).filter(k => WEAR[k].rar === rar && k !== 'band_none');
-  const id = pool[Math.floor(Math.random() * pool.length)], w = WEAR[id], dup = S.owned.includes(id);
-  if (dup) S.coins += DUP_REFUND; else S.owned.push(id);
+  const wears = Object.keys(WEAR).filter(k => WEAR[k].rar === rar && k !== 'band_none').map(k => ({ wear: k }));
+  const pool = wears.concat((GACHA_ITEMS[rar] || []).map(x => ({ item: x.id, n: x.n })));
+  const got = pool[Math.floor(Math.random() * pool.length)];
+  let body;
+  if (got.item) {
+    const it = SHOP_ITEMS.find(x => x.id === got.item);
+    S.items[got.item] = (S.items[got.item] || 0) + got.n;
+    body = `<div class="item-big ${rar}">${I[got.item]}</div><span class="rar ${rar}">${rar}</span>
+      <div style="font-weight:900;font-size:20px">${esc(it.name)} ×${got.n}</div><div class="hint">トレーニングアイテム：${esc(it.desc)}</div>
+      <p style="margin:0;font-weight:900">トレーニングの「もちもの」に入りました</p>`;
+  } else {
+    const id = got.wear, w = WEAR[id], dup = S.owned.includes(id);
+    if (dup) S.coins += DUP_REFUND; else S.owned.push(id);
+    body = `<div class="item-big ${rar}">${wearIcon(id)}</div><span class="rar ${rar}">${rar}</span>
+      <div style="font-weight:900;font-size:20px">${esc(w.name)}</div><div class="hint">${SLOT_NAME[w.slot]}のきせかえ${w.bonus ? '　' + Object.entries(w.bonus).map(([k, v]) => `${STAT_NAME[k]}+${v}`).join(' ') : ''}</div>
+      ${dup ? `<p style="margin:0;font-weight:900">もう持っていたので ${DUP_REFUND}コインに交換しました</p>` : `<button class="btn block" id="equipNow" data-slot="${w.slot}" data-id="${id}">さっそく着る</button>`}`;
+  }
   save(); se(rar === 'SR' ? 'get' : 'coin'); buzz(rar === 'SR' ? [60, 40, 60] : 40);
-  openModal(`<h2 id="modalTitle">${rar === 'SR' ? '大当たり！' : 'でたよ！'}</h2><div class="reveal">
-    <div class="item-big ${rar}">${wearIcon(id)}</div><span class="rar ${rar}">${rar}</span>
-    <div style="font-weight:900;font-size:20px">${esc(w.name)}</div><div class="hint">${SLOT_NAME[w.slot]}のきせかえ${w.bonus ? '　' + Object.entries(w.bonus).map(([k, v]) => `${STAT_NAME[k]}+${v}`).join(' ') : ''}</div>
-    ${dup ? `<p style="margin:0;font-weight:900">もう持っていたので ${DUP_REFUND}コインに交換しました</p>` : `<button class="btn block" id="equipNow">さっそく着る</button>`}
+  openModal(`<h2 id="modalTitle">${rar === 'SR' ? '大当たり！' : 'でたよ！'}</h2><div class="reveal">${body}
     <button class="btn white block" id="againG">もう1回（${GACHA_COST}コイン）</button></div>`, root => {
-    const eq = root.querySelector('#equipNow'); if (eq) eq.onclick = () => { S.cat.equip[w.slot] = id; save(); closeModal(); toast('着がえました'); };
-    root.querySelector('#againG').onclick = () => { closeModal(); pullGacha(); };
+    const eq = root.querySelector('#equipNow'); if (eq) eq.onclick = () => { S.cat.equip[eq.dataset.slot] = eq.dataset.id; save(); closeModal(); toast('着がえました'); };
+    root.querySelector('#againG').onclick = () => { closeModal(); confirmGacha(); };
   });
 }
 
@@ -547,13 +692,13 @@ function renderTrain() {
   $('trainSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === UI.trainTab));
   const d = day();
   if (UI.trainTab === 'gym') {
-    $('trainBody').innerHTML = `${S.protein ? '<p class="boost">プロテイン効果中：次のトレーニングが1.5倍</p>' : ''}
+    $('trainBody').innerHTML = `${S.protein ? '<p class="boost">プロテイン効果中：次のトレーニングが1.5倍</p>' : ''}${S.goldbag > 0 ? `<p class="boost">金のサンドバッグ効果中：あと${S.goldbag}回 2倍</p>` : ''}
       <div class="scene gym-scene"><img src="gym-bg.jpg" alt="ジムで猫たちがトレーニングしている絵" width="900" height="718"></div>
-      <div class="gym-cards">${TRAININGS.map(t => { const ok = S.stamina >= t.cost && !S.cat.dead; return `<div class="gym-card2"><div class="gc-head">${{ bag: 'サンドバッグ<br>連打', tread: 'トレッドミル', weight: 'ウェイト<br>トレーニング' }[t.id] || esc(t.name)}</div>
+      <div class="gym-cards">${TRAININGS.map(t => { const ok = S.stamina >= t.cost && !S.cat.dead; return `<div class="gym-card2" id="gc-${t.id}"><div class="gc-head">${{ bag: 'サンドバッグ<br>連打', tread: 'トレッドミル', weight: 'ウェイト<br>トレーニング' }[t.id] || esc(t.name)}</div>
         <div class="gc-body"><span class="gc-ico">${I[{ bag: 'sandbag', tread: 'tread', weight: 'barbell' }[t.id]]}</span><span class="gc-cost">スタミナ −${t.cost}</span><span class="gc-label">${esc(t.label)}</span>
         <button class="btn small red gc-start" data-train="${t.id}" ${ok ? '' : 'disabled'}>START</button></div></div>`; }).join('')}</div>
       <div class="section-title">もちもの</div>
-      <div class="list">${SHOP_ITEMS.map(it => `<div class="card row"><span style="width:40px;height:40px;flex:none">${I[it.id]}</span><div class="grow"><div class="name">${esc(it.name)} ×${S.items[it.id] || 0}</div><div class="hint">${esc(it.desc)}</div></div><button class="btn small yellow" data-use="${it.id}" ${(S.items[it.id] || 0) > 0 ? '' : 'disabled'}>使う</button></div>`).join('')}</div>
+      <div class="list">${SHOP_ITEMS.filter(it => it.shop !== false || (S.items[it.id] || 0) > 0).map(it => `<div class="card row"><span style="width:40px;height:40px;flex:none">${I[it.id]}</span><div class="grow"><div class="name">${esc(it.name)} ×${S.items[it.id] || 0}</div><div class="hint">${esc(it.desc)}</div></div><button class="btn small yellow" data-use="${it.id}" ${(S.items[it.id] || 0) > 0 ? '' : 'disabled'}>使う</button></div>`).join('')}</div>
       <p class="hint" style="margin-top:10px">スタミナは、ごはんを記録したり歩いたりすると回復します。</p>`;
   } else if (UI.trainTab === 'mini') {
     const left = Math.max(0, RULE.miniPlaysPerDay - d.miniRewards);
@@ -561,10 +706,11 @@ function renderTrain() {
       <div class="list">
         <div class="card gym-card"><div class="ico" style="background:#FFE0EA;font-weight:900;font-size:30px;color:#C2335E">?</div><div><div style="font-weight:900">どっちが高い？</div><div class="hint">カロリーが高いほうを選ぶクイズ（5問）</div></div><button class="btn small" data-mini="quiz">あそぶ</button></div>
         <div class="card gym-card"><div class="ico">${I.sandbag}</div><div><div style="font-weight:900">サンドバッグ連打</div><div class="hint">10秒でできるだけタップ！</div></div><button class="btn small" data-mini="tap">あそぶ</button></div>
+        <div class="card gym-card"><div class="ico" style="background:#E3F4E5;font-size:30px">🐱</div><div><div style="font-weight:900">本物の猫を探せ！</div><div class="hint">お題の猫をすばやくタップ！クリアで 10〜50コイン</div></div><button class="btn small" data-mini="sagase">あそぶ</button></div>
       </div><p class="hint" style="margin-top:10px">ミニゲームはスタミナを使いません。カロリーは一般的な目安です。</p>`;
   } else {
     const eq = S.cat.equip;
-    $('trainBody').innerHTML = `<div class="locker"><div class="card preview">${petCatHTML({ idx: S.cat.idx, equip: eq, dead: S.cat.dead })}</div>
+    $('trainBody').innerHTML = `<div class="locker"><div class="card preview">${petCatHTML({ breed: S.cat.breed, idx: S.cat.idx, equip: eq, dead: S.cat.dead })}</div>
       <div class="card stats"><div style="font-weight:900">${esc(S.cat.name)}　Lv.${S.cat.level}</div>${statRows()}</div></div>
       ${['head', 'top', 'hand'].map(sl => `<div class="section-title">${SLOT_NAME[sl]}</div><div class="wear-grid">${S.owned.filter(k => WEAR[k] && WEAR[k].slot === sl).map(k => `<button class="wear" data-wear="${k}" aria-pressed="${eq[sl] === k}">${wearIcon(k)}<span>${esc(WEAR[k].name)}</span><span class="rar ${WEAR[k].rar}">${WEAR[k].rar}</span></button>`).join('')}</div>`).join('')}
       <p class="hint" style="margin-top:10px">ガチャで新しいきせかえが手に入ります。</p>`;
@@ -583,29 +729,57 @@ $('trainBody').addEventListener('click', e => {
     const id = t.dataset.use; if (!(S.items[id] > 0)) return;
     if (id === 'drink') { if (S.stamina >= 100) { toast('スタミナは満タンです'); return; } addStamina(30); toast('スタミナ +30'); }
     if (id === 'protein') { if (S.protein) { toast('もうプロテイン効果中です'); return; } S.protein = true; toast('次のトレーニングが1.5倍！'); }
+    if (id === 'goldbag') { S.goldbag = (S.goldbag || 0) + 3; toast('つぎの3回のトレーニングが2倍！'); }
     S.items[id]--; save(); se('coin'); renderAll();
   }
   else if (t.dataset.mini === 'quiz') playQuiz();
   else if (t.dataset.mini === 'tap') playTap();
+  else if (t.dataset.mini === 'sagase') openSagase();
   else if (t.dataset.wear) { const k = t.dataset.wear; S.cat.equip[WEAR[k].slot] = k; save(); se('tap'); renderAll(); }
 });
 function doTraining(t) {
   if (S.cat.dead) return;
   if (S.stamina < t.cost) { toast('スタミナが足りません。ごはんを記録するか歩こう'); se('bad'); return; }
   S.stamina -= t.cost;
-  const mult = S.protein ? 1.5 : 1, g = Math.round(rand(t.gain[0], t.gain[1]) * mult);
-  S.cat.stats[t.stat] += g; S.protein = false; S.coins += t.coin; day().trains++; addExp(t.exp); save(); se('get'); buzz([30, 30, 30]); petSound(t.id === 'bag' ? 'punch' : 'pop');
-  openModal(`<h2 id="modalTitle">${esc(t.name)}</h2><div class="reveal"><div class="tr-cat tr-${t.id}">${petCatHTML({ idx: S.cat.idx, equip: S.cat.equip })}</div>
-    <div style="font-weight:900;font-size:24px">${STAT_NAME[t.stat]} +${g}${mult > 1 ? ' <small style="color:var(--orange-d)">プロテイン×1.5</small>' : ''}</div>
-    <div class="hint">EXP +${t.exp}${t.coin ? `　コイン +${t.coin}` : ''}　スタミナ −${t.cost}</div>
-    <button class="btn block" id="trOk">OK</button></div>`, root => {
-    root.querySelector('#trOk').onclick = closeModal;
-  });
+  const gold = (S.goldbag || 0) > 0;
+  const mult = (S.protein ? 1.5 : 1) * (gold ? 2 : 1), g = Math.round(rand(t.gain[0], t.gain[1]) * mult);
+  S.cat.stats[t.stat] += g; S.protein = false; if (gold) S.goldbag--;
+  S.coins += t.coin; day().trains++; addExp(t.exp); addMood(RULE.moodPerTrain); save();
+  se('get'); buzz(25); petSound(t.id === 'bag' ? 'punch' : 'pop');
+  // 結果は画面の上にふわっと出すだけ（続けて押せる）
+  renderAll();
+  const card = document.getElementById('gc-' + t.id), scene = document.querySelector('.gym-scene');
+  if (scene) { scene.classList.remove('hit'); void scene.offsetWidth; scene.classList.add('hit'); }
+  if (card) {
+    const f = document.createElement('span'); f.className = 'gc-float';
+    f.innerHTML = `${STAT_NAME[t.stat]} +${g}${mult > 1 ? ' ×' + mult : ''}<small>EXP +${t.exp}${t.coin ? '・コイン +' + t.coin : ''}</small>`;
+    card.appendChild(f); setTimeout(() => f.remove(), 1300);
+  }
 }
 function miniReward(coins) {
   const d = day(); d.minis++;
   if (d.miniRewards >= RULE.miniPlaysPerDay) return '今日の報酬はもう受けとりました';
   d.miniRewards++; S.coins += coins; se('coin'); return `コイン +${coins}`;
+}
+// 組員作のミニゲーム「本物の猫を探せ！」（sagase.html）を全画面で開く。
+// ゲームの中からは window.parent.nyankaloMini を通してコインなどを読み書きする。
+window.nyankaloMini = {
+  info: () => ({ coins: S.coins, left: Math.max(0, RULE.miniPlaysPerDay - day().miniRewards), best: S.miniBest || 0 }),
+  reward: n => { const ok = day().miniRewards < RULE.miniPlaysPerDay; const msg = miniReward(n); save(); return { ok, msg }; },
+  played: () => { day().minis++; save(); },
+  best: sc => { S.miniBest = Math.max(S.miniBest || 0, sc || 0); save(); return S.miniBest; },
+  close: () => closeSagase()
+};
+function openSagase() {
+  if ($('miniFrame')) return;
+  const w = document.createElement('div');
+  w.className = 'mini-frame'; w.id = 'miniFrame';
+  w.innerHTML = '<iframe src="sagase.html" title="本物の猫を探せ！" allow="autoplay"></iframe>';
+  document.body.appendChild(w); document.body.classList.add('mini-open');
+}
+function closeSagase() {
+  const w = $('miniFrame'); if (!w) return;
+  w.remove(); document.body.classList.remove('mini-open'); renderAll();
 }
 function playQuiz() {
   let q = 0, ok = 0;
@@ -692,6 +866,22 @@ function chartSVG(dates) {
   s += `<text x="${x0 - 6}" y="${y(tg) + 5}" text-anchor="end" font-size="14" font-weight="900" fill="#4A2A1A" font-family="Zen Maru Gothic, sans-serif">目安</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="今週の摂取カロリー。点線が目安の${tg}kcal">${s}</svg>`;
 }
+// 糖質・たんぱく質・脂質の合計とバランス（エネルギー比）
+// 目安：日本人の食事摂取基準のエネルギー比（たんぱく質13〜20%・脂質20〜30%・炭水化物50〜65%）
+const PFC_REF = { protein: [13, 20], fat: [20, 30], carbs: [50, 65] };
+function pfcCard(meals) {
+  const ms = meals.filter(m => m.carbs != null);
+  if (!ms.length) return meals.length ? `<p class="hint" style="margin:8px 4px 0">糖質・たんぱく質・脂質は、AIで調べたごはんだけ表示されます</p>` : '';
+  const g = { carbs: 0, protein: 0, fat: 0 }; ms.forEach(m => { g.carbs += m.carbs || 0; g.protein += m.protein || 0; g.fat += m.fat || 0; });
+  const e = { protein: g.protein * 4, fat: g.fat * 9, carbs: g.carbs * 4 }, tot = e.protein + e.fat + e.carbs || 1;
+  const pct = k => Math.round(e[k] / tot * 100);
+  const row = (k, name, col) => { const p = pct(k), [lo, hi] = PFC_REF[k], mark = p < lo ? '少なめ' : p > hi ? '多め' : 'ちょうどいい';
+    return `<div class="pfc-row"><span class="pfc-name"><i style="background:${col}"></i>${name}</span><b class="num">${fmt(g[k])}g</b><span class="num pfc-pct">${p}%</span><span class="pfc-tag ${mark === 'ちょうどいい' ? 'ok' : ''}">${mark}</span></div>`; };
+  return `<div class="card pfc-card"><div class="pfc-bar" role="img" aria-label="エネルギーの割合 たんぱく質${pct('protein')}% 脂質${pct('fat')}% 糖質${pct('carbs')}%">
+      <i style="width:${pct('protein')}%;background:#E8577A"></i><i style="width:${pct('fat')}%;background:#F7C64B"></i><i style="width:${pct('carbs')}%;background:#4C8FD6"></i></div>
+    ${row('protein', 'たんぱく質', '#E8577A')}${row('fat', '脂質', '#F7C64B')}${row('carbs', '糖質', '#4C8FD6')}
+    <p class="hint" style="margin:6px 0 0">％はエネルギーの割合。目安 たんぱく質13〜20%・脂質20〜30%・炭水化物50〜65%${ms.length < meals.length ? `（${meals.length - ms.length}件は数値なし）` : ''}</p></div>`;
+}
 function renderHistory() {
   const t = todayStr(), dt = parseYmd(t);
   $('histDate').textContent = `Date ${dt.getMonth() + 1}/${dt.getDate()}（${WEEK[dt.getDay()]}）`;
@@ -703,18 +893,18 @@ function renderHistory() {
       if (!m0) return `<div class="meal-card"><span class="slot">${SLOTS[k]}</span><span class="mname">${sel <= t ? 'まだ' : '－'}</span><span class="ph">${I.plate}</span><span class="hint" style="font-weight:900">${sel === t ? 'たべてないよ' : sel < t ? '記録なし' : ''}</span></div>`;
       return `<div class="meal-card"><span class="slot">${SLOTS[k]}</span><span class="mname">${esc(m0.name)}${ms.length > 1 ? ` ほか${ms.length - 1}` : ''}</span>${m0.photo ? `<img src="${m0.photo}" alt="${esc(m0.name)}の写真">` : `<span class="ph">${I.plate}</span>`}<span class="kc num">${fmt(kc)} kcal</span></div>`;
     }).join('');
-    const list = sd.meals.length ? `<div class="list meal-list" style="margin-top:12px">${sd.meals.map(m => `<div class="card row">${m.photo ? `<img src="${m.photo}" alt="">` : `<span class="ph"></span>`}<div class="grow"><div class="name">${esc(m.name)}</div><div class="hint">${SLOTS[m.slot]}　${esc(m.time)}</div></div><b class="num">${fmt(m.kcal)} kcal</b>${sel === t ? `<button class="x-btn" data-del="${m.id}" aria-label="${esc(m.name)}を消す">✕</button>` : ''}</div>`).join('')}</div>` : '';
+    const list = sd.meals.length ? `<div class="list meal-list" style="margin-top:12px">${sd.meals.map(m => `<div class="card row">${m.photo ? `<img src="${m.photo}" alt="">` : `<span class="ph"></span>`}<div class="grow"><div class="name">${esc(m.name)}</div><div class="hint">${SLOTS[m.slot]}　${esc(m.time)}${m.carbs != null ? `<br>糖質${m.carbs}g・たんぱく質${m.protein}g・脂質${m.fat}g` : ''}</div></div><b class="num">${fmt(m.kcal)} kcal</b>${sel === t ? `<button class="x-btn" data-del="${m.id}" aria-label="${esc(m.name)}を消す">✕</button>` : ''}</div>`).join('')}</div>` : '';
     $('histBody').innerHTML = `<div class="card chart-card">${chartSVG(dates)}</div>
       <div class="chips" style="justify-content:space-between;margin-top:8px">${dates.map(d => `<button class="chip" data-day="${d}" ${d > t ? 'disabled' : ''} style="${d === sel ? 'background:var(--yellow)' : ''}">${WEEK[parseYmd(d).getDay()]} <span class="num">${intake(d) ? fmt(intake(d)) : '-'}</span></button>`).join('')}</div>
       ${tabs}
       <div class="section-title">${sel === t ? '本日' : `${sdt.getMonth() + 1}/${sdt.getDate()}（${WEEK[sdt.getDay()]}）`}</div>
       <div class="meals3">${cards}</div>
-      <div class="card" style="margin-top:12px;padding:10px 14px;display:flex;justify-content:space-between;font-weight:900"><span>合計</span><span class="num">${fmt(intake(sel))} / ${fmt(target(S.user))} kcal</span></div>${list}`;
+      <div class="card" style="margin-top:12px;padding:10px 14px;display:flex;justify-content:space-between;font-weight:900"><span>合計</span><span class="num">${fmt(intake(sel))} / ${fmt(target(S.user))} kcal</span></div>${pfcCard(sd.meals)}${list}`;
   } else {
     const st = bodyState(S.cat.idx), recDays = Object.values(S.days).filter(d => d.meals.length).length;
     const meals = Object.values(S.days).reduce((a, d) => a + d.meals.length, 0), steps = Object.values(S.days).reduce((a, d) => a + (d.steps || 0), 0);
     $('histBody').innerHTML = `${tabs}
-      <div class="locker" style="margin-top:12px"><div class="card preview">${petCatHTML({ idx: S.cat.idx, equip: S.cat.equip, dead: S.cat.dead })}</div>
+      <div class="locker" style="margin-top:12px"><div class="card preview">${petCatHTML({ breed: S.cat.breed, idx: S.cat.idx, equip: S.cat.equip, dead: S.cat.dead })}</div>
       <div class="card stats"><div style="font-weight:900">${esc(S.cat.name)}　Lv.${S.cat.level}</div>${statRows()}</div></div>
       <div class="section-title">体型</div>
       <div class="card" style="padding:12px 14px"><div style="display:flex;justify-content:space-between;font-weight:900;margin-bottom:8px"><span>${st[0]}</span><span class="num">${S.cat.idx > 0 ? '+' : ''}${S.cat.idx}</span></div>
@@ -754,6 +944,7 @@ function renderSettings() {
     <div class="card set-group"><div class="set-row"><div class="grow">言語 / Language</div><select id="sLang" style="width:150px"><option value="ja" selected>日本語</option><option value="zh" disabled>中文（準備中）</option><option value="en" disabled>English（準備中）</option></select></div></div>
     <div class="section-title">そのほか</div>
     <div class="card set-group">
+      <div class="set-row"><div class="grow">猫の種類<small>いまは「${esc((CATS[S.cat.breed] || CATS.tabby).name)}」</small></div><button class="btn small white" id="sCat">かえる</button></div>
       <div class="set-row"><div class="grow">プロフィール・目標カロリー</div><button class="btn small white" id="sProfile">ひらく</button></div>
       <div class="set-row"><div class="grow">データをすべて消す<small>猫・コイン・記録が最初にもどります</small></div><button class="btn small ${resetArmed ? 'red' : 'white'}" id="sReset">${resetArmed ? 'もう一度押すと消えます' : '消す'}</button></div>
     </div>
@@ -770,9 +961,10 @@ $('setBody').addEventListener('click', async e => {
     else s.notify = false;
   }
   else if (b.id === 'sProfile') { openProfile(false); return; }
+  else if (b.id === 'sCat') { openCatPicker(); return; }
   else if (b.id === 'sReset') {
     if (!resetArmed) { resetArmed = true; renderSettings(); setTimeout(() => { resetArmed = false; if (UI.tab === 'settings') renderSettings(); }, 4000); return; }
-    try { localStorage.removeItem(KEY); } catch (err) {} S = defaultState(); resetArmed = false; save(); setTab('home'); openProfile(true); return;
+    try { localStorage.removeItem(KEY); } catch (err) {} S = defaultState(); resetArmed = false; save(); setTab('home'); openWelcome(); return;
   }
   save(); renderSettings();
 });
@@ -817,5 +1009,7 @@ $('tiShop').innerHTML = I.bag; $('tiTrain').innerHTML = I.dumb; $('tiHome').inne
 
 rollover();
 setTab('home');
-if (!S.onboarded) openProfile(true);
+renderTitle();
+$('title').addEventListener('click', startFromTitle);
+$('title').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startFromTitle(); } });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { rollover(); renderAll(); } });

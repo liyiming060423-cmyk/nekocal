@@ -4,6 +4,7 @@
 .pc-dead svg { width: 100%; height: 100%; display: block; }
 .pc-shape { position: absolute; inset: 0; transform: scale(var(--sx, 1), var(--sy, 1)); transform-origin: 50% 100%; transition: transform .7s cubic-bezier(.3, 1.5, .5, 1); }
 .pc-act, .pc-idle { position: absolute; inset: 0; transform-origin: 50% 100%; }
+.pc-art { position: absolute; top: 0; height: 100%; }
 .pc img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; -webkit-user-drag: none; }
 .pc-idle { animation: pcBreathe 2.6s ease-in-out infinite; }
 .pc-gear { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }

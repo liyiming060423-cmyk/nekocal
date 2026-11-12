@@ -19,43 +19,59 @@
 <link rel="stylesheet" href="petcat.css">
 </head>
 <body>
+<!-- ===== タイトル画面（毎回はじめに出る） ===== -->
+<div id="title" class="title" role="button" tabindex="0" aria-label="タップしてスタート">
+  <div class="t-logo"><span>にゃん</span><span>カロ</span></div>
+  <p class="t-sub">ごはん・おさんぽ・筋トレで猫をそだてよう</p>
+  <div class="t-cats" id="titleCats"></div>
+  <p class="t-hello" id="titleHello"></p>
+  <div class="t-start">タップしてスタート</div>
+  <p class="t-foot">宮崎情報ビジネス専門学校</p>
+</div>
 <div id="app">
 
   <!-- ===== ホーム ===== -->
   <section id="tab-home" class="tab" aria-label="ホーム">
-    <header class="home-top">
-      <button id="btnUser" class="icon-btn" aria-label="ユーザー"></button>
-      <div class="day-badge"><span id="dayWeek"></span><b id="dayNum">1</b><small>日目</small></div>
-      <div class="top-right">
-        <button id="btnLogin" class="icon-btn" aria-label="ログボ・プレゼント"><span class="dot" id="dotLogin" hidden></span></button>
-        <button id="btnMission" class="icon-btn" aria-label="ミッション"><span class="dot" id="dotMission" hidden></span></button>
-      </div>
+    <header class="h-top">
+      <button class="coin-chip" id="pillCoins" aria-label="肉球コイン（ショップへ）"></button>
+      <button class="name-chip" id="btnUser" aria-label="プロフィールを編集"></button>
+      <button id="btnLogin" class="icon-btn" aria-label="ログボ・プレゼント"><span class="dot" id="dotLogin" hidden></span></button>
+      <button id="btnMission" class="icon-btn" aria-label="ミッション"><span class="dot" id="dotMission" hidden></span></button>
     </header>
-    <button class="kcal-card" id="kcalCard" aria-label="今日のカロリー">
-      <span class="kcal-nums">今日 <b id="kcalIntake">0</b> / 目標 <b id="kcalTarget">0</b> kcal</span>
-      <span class="kcal-bar"><i id="kcalBar"></i><em id="kcalMark"></em></span>
-    </button>
+    <div class="h-row2">
+      <button class="kcal-card" id="kcalCard" aria-label="今日のカロリー">
+        <span class="kcal-ico" id="kcalIco"></span>
+        <span class="kcal-main">
+          <span class="kcal-nums">今日 <b id="kcalIntake">0</b> / 目標 <b id="kcalTarget">0</b> kcal</span>
+          <span class="kcal-row"><span class="day-chip" id="dayChip"></span><span class="kcal-bar"><i id="kcalBar"></i><em id="kcalMark"></em></span></span>
+        </span>
+      </button>
+      <button class="event-banner" id="eventBanner"></button>
+    </div>
 
-    <div class="stage">
-      <div class="stamina" role="meter" aria-label="スタミナ" aria-valuemin="0" aria-valuemax="100" id="stamMeter">
-        <div class="stam-tube"><div class="stam-fill" id="stamFill"></div></div>
-        <span class="stam-label">スタミナ</span>
-        <b class="stam-val" id="stamVal">0%</b>
-      </div>
-      <div class="cat-wrap" id="catWrap"></div>
+    <div class="h-stage">
       <div class="bubble" id="bubble"></div>
-      <div class="home-pills">
-        <button class="pill" id="pillCoins" aria-label="肉球コイン"></button>
-        <button class="pill" id="pillSteps" aria-label="今日の歩数"></button>
-        <span class="pill" id="pillLevel"></span>
+      <div class="cat-wrap" id="catWrap"></div>
+      <div class="h-left">
+        <div class="meter-card" role="meter" aria-label="スタミナ" aria-valuemin="0" aria-valuemax="100" id="stamMeter">
+          <span class="mc-head"><span class="mc-ico" id="stamIco"></span>スタミナ</span><b class="mc-val" id="stamVal">0%</b>
+          <span class="mc-bar"><i id="stamFill"></i></span>
+        </div>
+        <div class="meter-card" role="meter" aria-label="ごきげん" aria-valuemin="0" aria-valuemax="100" id="moodMeter">
+          <span class="mc-head"><span class="mc-ico" id="moodIco"></span>ごきげん</span><b class="mc-val" id="moodVal">0%</b>
+          <span class="mc-bar"><i id="moodFill"></i></span>
+        </div>
+      </div>
+      <div class="h-right">
+        <button class="gacha-btn" id="btnGacha" aria-label="ガチャへ"><span class="dot" id="dotGacha" hidden></span></button>
+        <button id="btnCamera" class="camera-btn" aria-label="ごはんを撮る"></button>
       </div>
       <button class="btn revive" id="btnRevive" hidden>新しい猫を迎える</button>
     </div>
 
-    <div class="home-bottom">
-      <button id="btnMini" class="mini-btn">ミニゲーム</button>
-      <div class="body-pill" id="bodyPill"></div>
-      <button id="btnCamera" class="camera-btn" aria-label="ごはんを撮る"></button>
+    <div class="h-bottom">
+      <button class="steps-card" id="pillSteps" aria-label="今日の歩数"></button>
+      <button class="state-btn" id="bodyPill" aria-label="猫のステータス"></button>
     </div>
   </section>
 

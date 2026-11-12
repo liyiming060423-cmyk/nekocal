@@ -1,7 +1,7 @@
 // にゃんカロ service worker
 // アプリ本体はキャッシュしてオフラインでも起動できるようにする。
 // 更新したら VERSION の数字を上げると、利用者のスマホに新しい版が届く。
-const VERSION = 'v6';
+const VERSION = 'v8';
 const CACHE = 'nekocal-' + VERSION;
 const APP_FILES = [
   './',
@@ -12,10 +12,25 @@ const APP_FILES = [
   './cat.js',
   './petcat.js',
   './petcat.css',
-  './cat-body.png',
-  './cat-tail.png',
-  './cat-shirt.png',
-  './cat-gloves.png',
+  './sagase.html',
+  './sagase.css',
+  './home-bg.jpg',
+  './cats/tabby-body.png',
+  './cats/tabby-tail.png',
+  './cats/tabby-shirt.png',
+  './cats/tabby-gloves.png',
+  './cats/white-body.png',
+  './cats/white-tail.png',
+  './cats/white-shirt.png',
+  './cats/white-gloves.png',
+  './cats/longwhite-body.png',
+  './cats/longwhite-tail.png',
+  './cats/longwhite-shirt.png',
+  './cats/longwhite-gloves.png',
+  './cats/grey-body.png',
+  './cats/grey-tail.png',
+  './cats/grey-shirt.png',
+  './cats/grey-gloves.png',
   './gym-bg.jpg',
   './shop-bg.jpg',
   './app.js',
@@ -43,11 +58,14 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
 
   // 画面（HTML）：ネット優先、つながらなければキャッシュ
+  // （ミニゲームの sagase.html も画面なので、ページごとに別々に保存する）
   if (req.mode === 'navigate') {
+    const isGame = url.pathname.endsWith('/sagase.html');
+    const key = isGame ? './sagase.html' : './index.html';
     e.respondWith(
       fetch(req)
-        .then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put('./index.html', copy)); return res; })
-        .catch(() => caches.match('./index.html'))
+        .then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(key, copy)); } return res; })
+        .catch(() => caches.match(key))
     );
     return;
   }

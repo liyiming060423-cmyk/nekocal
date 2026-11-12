@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>本物の猫を探せ！</title>
+  <!-- 組員作のミニゲーム。にゃんカロ用に、Tailwind をオフライン用の sagase.css にし、コインをアプリのコインにつないだ -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+  <link rel="stylesheet" href="sagase.css">
+  <style>
+    
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', -apple-system, BlinkMacSystemFont, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      background-color: #f3efe6;
+    }
+
+    /* Screen Shake Animation on Error */
+    @keyframes shake {
+      0%, 100% { transform: translate(0, 0); }
+      20% { transform: translate(-8px, 4px); }
+      40% { transform: translate(8px, -4px); }
+      60% { transform: translate(-5px, -2px); }
+      80% { transform: translate(5px, 2px); }
+    }
+    .animate-shake {
+      animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both;
+    }
+
+    /* Red Flash on Miss */
+    @keyframes red-flash {
+      0% { box-shadow: inset 0 0 0 0px rgba(239, 68, 68, 0); }
+      30% { box-shadow: inset 0 0 0 16px rgba(239, 68, 68, 0.65); }
+      100% { box-shadow: inset 0 0 0 0px rgba(239, 68, 68, 0); }
+    }
+    .flash-error {
+      animation: red-flash 0.35s ease-out;
+    }
+
+    /* Floating HUD Card Shadow */
+    .hud-card-shadow {
+      box-shadow: 0 8px 24px -4px rgba(120, 95, 75, 0.18), 0 3px 6px -2px rgba(120, 95, 75, 0.08);
+    }
+  </style>
+</head>
+<body class="w-full h-full flex flex-col items-center justify-center p-0 sm:p-4 text-stone-800">
+
+  <!-- Main Game Outer Container -->
+  <div id="gameFrame" class="relative w-full h-full max-w-4xl sm:h-auto sm:aspect-[16/10] bg-[#FAF6EE] sm:border-4 border-stone-300/80 sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+
+    <!-- TOP FLOATING HUD CARD -->
+    <div class="absolute top-2 sm:top-3 left-1/2 -translate-x-1/2 z-10 w-[calc(100%-6.5rem)] max-w-xl">
+      <div class="hud-card-shadow bg-white/95 backdrop-blur-md border border-stone-200/90 rounded-2xl sm:rounded-3xl px-3 py-2 sm:px-4 sm:py-2.5 flex items-center justify-between">
+        
+        <!-- Target Preview Icon & Text -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Preview Thumbnail Canvas -->
+          <div class="w-11 h-11 sm:w-14 sm:h-14 rounded-full border-2 border-amber-500/80 bg-[#FAF6EE] flex items-center justify-center shadow-inner overflow-hidden flex-shrink-0">
+            <canvas id="targetIconCanvas" class="w-full h-full object-contain"></canvas>
+          </div>
+          
+          <!-- Target Title -->
+          <div class="flex flex-col">
+            <span id="diffBadge" class="text-[9px] sm:text-[10px] font-black text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full w-max leading-none mb-0.5">初級</span>
+            <h2 id="targetTitle" class="text-xs sm:text-base font-black text-stone-800 tracking-wide leading-tight">
+              トラ猫を探せ！
+            </h2>
+          </div>
+        </div>
+
+        <!-- Stage, Score, Coins & Time Stats -->
+        <div class="text-right flex flex-col justify-center pl-1 sm:pl-2">
+          <div class="text-[10px] sm:text-xs font-bold text-stone-500 tracking-wider">
+            <span id="catCountDisplay" class="font-black text-stone-800">0/8匹</span>
+            <span class="mx-0.5 sm:mx-1 text-stone-300">|</span>
+            <span class="text-amber-500">🪙</span> <span id="coinDisplay" class="font-extrabold text-amber-600">0</span>
+          </div>
+          <div id="timeDisplay" class="text-xs sm:text-base font-black text-rose-500 tracking-wider mt-0.5">
+            TIME: 30.0s
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- にゃんカロにもどるボタン -->
+    <button id="backBtn" aria-label="にゃんカロにもどる" class="absolute top-3 left-3 sm:top-4 sm:left-4 z-40 bg-white/85 hover:bg-white text-stone-700 border border-stone-300/80 rounded-full shadow-md transition active:scale-95 font-black flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 text-lg">×</button>
+
+    <!-- Sound Toggle Button -->
+    <button id="soundBtn" aria-label="Toggle Sound" class="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 bg-white/85 hover:bg-white text-stone-700 border border-stone-300/80 rounded-full p-2 shadow-md transition active:scale-95 text-xs font-bold flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10">
+      <span id="soundIcon" class="text-base sm:text-lg">🔊</span>
+    </button>
+
+    <!-- Canvas Game Area -->
+    <canvas id="gameCanvas" class="w-full h-full block cursor-pointer"></canvas>
+
+    <!-- DIFFICULTY SELECTION & START OVERLAY SCREEN -->
+    <div id="startOverlay" class="absolute inset-0 bg-[#FAF6EE]/95 backdrop-blur-md z-30 flex flex-col items-center justify-center p-4 sm:p-6 text-center overflow-y-auto">
+      <div class="text-5xl sm:text-6xl mb-2 animate-bounce">🐱</div>
+      <h1 class="text-2xl sm:text-3xl font-black text-stone-800 mb-1 tracking-tight">本物の猫を探せ！</h1>
+      <p class="text-stone-600 text-xs sm:text-sm max-w-sm mb-3 font-bold leading-relaxed">
+        お題とおなじ猫をすばやくタップ！<br>目標匹数を達成してコインをGETしよう！
+      </p>
+
+      <!-- Total Saved Coins Display -->
+      <div class="bg-amber-100/80 border border-amber-300 text-amber-800 font-extrabold text-xs sm:text-sm px-4 py-1.5 rounded-full mb-4 flex items-center gap-1.5 shadow-sm">
+        <span>所持コイン:</span>
+        <span class="text-base">🪙</span>
+        <span id="totalCoinsMenu" class="text-amber-900 font-black text-sm sm:text-base">0</span>
+      </div>
+      <p id="rewardLeft" class="text-stone-600 text-[11px] sm:text-xs font-bold -mt-2 mb-3"></p>
+
+      <!-- Difficulty Selection Buttons -->
+      <div class="w-full max-w-sm space-y-2.5 mb-2">
+        <!-- Beginner Button -->
+        <button data-diff="easy" class="diffBtn w-full bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-white border-b-4 border-emerald-700 rounded-2xl p-3 shadow-md flex items-center justify-between text-left transition-all cursor-pointer">
+          <div class="flex items-center gap-3">
+            <span class="text-3xl">🐣</span>
+            <div>
+              <div class="font-black text-base sm:text-lg leading-tight">初級（ゆったり）</div>
+              <div class="text-[11px] text-emerald-100 font-bold">目標 8匹クリアで <span class="text-yellow-200 font-extrabold">10🪙</span> / 制限時間 30秒</div>
+            </div>
+          </div>
+          <span class="text-xs bg-emerald-700/60 font-black px-2.5 py-1 rounded-full">スタート</span>
+        </button>
+
+        <!-- Normal Button -->
+        <button data-diff="normal" class="diffBtn w-full bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-white border-b-4 border-amber-700 rounded-2xl p-3 shadow-md flex items-center justify-between text-left transition-all cursor-pointer">
+          <div class="flex items-center gap-3">
+            <span class="text-3xl">🐾</span>
+            <div>
+              <div class="font-black text-base sm:text-lg leading-tight">中級（スピード）</div>
+              <div class="text-[11px] text-amber-100 font-bold">目標 10匹クリアで <span class="text-yellow-200 font-extrabold">30🪙</span> / 制限時間 20秒</div>
+            </div>
+          </div>
+          <span class="text-xs bg-amber-700/60 font-black px-2.5 py-1 rounded-full">スタート</span>
+        </button>
+
+        <!-- Hard Button -->
+        <button data-diff="hard" class="diffBtn w-full bg-rose-500 hover:bg-rose-400 active:scale-[0.98] text-white border-b-4 border-rose-700 rounded-2xl p-3 shadow-md flex items-center justify-between text-left transition-all cursor-pointer">
+          <div class="flex items-center gap-3">
+            <span class="text-3xl">⚡</span>
+            <div>
+              <div class="font-black text-base sm:text-lg leading-tight">上級（爆速サバイバル）</div>
+              <div class="text-[11px] text-rose-100 font-bold">目標 15匹クリアで <span class="text-yellow-200 font-extrabold">50🪙</span> / 初期12秒 (+2.0秒)</div>
+            </div>
+          </div>
+          <span class="text-xs bg-rose-700/60 font-black px-2.5 py-1 rounded-full">スタート</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- GAME OVER / CLEAR OVERLAY SCREEN -->
+    <div id="gameOverOverlay" class="hidden absolute inset-0 bg-stone-900/85 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center text-white">
+      <div id="resultEmoji" class="text-6xl mb-2 animate-bounce">🎉</div>
+      <h2 id="resultHeader" class="text-3xl sm:text-4xl font-black text-emerald-400 mb-1">CLEAR!</h2>
+      <p id="resultSub" class="text-stone-200 text-xs sm:text-sm font-bold mb-4">目標 8匹を見事達成！</p>
+
+      <div class="bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-4 w-full max-w-xs mb-5 space-y-2">
+        <div class="flex justify-between text-sm"><span class="text-stone-300 font-bold">難易度:</span><span id="finalDiff" class="font-black text-amber-300">初級</span></div>
+        <div class="flex justify-between text-sm"><span class="text-stone-300 font-bold">見つけた猫:</span><span id="finalCats" class="font-black text-white text-base">8匹 / 目標 8匹</span></div>
+        <div class="flex justify-between text-sm"><span class="text-stone-300 font-bold">獲得コイン:</span><span id="finalCoins" class="font-black text-yellow-300 text-base">🪙 +10</span></div>
+        <div id="finalNote" class="text-[11px] text-stone-300 font-bold text-right -mt-1"></div>
+        <div class="flex justify-between text-sm"><span class="text-stone-300 font-bold">最終スコア:</span><span id="finalScore" class="font-black text-emerald-400 text-lg">0</span></div>
+        <div class="flex justify-between text-sm border-t border-white/15 pt-1.5"><span class="text-stone-300 font-bold">最高記録:</span><span id="finalBest" class="font-black text-emerald-300 text-lg">0</span></div>
+      </div>
+
+      <!-- DUAL BUTTONS: RETRY SAME DIFFICULTY & BACK TO MENU -->
+      <div class="flex flex-col sm:flex-row gap-2.5 w-full max-w-xs">
+        <button id="retryBtn" class="flex-1 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-white font-black text-sm sm:text-base py-3 rounded-full shadow-lg border-2 border-emerald-300 transition-all cursor-pointer">
+          もう一度遊ぶ
+        </button>
+        <button id="restartBtn" class="flex-1 bg-amber-500 hover:bg-amber-400 active:scale-95 text-white font-black text-sm sm:text-base py-3 rounded-full shadow-lg border-2 border-amber-300 transition-all cursor-pointer">
+          難易度を選ぶ
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Prevent iOS Safari bounce scroll
+    document.addEventListener('touchmove', (e) => {
+      if (e.target.tagName !== 'BUTTON') {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    /* ===================================================================
+       1. WEB AUDIO API SYNTHESIS ENGINE (Meows, Coin Chimes, Fanfare)
+       =================================================================== */
+    class AudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playMeow() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(540, now);
+        osc.frequency.exponentialRampToValueAtTime(980, now + 0.12);
+        osc.frequency.exponentialRampToValueAtTime(620, now + 0.28);
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.3, now + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
+
+      playCoin() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc1.type = 'sine';
+        osc2.type = 'sine';
+        osc1.frequency.setValueAtTime(987.77, now); // B5
+        osc2.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.25, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc1.start(now);
+        osc2.start(now + 0.08);
+        osc1.stop(now + 0.35);
+        osc2.stop(now + 0.45);
+      }
+
+      playClearFanfare() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, idx) => {
+          const now = this.ctx.currentTime + idx * 0.1;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now);
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(0.25, now + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.38);
+        });
+      }
+
+      playWrong() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc1.type = 'sawtooth';
+        osc2.type = 'square';
+        osc1.frequency.setValueAtTime(140, now);
+        osc2.frequency.setValueAtTime(180, now);
+
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc1.start(now); osc2.start(now);
+        osc1.stop(now + 0.25); osc2.stop(now + 0.25);
+      }
+
+      playGameOver() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        [400, 340, 280, 220].forEach((freq, idx) => {
+          const now = this.ctx.currentTime + idx * 0.12;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        });
+      }
+    }
+
+    const sound = new AudioEngine();
+
+    function unlockMobileAudio() {
+      sound.init();
+      window.removeEventListener('touchstart', unlockMobileAudio);
+      window.removeEventListener('pointerdown', unlockMobileAudio);
+    }
+    window.addEventListener('touchstart', unlockMobileAudio, { once: true });
+    window.addEventListener('pointerdown', unlockMobileAudio, { once: true });
+
+    /* ===================================================================
+       2. REALISTIC CANVAS CAT VECTOR GRAPHICS ENGINE
+       =================================================================== */
+
+    const BREEDS = {
+      tabby: {
+        id: 'tabby',
+        title: 'トラ猫を探せ！',
+        baseColor: '#d97706',
+        highlightColor: '#fef3c7',
+        shadowColor: '#92400e',
+        innerEar: '#fca5a5',
+        eyeIrisInner: '#f59e0b',
+        eyeIrisOuter: '#b45309',
+        eyeStyle: 'almond_amber',
+        stripes: '#783c0c'
+      },
+      white: {
+        id: 'white',
+        title: '白猫を探せ！',
+        baseColor: '#ffffff',
+        highlightColor: '#ffffff',
+        shadowColor: '#e2e8f0',
+        innerEar: '#fecdd3',
+        eyeIrisInner: '#38bdf8',
+        eyeIrisOuter: '#0284c7',
+        eyeStyle: 'almond_blue'
+      },
+      black: {
+        id: 'black',
+        title: '黒猫を探せ！',
+        baseColor: '#27272a',
+        highlightColor: '#52525b',
+        shadowColor: '#18181b',
+        innerEar: '#f472b6',
+        eyeIrisInner: '#facc15',
+        eyeIrisOuter: '#ca8a04',
+        eyeStyle: 'almond_gold'
+      },
+      grey: {
+        id: 'grey',
+        title: '灰猫を探せ！',
+        baseColor: '#64748b',
+        highlightColor: '#cbd5e1',
+        shadowColor: '#334155',
+        innerEar: '#cbd5e1',
+        eyeIrisInner: '#4ade80',
+        eyeIrisOuter: '#15803d',
+        eyeStyle: 'almond_green'
+      },
+      patch: {
+        id: 'patch',
+        title: 'ぶち猫を探せ！',
+        baseColor: '#f8fafc',
+        highlightColor: '#ffffff',
+        shadowColor: '#e2e8f0',
+        innerEar: '#fca5a5',
+        eyeIrisInner: '#06b6d4',
+        eyeIrisOuter: '#0e7490',
+        patchColor: '#334155',
+        eyeStyle: 'almond_cyan'
+      },
+      calico: {
+        id: 'calico',
+        title: '三毛猫を探せ！',
+        baseColor: '#ffffff',
+        highlightColor: '#ffffff',
+        shadowColor: '#e2e8f0',
+        innerEar: '#fca5a5',
+        eyeIrisInner: '#f59e0b',
+        eyeIrisOuter: '#b45309',
+        calicoOrange: '#ea580c',
+        calicoBlack: '#1e293b',
+        eyeStyle: 'almond_hazel'
+      }
+    };
+
+    const BREED_KEYS = Object.keys(BREEDS);
+
+    // Render detailed realistic cat head
+    function drawCat(ctx, centerX, centerY, radius, breedData) {
+      ctx.save();
+      ctx.translate(centerX, centerY);
+
+      const strokeColor = '#2b231f';
+      const strokeWidth = radius * 0.08;
+
+      // 1. EARS WITH FUR SHADING
+      function drawEar(isLeft) {
+        const sign = isLeft ? -1 : 1;
+        ctx.save();
+
+        // Outer Ear Shadow & Shape
+        ctx.beginPath();
+        ctx.moveTo(sign * radius * 0.45, -radius * 0.55);
+        ctx.quadraticCurveTo(sign * radius * 0.95, -radius * 1.15, sign * radius * 0.82, -radius * 1.18);
+        ctx.quadraticCurveTo(sign * radius * 0.35, -radius * 0.95, sign * radius * 0.15, -radius * 0.78);
+        ctx.closePath();
+
+        ctx.fillStyle = (isLeft && breedData.id === 'patch') ? breedData.patchColor : breedData.baseColor;
+        ctx.fill();
+        ctx.lineWidth = strokeWidth;
+        ctx.strokeStyle = strokeColor;
+        ctx.stroke();
+
+        // Inner Ear Fluff / Depth
+        ctx.beginPath();
+        ctx.moveTo(sign * radius * 0.48, -radius * 0.62);
+        ctx.lineTo(sign * radius * 0.76, -radius * 1.05);
+        ctx.lineTo(sign * radius * 0.28, -radius * 0.82);
+        ctx.closePath();
+        ctx.fillStyle = breedData.innerEar;
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      drawEar(true);
+      drawEar(false);
+
+      // 2. HEAD SHAPE WITH RADIAL LIGHTING
+      const headGrad = ctx.createRadialGradient(
+        -radius * 0.2, -radius * 0.2, radius * 0.1,
+        0, 0, radius
+      );
+      headGrad.addColorStop(0, breedData.highlightColor || breedData.baseColor);
+      headGrad.addColorStop(0.75, breedData.baseColor);
+      headGrad.addColorStop(1, breedData.shadowColor || breedData.baseColor);
+
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.fillStyle = headGrad;
+      ctx.fill();
+      ctx.lineWidth = strokeWidth;
+      ctx.strokeStyle = strokeColor;
+      ctx.stroke();
+
+      // 3. COAT PATTERNS
+      if (breedData.id === 'tabby') {
+        // Tabby Forehead M-Mark
+        ctx.fillStyle = breedData.stripes;
+        ctx.beginPath();
+        ctx.moveTo(-radius * 0.08, -radius * 0.88);
+        ctx.lineTo(0, -radius * 0.52);
+        ctx.lineTo(radius * 0.08, -radius * 0.88);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(-radius * 0.38, -radius * 0.78);
+        ctx.lineTo(-radius * 0.18, -radius * 0.48);
+        ctx.lineTo(-radius * 0.26, -radius * 0.84);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(radius * 0.38, -radius * 0.78);
+        ctx.lineTo(radius * 0.18, -radius * 0.48);
+        ctx.lineTo(radius * 0.26, -radius * 0.84);
+        ctx.fill();
+      } else if (breedData.id === 'patch') {
+        // Eye Patch
+        ctx.beginPath();
+        ctx.ellipse(-radius * 0.34, -radius * 0.08, radius * 0.44, radius * 0.48, 0.2, 0, Math.PI * 2);
+        ctx.fillStyle = breedData.patchColor;
+        ctx.fill();
+      } else if (breedData.id === 'calico') {
+        // Calico Patches
+        ctx.beginPath();
+        ctx.ellipse(-radius * 0.42, -radius * 0.42, radius * 0.42, radius * 0.38, -0.3, 0, Math.PI * 2);
+        ctx.fillStyle = breedData.calicoOrange;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.ellipse(radius * 0.45, -radius * 0.35, radius * 0.38, radius * 0.35, 0.4, 0, Math.PI * 2);
+        ctx.fillStyle = breedData.calicoBlack;
+        ctx.fill();
+      }
+
+      // 4. REALISTIC MUZZLE (WHISKER PADS)
+      const muzzleY = radius * 0.22;
+      ctx.beginPath();
+      ctx.ellipse(-radius * 0.18, muzzleY, radius * 0.24, radius * 0.18, -0.15, 0, Math.PI * 2);
+      ctx.ellipse(radius * 0.18, muzzleY, radius * 0.24, radius * 0.18, 0.15, 0, Math.PI * 2);
+      ctx.fillStyle = breedData.id === 'black' ? '#3f3f46' : 'rgba(255, 255, 255, 0.85)';
+      ctx.fill();
+
+      // 5. DETAILED ALMOND CAT EYES
+      const eyeOffsetX = radius * 0.36;
+      const eyeOffsetY = -radius * 0.12;
+      const eyeRx = radius * 0.24;
+      const eyeRy = radius * 0.21;
+
+      function renderRealisticEye(isLeft) {
+        const ex = isLeft ? -eyeOffsetX : eyeOffsetX;
+        ctx.save();
+        ctx.translate(ex, eyeOffsetY);
+
+        // Eye Contour / Eyeliner Base
+        ctx.beginPath();
+        ctx.ellipse(0, 0, eyeRx, eyeRy, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#1c1917';
+        ctx.fill();
+
+        // Iris Radial Gradient
+        const irisGrad = ctx.createRadialGradient(0, 0, eyeRx * 0.15, 0, 0, eyeRx * 0.88);
+        irisGrad.addColorStop(0, breedData.eyeIrisInner);
+        irisGrad.addColorStop(0.7, breedData.eyeIrisOuter);
+        irisGrad.addColorStop(1, '#0f172a');
+
+        ctx.beginPath();
+        ctx.ellipse(0, 0, eyeRx * 0.85, eyeRy * 0.85, 0, 0, Math.PI * 2);
+        ctx.fillStyle = irisGrad;
+        ctx.fill();
+
+        // Vertical Cat Pupil (Tapered Slit)
+        ctx.beginPath();
+        ctx.ellipse(0, 0, eyeRx * 0.24, eyeRy * 0.72, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#09090b';
+        ctx.fill();
+
+        // Multi-point Specular Highlights (Catchlights)
+        ctx.beginPath();
+        ctx.ellipse(-eyeRx * 0.28, -eyeRy * 0.28, eyeRx * 0.22, eyeRy * 0.18, -0.3, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(eyeRx * 0.25, eyeRy * 0.25, eyeRx * 0.12, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      renderRealisticEye(true);
+      renderRealisticEye(false);
+
+      // 6. CAT NOSE WITH NOSTRILS
+      ctx.beginPath();
+      ctx.moveTo(-radius * 0.1, radius * 0.12);
+      ctx.lineTo(radius * 0.1, radius * 0.12);
+      ctx.lineTo(0, radius * 0.22);
+      ctx.closePath();
+      ctx.fillStyle = breedData.id === 'black' ? '#18181b' : '#f43f5e';
+      ctx.fill();
+
+      // 7. MOUTH CURVES
+      ctx.beginPath();
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = strokeWidth * 0.85;
+      ctx.lineCap = 'round';
+      ctx.moveTo(0, radius * 0.22);
+      ctx.lineTo(0, radius * 0.27);
+
+      ctx.moveTo(-radius * 0.16, radius * 0.32);
+      ctx.quadraticCurveTo(-radius * 0.08, radius * 0.38, 0, radius * 0.27);
+      ctx.quadraticCurveTo(radius * 0.08, radius * 0.38, radius * 0.16, radius * 0.32);
+      ctx.stroke();
+
+      // 8. REALISTIC CURVING WHISKERS
+      ctx.strokeStyle = breedData.id === 'black' ? 'rgba(255, 255, 255, 0.75)' : 'rgba(43, 35, 31, 0.85)';
+      ctx.lineWidth = strokeWidth * 0.55;
+
+      function drawWhiskers(isLeft) {
+        const sign = isLeft ? -1 : 1;
+        const wx = sign * radius * 0.28;
+        const wy = radius * 0.24;
+
+        ctx.beginPath();
+        ctx.moveTo(wx, wy - radius * 0.04);
+        ctx.quadraticCurveTo(sign * radius * 0.65, wy - radius * 0.12, sign * radius * 1.02, wy - radius * 0.18);
+
+        ctx.moveTo(wx, wy);
+        ctx.quadraticCurveTo(sign * radius * 0.68, wy + radius * 0.02, sign * radius * 1.05, wy + radius * 0.06);
+
+        ctx.moveTo(wx, wy + radius * 0.04);
+        ctx.quadraticCurveTo(sign * radius * 0.65, wy + radius * 0.16, sign * radius * 0.98, wy + radius * 0.24);
+        ctx.stroke();
+      }
+
+      drawWhiskers(true);
+      drawWhiskers(false);
+
+      ctx.restore();
+    }
+
+    /* ===================================================================
+       3. GAME STATE & DIFFICULTY SETTINGS (PLAN 4 GOALS & REWARDS)
+       =================================================================== */
+
+    const DIFFICULTIES = {
+      easy: {
+        id: 'easy',
+        name: '初級',
+        timeLimit: 30.0,
+        bonusTime: 0.0,
+        baseSpeed: 1.2,
+        speedScale: 0.05,
+        clearGoal: 8,
+        clearReward: 10,
+        catRadius: 30,
+        badgeClass: 'bg-emerald-100 text-emerald-700'
+      },
+      normal: {
+        id: 'normal',
+        name: '中級',
+        timeLimit: 20.0,
+        bonusTime: 0.0,
+        baseSpeed: 3.2,
+        speedScale: 0.15,
+        clearGoal: 10,
+        clearReward: 30,
+        catRadius: 27,
+        badgeClass: 'bg-amber-100 text-amber-700'
+      },
+      hard: {
+        id: 'hard',
+        name: '上級',
+        timeLimit: 12.0,
+        bonusTime: 2.0,
+        baseSpeed: 5.0,
+        speedScale: 0.3, // Accelerated moderately so 15 cats is achievable!
+        clearGoal: 15,
+        clearReward: 50,
+        catRadius: 24,
+        badgeClass: 'bg-rose-100 text-rose-700'
+      }
+    };
+
+    const gameFrame = document.getElementById('gameFrame');
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const targetIconCanvas = document.getElementById('targetIconCanvas');
+    const targetIconCtx = targetIconCanvas.getContext('2d');
+
+    const targetTitle = document.getElementById('targetTitle');
+    const diffBadge = document.getElementById('diffBadge');
+    const catCountDisplay = document.getElementById('catCountDisplay');
+    const coinDisplay = document.getElementById('coinDisplay');
+    const timeDisplay = document.getElementById('timeDisplay');
+
+    const startOverlay = document.getElementById('startOverlay');
+    const gameOverOverlay = document.getElementById('gameOverOverlay');
+    const restartBtn = document.getElementById('restartBtn');
+    const retryBtn = document.getElementById('retryBtn');
+    const totalCoinsMenu = document.getElementById('totalCoinsMenu');
+
+    const soundBtn = document.getElementById('soundBtn');
+    const soundIcon = document.getElementById('soundIcon');
+
+    let dpr = 1;
+    let gameActive = false;
+    let currentDifficulty = DIFFICULTIES.normal;
+    let stage = 1;
+    let catsFound = 0;
+    let hasAwardedClear = false;
+    let score = 0;
+    let sessionCoinsEarned = 0;
+    // にゃんカロとのつなぎ（同じサイトの中で iframe として開かれたときだけ使える）
+    //   info()  → { coins, left, best }   reward(枚数) → { ok, msg }   played() / best(点) / close()
+    const APP = (() => { try { return window.parent !== window && window.parent.nyankaloMini ? window.parent.nyankaloMini : null; } catch (e) { return null; } })();
+    let totalCoins = APP ? APP.info().coins : 0;
+    let highScore = APP ? APP.info().best : 0;
+    let rewardMsg = '';
+    let timeRemaining = 10.0;
+    let timerInterval = null;
+
+    let logicalWidth = 0;
+    let logicalHeight = 0;
+
+    let targetBreed = null;
+    let catEntities = [];
+    let particleList = [];
+    let popupTexts = [];
+
+    function refreshMenu() {
+      if (APP) { const i = APP.info(); totalCoins = i.coins; highScore = i.best; document.getElementById('rewardLeft').textContent = i.left > 0 ? `今日コインがもらえるのは あと${i.left}回（ミニゲーム全体で1日3回）` : '今日のコイン報酬はおわり（あそぶことはできます）'; }
+      else document.getElementById('rewardLeft').textContent = 'にゃんカロの中で開くとコインがアプリにたまります';
+      totalCoinsMenu.textContent = totalCoins;
+    }
+    refreshMenu();
+    document.getElementById('backBtn').addEventListener('click', e => { e.stopPropagation(); gameActive = false; clearInterval(timerInterval); if (APP) APP.close(); else history.back(); });
+
+    /* ===================================================================
+       4. CAT ENTITY & PARTICLES
+       =================================================================== */
+
+    class CatEntity {
+      constructor(x, y, radius, breed, isTarget = false) {
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        this.breed = breed;
+        this.isTarget = isTarget;
+
+        this.rotation = (Math.random() - 0.5) * (Math.PI * 1.0);
+        this.rotSpeed = (Math.random() - 0.5) * 0.03 * (currentDifficulty.baseSpeed / 1.5);
+
+        const speed = (currentDifficulty.baseSpeed + (stage - 1) * currentDifficulty.speedScale) * (0.85 + Math.random() * 0.3);
+        const angle = Math.random() * Math.PI * 2;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+
+        this.cache = document.createElement('canvas');
+        const dim = Math.ceil(radius * 3.4);
+        this.cache.width = Math.ceil(dim * dpr);
+        this.cache.height = Math.ceil(dim * dpr);
+        const cCtx = this.cache.getContext('2d');
+        cCtx.scale(dpr, dpr);
+        drawCat(cCtx, dim / 2, dim / 2, radius, this.breed);
+      }
+
+      update(width, height) {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.rotation += this.rotSpeed;
+
+        const pad = this.radius * 1.1;
+        const hudCard = document.querySelector('.hud-card-shadow');
+        const hudHeight = hudCard ? hudCard.getBoundingClientRect().height + 16 : 80;
+        const topBound = hudHeight + this.radius * 1.2;
+
+        if (this.x < pad) { this.x = pad; this.vx = Math.abs(this.vx); }
+        if (this.x > width - pad) { this.x = width - pad; this.vx = -Math.abs(this.vx); }
+        if (this.y < topBound) { this.y = topBound; this.vy = Math.abs(this.vy); }
+        if (this.y > height - pad) { this.y = height - pad; this.vy = -Math.abs(this.vy); }
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        const dim = this.cache.width / dpr;
+        ctx.drawImage(this.cache, -dim / 2, -dim / 2, dim, dim);
+        ctx.restore();
+      }
+
+      isHit(mx, my) {
+        const dx = mx - this.x;
+        const dy = my - this.y;
+        const hitRadius = this.radius * 1.2;
+        return (dx * dx + dy * dy) <= (hitRadius * hitRadius);
+      }
+    }
+
+    class StarParticle {
+      constructor(x, y, isCoin = false) {
+        this.x = x;
+        this.y = y;
+        this.isCoin = isCoin;
+        this.color = isCoin ? '#f59e0b' : (Math.random() > 0.5 ? '#10b981' : '#38bdf8');
+        this.size = isCoin ? (Math.random() * 6 + 5) : (Math.random() * 5 + 3);
+        const angle = Math.random() * Math.PI * 2;
+        const spd = Math.random() * 4.5 + 2;
+        this.vx = Math.cos(angle) * spd;
+        this.vy = Math.sin(angle) * spd;
+        this.life = 1.0;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life -= 0.03;
+      }
+      draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, this.life);
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    class FloatingText {
+      constructor(x, y, text, color) {
+        this.x = x;
+        this.y = y;
+        this.text = text;
+        this.color = color;
+        this.life = 1.0;
+      }
+      update() {
+        this.y -= 1.3;
+        this.life -= 0.024;
+      }
+      draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, this.life);
+        ctx.font = '900 20px "Zen Maru Gothic", sans-serif';
+        ctx.fillStyle = this.color;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4;
+        ctx.textAlign = 'center';
+        ctx.strokeText(this.text, this.x, this.y);
+        ctx.fillText(this.text, this.x, this.y);
+        ctx.restore();
+      }
+    }
+
+    /* ===================================================================
+       5. RESIZING & GAME FLOW
+       =================================================================== */
+
+    function resizeCanvas() {
+      dpr = Math.min(window.devicePixelRatio || 1, 3);
+      const rect = gameFrame.getBoundingClientRect();
+
+      logicalWidth = rect.width;
+      logicalHeight = rect.height;
+
+      canvas.width = Math.ceil(rect.width * dpr);
+      canvas.height = Math.ceil(rect.height * dpr);
+      ctx.resetTransform();
+      ctx.scale(dpr, dpr);
+
+      const iconRect = targetIconCanvas.parentElement.getBoundingClientRect();
+      targetIconCanvas.width = Math.ceil(iconRect.width * dpr);
+      targetIconCanvas.height = Math.ceil(iconRect.height * dpr);
+      targetIconCtx.resetTransform();
+      targetIconCtx.scale(dpr, dpr);
+
+      if (targetBreed) {
+        renderTargetIcon(targetBreed);
+      }
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 150));
+    resizeCanvas();
+
+    function updateCatCountUI() {
+      if (catCountDisplay) {
+        catCountDisplay.innerHTML = `<span class="text-stone-800">${catsFound}</span>/<span class="text-stone-500">${currentDifficulty.clearGoal}匹</span>`;
+      }
+    }
+
+    function startGame(diffKey) {
+      sound.init();
+      currentDifficulty = DIFFICULTIES[diffKey] || DIFFICULTIES.normal;
+
+      stage = 1;
+      catsFound = 0;
+      hasAwardedClear = false;
+      score = 0;
+      sessionCoinsEarned = 0;
+      rewardMsg = '';
+      timeRemaining = currentDifficulty.timeLimit;
+      gameActive = true;
+
+      diffBadge.textContent = currentDifficulty.name;
+      diffBadge.className = `text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-full w-max leading-none mb-0.5 ${currentDifficulty.badgeClass}`;
+
+      updateCatCountUI();
+      coinDisplay.textContent = sessionCoinsEarned;
+
+      startOverlay.classList.add('hidden');
+      gameOverOverlay.classList.add('hidden');
+
+      setupStage();
+      startTimer();
+    }
+
+    function setupStage() {
+      catEntities = [];
+      particleList = [];
+      popupTexts = [];
+
+      const targetKey = BREED_KEYS[Math.floor(Math.random() * BREED_KEYS.length)];
+      targetBreed = BREEDS[targetKey];
+
+      targetTitle.textContent = targetBreed.title;
+      renderTargetIcon(targetBreed);
+
+      const isMobile = logicalWidth < 640;
+      const baseCrowd = isMobile ? 8 : 12;
+      const maxCrowd = isMobile ? 45 : 65;
+      const crowdCount = Math.min(baseCrowd + (stage - 1) * 3, maxCrowd);
+
+      const catRadius = currentDifficulty.catRadius;
+      const pad = catRadius * 1.4;
+      
+      const hudCard = document.querySelector('.hud-card-shadow');
+      const hudHeight = hudCard ? hudCard.getBoundingClientRect().height + 16 : 80;
+      const topPad = hudHeight + catRadius * 1.2;
+
+      // Target Cat
+      const targetX = pad + Math.random() * (logicalWidth - pad * 2);
+      const targetY = topPad + Math.random() * Math.max(10, (logicalHeight - topPad - pad));
+      const targetCat = new CatEntity(targetX, targetY, catRadius, targetBreed, true);
+
+      // Distractor Cats
+      const distractorKeys = BREED_KEYS.filter(k => k !== targetKey);
+      for (let i = 0; i < crowdCount - 1; i++) {
+        const randKey = distractorKeys[Math.floor(Math.random() * distractorKeys.length)];
+        const distractorBreed = BREEDS[randKey];
+
+        const x = pad + Math.random() * (logicalWidth - pad * 2);
+        const y = topPad + Math.random() * Math.max(10, (logicalHeight - topPad - pad));
+        catEntities.push(new CatEntity(x, y, catRadius, distractorBreed, false));
+      }
+
+      const insertIdx = Math.floor(Math.random() * (catEntities.length + 1));
+      catEntities.splice(insertIdx, 0, targetCat);
+    }
+
+    function renderTargetIcon(breed) {
+      const iconWidth = targetIconCanvas.width / dpr;
+      const iconHeight = targetIconCanvas.height / dpr;
+      targetIconCtx.clearRect(0, 0, iconWidth, iconHeight);
+      drawCat(targetIconCtx, iconWidth / 2, iconHeight / 2 + 1, iconWidth * 0.38, breed);
+    }
+
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      let lastTime = performance.now();
+
+      timerInterval = setInterval(() => {
+        if (!gameActive) return;
+
+        const now = performance.now();
+        const delta = (now - lastTime) / 1000;
+        lastTime = now;
+
+        timeRemaining -= delta;
+        if (timeRemaining <= 0) {
+          timeRemaining = 0;
+          triggerGameOver();
+        }
+        timeDisplay.textContent = `TIME: ${timeRemaining.toFixed(1)}s`;
+      }, 50);
+    }
+
+    /* ===================================================================
+       6. INPUT & REWARD HANDLING
+       =================================================================== */
+
+    function handlePointerDown(e) {
+      if (!gameActive) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      for (let i = catEntities.length - 1; i >= 0; i--) {
+        const cat = catEntities[i];
+        if (cat.isHit(clickX, clickY)) {
+          if (cat.isTarget) {
+            catsFound++;
+            updateCatCountUI();
+
+            sound.playMeow();
+            sound.playCoin();
+
+            // Check Plan 4 Goal Achievement
+            if (catsFound >= currentDifficulty.clearGoal && !hasAwardedClear) {
+              hasAwardedClear = true;
+              sound.playClearFanfare();
+
+              const r = APP ? APP.reward(currentDifficulty.clearReward) : { ok: true, msg: '' };
+              rewardMsg = r.ok ? "" : r.msg;
+              if (r.ok) { sessionCoinsEarned += currentDifficulty.clearReward; totalCoins += currentDifficulty.clearReward; }
+              coinDisplay.textContent = sessionCoinsEarned;
+
+              popupTexts.push(new FloatingText(cat.x, cat.y - 35, '🎉 CLEAR達成!', '#10b981'));
+              popupTexts.push(new FloatingText(cat.x, cat.y + 10, r.ok ? `+${currentDifficulty.clearReward} 🪙 GET!` : '今日の報酬はおわり', '#f59e0b'));
+            } else {
+              popupTexts.push(new FloatingText(cat.x, cat.y - 10, currentDifficulty.bonusTime > 0 ? `+${currentDifficulty.bonusTime.toFixed(1)}秒!` : '正解!', '#10b981'));
+            }
+
+            // Particles
+            for (let p = 0; p < 18; p++) {
+              particleList.push(new StarParticle(cat.x, cat.y, true));
+            }
+
+            score += 100 + stage * 20;
+
+            if (currentDifficulty.bonusTime > 0) {
+              timeRemaining = Math.min(25.0, timeRemaining + currentDifficulty.bonusTime);
+              timeDisplay.textContent = `TIME: ${timeRemaining.toFixed(1)}s`;
+            }
+
+            stage++;
+
+            gameActive = false;
+            setTimeout(() => {
+              gameActive = true;
+              setupStage();
+            }, 320);
+
+          } else {
+            // MISS - Penalty (-1.0s + Screen Shake & Error Sound)
+            sound.playWrong();
+
+            gameFrame.classList.remove('animate-shake', 'flash-error');
+            void gameFrame.offsetWidth;
+            gameFrame.classList.add('animate-shake', 'flash-error');
+
+            timeRemaining = Math.max(0, timeRemaining - 1.0);
+            timeDisplay.textContent = `TIME: ${timeRemaining.toFixed(1)}s`;
+
+            popupTexts.push(new FloatingText(clickX, clickY, '-1.0秒!', '#ef4444'));
+
+            if (timeRemaining <= 0) triggerGameOver();
+          }
+          break;
+        }
+      }
+    }
+
+    canvas.addEventListener('pointerdown', handlePointerDown);
+
+    function triggerGameOver() {
+      gameActive = false;
+      clearInterval(timerInterval);
+
+      const isClear = catsFound >= currentDifficulty.clearGoal;
+      const resultEmoji = document.getElementById('resultEmoji');
+      const resultHeader = document.getElementById('resultHeader');
+      const resultSub = document.getElementById('resultSub');
+
+      if (isClear) {
+        sound.playClearFanfare();
+        resultEmoji.textContent = '🎉';
+        resultHeader.textContent = 'CLEAR!';
+        resultHeader.className = 'text-3xl sm:text-4xl font-black text-emerald-400 mb-1';
+        resultSub.textContent = `目標 ${currentDifficulty.clearGoal}匹 クリア達成！`;
+      } else {
+        sound.playGameOver();
+        resultEmoji.textContent = '😢';
+        resultHeader.textContent = '残念...';
+        resultHeader.className = 'text-3xl sm:text-4xl font-black text-rose-400 mb-1';
+        const needed = currentDifficulty.clearGoal - catsFound;
+        resultSub.textContent = `あと ${needed} 匹でクリアでした！`;
+      }
+
+      document.getElementById('finalDiff').textContent = currentDifficulty.name;
+      document.getElementById('finalCats').textContent = `${catsFound}匹 / 目標 ${currentDifficulty.clearGoal}匹`;
+      document.getElementById('finalCoins').textContent = `🪙 +${sessionCoinsEarned}`;
+      document.getElementById('finalNote').textContent = hasAwardedClear ? rewardMsg : '';
+      document.getElementById('finalScore').textContent = score;
+
+      if (APP && !hasAwardedClear) APP.played();   // クリアしなくても「あそんだ」回数（ミッション）に数える
+      if (APP) highScore = APP.best(score);
+      else if (score > highScore) highScore = score;
+      document.getElementById('finalBest').textContent = highScore;
+
+      gameOverOverlay.classList.remove('hidden');
+    }
+
+    // Difficulty selection menu buttons
+    document.querySelectorAll('.diffBtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const diffKey = btn.getAttribute('data-diff');
+        startGame(diffKey);
+      });
+    });
+
+    if (retryBtn) {
+      retryBtn.addEventListener('click', () => {
+        startGame(currentDifficulty.id);
+      });
+    }
+
+    restartBtn.addEventListener('click', () => {
+      refreshMenu();
+      gameOverOverlay.classList.add('hidden');
+      startOverlay.classList.remove('hidden');
+    });
+
+    soundBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sound.muted = !sound.muted;
+      soundIcon.textContent = sound.muted ? '🔇' : '🔊';
+    });
+
+    /* ===================================================================
+       7. MAIN ANIMATION LOOP
+       =================================================================== */
+
+    function animate() {
+      ctx.fillStyle = '#FAF6EE';
+      ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+
+      for (let i = 0; i < catEntities.length; i++) {
+        if (gameActive) catEntities[i].update(logicalWidth, logicalHeight);
+        catEntities[i].draw(ctx);
+      }
+
+      for (let i = particleList.length - 1; i >= 0; i--) {
+        particleList[i].update();
+        particleList[i].draw(ctx);
+        if (particleList[i].life <= 0) particleList.splice(i, 1);
+      }
+
+      for (let i = popupTexts.length - 1; i >= 0; i--) {
+        popupTexts[i].update();
+        popupTexts[i].draw(ctx);
+        if (popupTexts[i].life <= 0) popupTexts.splice(i, 1);
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+
+  </script>
+</body>
+</html>

@@ -1,27 +1,16 @@
 // にゃんカロ イラスト猫（B案）
-// petCatHTML({ idx, dead, mood }) で猫のHTMLを返し、petCatBind(要素) でタップ反応をつける。
-//   idx : 体型 -100(骸骨) 〜 0 〜 +100(爆発)。今は絵を横に伸び縮みさせて表現
-//   dead: null / 'skel' / 'boom'（骸骨・爆発は今までの SVG を使う）
-//   mood: 'normal' / 'hungry' / 'tired'
+// petCatHTML({ breed, idx, dead, mood, equip }) で猫のHTMLを返し、petCatBind(要素) でタップ反応をつける。
+//   breed: data.js の CATS のキー（tabby / white / longwhite / grey）
+//   idx  : 体型 -100(骸骨) 〜 0 〜 +100(爆発)。今は絵を横に伸び縮みさせて表現
+//   dead : null / 'skel' / 'boom'（骸骨・爆発は今までの SVG を使う）
+//   mood : 'normal' / 'hungry' / 'tired'
 //   equip: { head, top, hand } … data.js の WEAR のキー
-// 画像：同じ大きさ 600×813 の透過PNG を重ねる。
-//   cat-body.png（しっぽ以外）/ cat-tail.png（しっぽだけ）/ cat-shirt.png（服だけ）/ cat-gloves.png（手袋だけ）
-//   服と手袋は色フィルターで着せかえ色にする（petcat.css の .wear-○○）。
-//   組員の新しい絵が届いたら、この4枚を差しかえるだけで見た目が変わる。
-var PC_IMG = window.PC_IMG || { body: 'cat-body.png', tail: 'cat-tail.png', shirt: 'cat-shirt.png', gloves: 'cat-gloves.png' };
-
-const PC_W = 1108, PC_H = 1502;            // 部位の座標は元の切り抜き画像の大きさで書く
-const PC_TAIL_PIVOT = [900 / PC_W * 100, 935 / PC_H * 100];
-// 当たり判定（上から順に優先）: [名前, 中心x, 中心y, 半径x, 半径y]
-const PC_ZONES = [
-  ['tail', 1000, 890, 115, 135],
-  ['ear', 190, 125, 85, 90], ['ear', 635, 85, 85, 90],
-  ['hand', 150, 590, 155, 165], ['hand', 825, 470, 145, 140],
-  ['head', 440, 300, 345, 235],
-  ['foot', 200, 1385, 170, 115], ['foot', 860, 1385, 160, 115],
-  ['belly', 550, 760, 310, 180],
-  ['pants', 580, 1100, 400, 160]
-];
+// 画像：cats/<breed>-body.png（しっぽ以外）/ -tail.png（しっぽの先）/ -shirt.png（服だけ）/ -gloves.png（手袋だけ）
+//   服と手袋は色フィルターで着せかえ色にする（petcat.css の .wear-○○）。どの猫も服はオレンジ・手袋は茶色でそろえてある。
+//   絵の大きさ・当たり判定などは data.js の CATS に書く。
+const PC_BOX_W = 600, PC_BOX_H = 813;      // 猫を入れる枠（どの猫も同じ）
+const pcCat = b => CATS[b] || CATS.tabby;
+const pcImg = (b, part) => `cats/${CATS[b] ? b : 'tabby'}-${part}.png`;
 
 const PC_LINES = {
   head: ['ゴロゴロ…', 'もっとなでて♡', 'ふにゃ〜'],
@@ -46,16 +35,18 @@ function petCatHTML(o) {
   o = o || {};
   if (o.dead === 'skel') return `<div class="pc pc-dead">${skeletonSVG()}</div>`;
   if (o.dead === 'boom') return `<div class="pc pc-dead">${boomSVG()}</div>`;
+  const b = CATS[o.breed] ? o.breed : 'tabby', c = pcCat(b);
   const s = petCatShape(o.idx);
   const cls = ['pc', 'mood-' + (o.mood || 'normal')];
   if (s.fat > 0.5) cls.push('is-fat');
   if (s.thin > 0.6) cls.push('is-thin');
-  return `<div class="${cls.join(' ')}" style="--sx:${s.sx.toFixed(3)};--sy:${s.sy.toFixed(3)};--tx:${PC_TAIL_PIVOT[0].toFixed(1)}%;--ty:${PC_TAIL_PIVOT[1].toFixed(1)}%">
-    <div class="pc-shape"><div class="pc-act"><div class="pc-idle">
-      <img class="pc-tail" src="${PC_IMG.tail}" alt="" draggable="false">
-      <img class="pc-body" src="${PC_IMG.body}" alt="猫" draggable="false">
-      ${petCatWear(o.equip || {})}
-    </div></div></div>
+  const art = `left:${(c.x / PC_BOX_W * 100).toFixed(2)}%;width:${(c.w / PC_BOX_W * 100).toFixed(2)}%`;
+  return `<div class="${cls.join(' ')}" data-breed="${b}" style="--sx:${s.sx.toFixed(3)};--sy:${s.sy.toFixed(3)};--tx:${(c.pivot[0] / c.w * 100).toFixed(1)}%;--ty:${(c.pivot[1] / c.h * 100).toFixed(1)}%">
+    <div class="pc-shape"><div class="pc-act"><div class="pc-idle"><div class="pc-art" style="${art}">
+      <img class="pc-tail" src="${pcImg(b, 'tail')}" alt="" draggable="false">
+      <img class="pc-body" src="${pcImg(b, 'body')}" alt="${c.name}" draggable="false">
+      ${petCatWear(b, o.equip || {})}
+    </div></div></div></div>
     <div class="pc-fx" aria-hidden="true"></div>
     <div class="pc-say" role="status" hidden></div>
   </div>`;
@@ -63,22 +54,23 @@ function petCatHTML(o) {
 
 // 着せかえ（服・手袋は色フィルター、頭とダンベルは絵を重ねる）
 const PC_GEAR_DY = { cap_red: 36, crown: 24, band_pink: 16, band_blue: 16 };
-function petCatWear(eq) {
+function petCatWear(b, eq) {
+  const c = pcCat(b);
   let s = '';
-  if (eq.top && eq.top !== 'tee_orange' && PC_IMG.shirt) s += `<img class="pc-shirt wear-${eq.top}" src="${PC_IMG.shirt}" alt="" draggable="false">`;
-  if (eq.hand && eq.hand !== 'gloves_brown' && eq.hand !== 'dumbbell' && PC_IMG.gloves) s += `<img class="pc-gloves wear-${eq.hand}" src="${PC_IMG.gloves}" alt="" draggable="false">`;
+  if (eq.top && eq.top !== 'tee_orange') s += `<img class="pc-shirt wear-${eq.top}" src="${pcImg(b, 'shirt')}" alt="" draggable="false">`;
+  if (eq.hand && eq.hand !== 'gloves_brown' && eq.hand !== 'dumbbell') s += `<img class="pc-gloves wear-${eq.hand}" src="${pcImg(b, 'gloves')}" alt="" draggable="false">`;
   let g = '';
   if (eq.head && eq.head !== 'band_none' && typeof headGear === 'function') {
-    const k = 3.55, dy = PC_GEAR_DY[eq.head] || 0;
-    g += `<g transform="translate(${(445 - 150 * k).toFixed(1)} ${(290 - (130 - dy) * k).toFixed(1)}) scale(${k})">${headGear(eq.head, 97)}</g>`;
+    const [hx, hy, hr] = c.head, k = hr / 97, dy = PC_GEAR_DY[eq.head] || 0;
+    g += `<g transform="translate(${(hx - 150 * k).toFixed(1)} ${(hy - (130 - dy) * k).toFixed(1)}) scale(${k.toFixed(3)})">${headGear(eq.head, 97)}</g>`;
   }
   if (eq.hand === 'dumbbell') {
-    for (const [x, y] of [[150, 600], [825, 470]]) {
-      g += `<g transform="translate(${x} ${y}) rotate(-12)"><rect x="-150" y="-14" width="300" height="28" rx="12" fill="#9AA3A8" stroke="#3B2A20" stroke-width="8"/>` +
+    for (const [x, y] of c.hands) {
+      g += `<g transform="translate(${x} ${y}) rotate(-12) scale(.54)"><rect x="-150" y="-14" width="300" height="28" rx="12" fill="#9AA3A8" stroke="#3B2A20" stroke-width="8"/>` +
         `<rect x="-170" y="-62" width="56" height="124" rx="16" fill="#2E3A4A" stroke="#1F2A27" stroke-width="10"/><rect x="114" y="-62" width="56" height="124" rx="16" fill="#2E3A4A" stroke="#1F2A27" stroke-width="10"/></g>`;
     }
   }
-  if (g) s += `<svg class="pc-gear" viewBox="0 0 ${PC_W} ${PC_H}" aria-hidden="true">${g}</svg>`;
+  if (g) s += `<svg class="pc-gear" viewBox="0 0 ${c.w} ${c.h}" aria-hidden="true">${g}</svg>`;
   return s;
 }
 
@@ -111,12 +103,13 @@ function petCatBind(host, opt) {
     fx.appendChild(e);
     setTimeout(() => e.remove(), 1200);
   };
-  const pos = (cx, cy) => [cx / PC_W * 100, cy / PC_H * 100];
+  const cat = pcCat(root.dataset.breed);
+  const pos = (cx, cy) => [(cx + cat.x) / PC_BOX_W * 100, cy / PC_BOX_H * 100];
 
   function zoneAt(ev) {
     const r = body.getBoundingClientRect();
-    const x = (ev.clientX - r.left) / r.width * PC_W, y = (ev.clientY - r.top) / r.height * PC_H;
-    for (const [n, cx, cy, rx, ry] of PC_ZONES) {
+    const x = (ev.clientX - r.left) / r.width * cat.w, y = (ev.clientY - r.top) / r.height * cat.h;
+    for (const [n, cx, cy, rx, ry] of cat.zones) {
       if (((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1) return { n, x, y };
     }
     return null;
