@@ -5,12 +5,12 @@
 //   dead : null / 'skel' / 'boom'（骸骨・爆発は今までの SVG を使う）
 //   mood : 'normal' / 'hungry' / 'tired'
 //   equip: { head, top, hand } … data.js の WEAR のキー
-// 画像：cats/<breed>-body.png（しっぽ以外）/ -tail.png（しっぽの先）/ -shirt.png（服だけ）/ -gloves.png（手袋だけ）
+// 画像：<breed>-body.png（しっぽ以外）/ -tail.png（しっぽの先）/ -shirt.png（服だけ）/ -gloves.png（手袋だけ）
 //   服と手袋は色フィルターで着せかえ色にする（petcat.css の .wear-○○）。どの猫も服はオレンジ・手袋は茶色でそろえてある。
 //   絵の大きさ・当たり判定などは data.js の CATS に書く。
 const PC_BOX_W = 600, PC_BOX_H = 813;      // 猫を入れる枠（どの猫も同じ）
 const pcCat = b => CATS[b] || CATS.tabby;
-const pcImg = (b, part) => `cats/${CATS[b] ? b : 'tabby'}-${part}.png`;
+const pcImg = (b, part) => `./${CATS[b] ? b : 'tabby'}-${part}.png`;
 
 const PC_LINES = {
   head: ['ゴロゴロ…', 'もっとなでて♡', 'ふにゃ〜'],

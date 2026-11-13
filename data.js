@@ -29,7 +29,7 @@ const WEAR = {
 const SLOT_NAME = { head: '頭', top: '服', hand: '手' };
 
 // 猫の種類（はじめに選ぶ・せっていで変えられる）
-// 絵は cats/○○-body.png / -tail.png / -shirt.png / -gloves.png（高さ813の透過PNG、4枚とも同じ大きさ）
+// 絵は ○○-body.png / -tail.png / -shirt.png / -gloves.png（高さ813の透過PNG、4枚とも同じ大きさ）
 //   w,h  : 絵の大きさ    x : 横の位置あわせ（600幅の枠の中で、頭の真ん中がそろうようにずらす量）
 //   pivot: しっぽを振る中心    head: 頭の中心と半径（頭の着せかえの位置）    hands: ダンベルを持つ位置
 //   zones: タップの当たり判定 [部位, 中心x, 中心y, 半径x, 半径y]（上から順に優先）
