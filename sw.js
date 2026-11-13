@@ -1,7 +1,7 @@
 // にゃんカロ service worker
 // アプリ本体はキャッシュしてオフラインでも起動できるようにする。
 // 更新したら VERSION の数字を上げると、利用者のスマホに新しい版が届く。
-const VERSION = '8.5';   // index.html などの ?v= と同じ数字にする
+const VERSION = '8.6';   // index.html などの ?v= と同じ数字にする
 const CACHE = 'nekocal-v' + VERSION;
 const V = '?v=' + VERSION;
 const APP_FILES = [
@@ -39,6 +39,10 @@ const APP_FILES = [
   './shop-bg.jpg',
   './battle.js' + V,
   './battle.css' + V,
+  './walk.js' + V,
+  './walk.css' + V,
+  './leaflet.js' + V,
+  './leaflet.css' + V,
   './app.js' + V,
   './icon-192.png',
   './icon-512.png',

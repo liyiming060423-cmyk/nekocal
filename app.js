@@ -529,21 +529,39 @@ function openProfile(first) {
 }
 
 /* ---------- 歩数 ---------- */
+// 1日の歩数 ＝「手で入力した歩数」と「さんぽモード（GPS、walk.js）で歩いた歩数」の大きいほう。
+// （スマホのヘルスケアの歩数には、さんぽモードで歩いた分も入っているので、足すと二重になるため）
+// d.steps は合計（ミッション・km表示・きろく はこれを使う）、d.stepsManual / d.stepsGps はそれぞれの歩数。
+function normSteps(d) {
+  if (d.stepsManual == null) d.stepsManual = d.steps || 0;   // v8.5 までのデータは手入力として読む
+  if (d.stepsGps == null) d.stepsGps = 0;
+}
+// 歩数を決めなおして、ふえた 1000歩ごとに ごほうび。ふえたぶんの回数を返す
+function applySteps(d) {
+  normSteps(d);
+  d.steps = Math.max(d.stepsManual, d.stepsGps);
+  const units = Math.floor(d.steps / RULE.stepsUnit), add = units - (d.stepUnits || 0);
+  if (add <= 0) return 0;
+  d.stepUnits = units; addStamina(add * RULE.staminaPerUnit); S.coins += add * RULE.coinPerUnit;
+  return add;
+}
 function openSteps() {
-  const d = day();
+  const d = day(); normSteps(d);
   openModal(`<h2 id="modalTitle">今日の歩数</h2><div class="stack">
-    <p style="margin:0">スマホの「ヘルスケア」や「Google Fit」に出ている今日の歩数を入れてください。</p>
-    <label class="f">今日の歩数<input type="number" id="stepIn" inputmode="numeric" min="0" max="100000" value="${d.steps || ''}" placeholder="例：6500"></label>
+    <div class="card" style="padding:10px 14px;font-weight:700">今日 <b style="font-size:20px">${fmt(d.steps)}歩</b><div class="hint">手で入力 ${fmt(d.stepsManual)}歩／さんぽモード ${fmt(d.stepsGps)}歩（大きいほうが今日の歩数）</div></div>
+    <button class="btn block" id="walkGo">🐾 さんぽモード（GPS）</button>
+    <p class="hint" style="margin-top:-4px">アプリを開いたまま歩くと、地図に道のりを描いて歩数にします。画面を消したり、ほかのアプリに切りかえると止まります（もどったときに、まっすぐの距離だけ足します）。</p>
+    <label class="f">手で入力（ヘルスケア・Google Fit の今日の歩数）<input type="number" id="stepIn" inputmode="numeric" min="0" max="100000" value="${d.stepsManual || ''}" placeholder="例：6500"></label>
     <div class="card" style="padding:10px 14px;font-size:14px">${fmt(RULE.stepsUnit)}歩ごとに スタミナ +${RULE.staminaPerUnit}・コイン +${RULE.coinPerUnit}</div>
-    <p class="hint">Webアプリはスマホの歩数計を直接読めないので、今は手で入力します。</p>
-    <button class="btn block" id="stepSave">きろくする</button></div>`, root => {
+    <button class="btn white block" id="stepSave">手入力をきろくする</button></div>`, root => {
+    root.querySelector('#walkGo').onclick = () => { closeModal(); openWalk(); };
     root.querySelector('#stepSave').onclick = () => {
       const n = Math.round(+root.querySelector('#stepIn').value);
       if (!(n >= 0 && n <= 100000)) { toast('0〜100,000の数字で入れてください'); return; }
-      d.steps = n;
-      const units = Math.floor(n / RULE.stepsUnit), add = units - d.stepUnits;
+      d.stepsManual = n;
+      const add = applySteps(d);
       let msg = '歩数を記録しました';
-      if (add > 0) { d.stepUnits = units; addStamina(add * RULE.staminaPerUnit); S.coins += add * RULE.coinPerUnit; msg = `スタミナ +${add * RULE.staminaPerUnit}・コイン +${add * RULE.coinPerUnit}`; se('coin'); }
+      if (add > 0) { msg = `スタミナ +${add * RULE.staminaPerUnit}・コイン +${add * RULE.coinPerUnit}`; se('coin'); }
       save(); closeModal(); toast(msg);
     };
   });

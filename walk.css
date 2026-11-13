@@ -1,0 +1,24 @@
+/* さんぽモード（GPS）の画面 */
+.walk { position: fixed; inset: 0; z-index: 55; display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; background: var(--bg); }
+body.walk-open { overflow: hidden; }
+.walk-map { flex: 1; min-height: 180px; position: relative; z-index: 0; isolation: isolate; background: #DDE8D5; }
+.walk-maptxt { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 900; color: #6B5A4E; padding: 20px; text-align: center; }
+.walk-panel { position: relative; z-index: 1; margin-top: -18px; display: grid; grid-template-columns: 92px 1fr; gap: 8px 12px; align-items: end;
+  padding: 14px 14px calc(14px + env(safe-area-inset-bottom, 0px)); background: var(--bg); border-top: 3px solid var(--ink); border-radius: 22px 22px 0 0; box-shadow: 0 -4px 0 rgba(74, 42, 26, .15); }
+.walk-cat { width: 92px; }
+.walk-cat .pc { cursor: default; pointer-events: none; }
+.walk-cat .pc-idle { animation: walkBob .45s ease-in-out infinite alternate; }
+@keyframes walkBob { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-5px) rotate(3deg); } }
+.walk-title { font-weight: 900; margin-bottom: 6px; }
+.walk-nums, .walk-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.walk-nums div, .walk-sum div { background: var(--white); border: 2px solid var(--ink); border-radius: 12px; padding: 6px 4px; text-align: center; }
+.walk-nums b, .walk-sum b { display: block; font-size: 20px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.walk-sum b { font-size: 24px; }
+.walk-nums small, .walk-sum small { font-size: 11px; font-weight: 700; }
+.walk-next { grid-column: 1 / -1; display: grid; gap: 4px; }
+.walk-bar { height: 12px; border-radius: 99px; border: 2px solid var(--ink); background: var(--white); overflow: hidden; }
+.walk-bar i { display: block; height: 100%; width: 0; background: var(--orange); transition: width .4s; }
+.walk-next small { font-size: 12px; font-weight: 700; }
+.walk-note { grid-column: 1 / -1; min-height: 1.4em; font-size: 13px; font-weight: 700; color: var(--red); }
+.walk-note:empty { display: none; }
+.walk-end { grid-column: 1 / -1; }
