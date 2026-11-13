@@ -1,5 +1,5 @@
 // アプリの版。index.html の ?v= と sw.js の VERSION もこれにそろえる
-const APP_VER = '9.0';
+const APP_VER = '9.1';
 
 // にゃんカロ データ定義
 // アイテム・ショップ・トレーニング・ミッションなど「数字や名前」はここだけで管理する。
@@ -167,6 +167,31 @@ const MISSIONS = [
   { id: 'mini1',   name: 'ミニゲームをあそぶ',   goal: 1, reward: 40, check: d => d.minis || 0 },
   { id: 'steps2k', name: 'さんぽで2,000歩あるく', goal: 2000, reward: 50, check: d => d.steps || 0 },
   { id: 'treasure3', name: 'さんぽでお宝を3つ拾う', goal: 3, reward: 50, check: d => d.treasures || 0 }
+];
+
+// はじめてガイド（v9.1）：1回だけのミッション。ホームのバナーから開く
+//   check(S, hits)：hits は「さんぽを開いた」などの記録（S.guide.hits）
+const GUIDE = {
+  reward: 50,      // 1つクリアでもらえるコイン
+  bonus: 200,      // ぜんぶクリアのボーナス
+  tasks: [
+    { id: 'meal',  name: 'ごはんを記録する',       how: 'ホームのカメラのボタン',       check: (s, h) => Object.values(s.days).some(d => (d.meals || []).length > 0) },
+    { id: 'train', name: 'ジムでトレーニングする', how: 'トレーニング → ジム',          check: (s, h) => Object.values(s.days).some(d => d.trains > 0) },
+    { id: 'mini',  name: 'ミニゲームをあそぶ',     how: 'トレーニング → ミニゲーム',    check: (s, h) => Object.values(s.days).some(d => d.minis > 0) },
+    { id: 'walk',  name: 'さんぽを開いてみる',     how: 'ホームの歩数のカード',         check: (s, h) => h.includes('walk') },
+    { id: 'gacha', name: '福袋を引く',             how: 'ショップ → ガチャ',            check: (s, h) => h.includes('gacha') },
+    { id: 'wear',  name: 'きせかえで着がえる',     how: 'トレーニング → 更衣室',        check: (s, h) => h.includes('wear') }
+  ]
+};
+// ホームの案内（v9.1）：上から順に、sel の場所を照らして猫が説明する。{cat} は猫の名前
+const TOUR = [
+  { sel: ['#bodyPill'],               text: 'これが{cat}の体型だニャ。目標カロリーに近いごはんだと元気、食べすぎると太って、少なすぎるとやせちゃうニャ。' },
+  { sel: ['#btnCamera'],              text: 'ごはんはここで記録するニャ。写真をとるとAIがカロリーを調べてくれて、スタミナも回復するニャ。' },
+  { sel: ['.h-left'],                 text: 'スタミナはジムのトレーニングで使うニャ。ごきげんは{cat}をなでたり、ごはんを記録すると上がるニャ。' },
+  { sel: ['#pillSteps'],              text: 'ここからさんぽに行けるニャ。歩くとコインとスタミナがもらえて、地図のお宝も拾えるニャ。' },
+  { sel: ['#btnLogin', '#btnMission'], text: '毎日のログインボーナスとミッションはここ。コインのもらい忘れに気をつけてニャ。' },
+  { sel: ['.tabbar'],                 text: 'トレーニングには ジム・ミニゲーム・対戦・更衣室、ショップには福袋があるニャ。' },
+  { sel: ['#eventBanner'],            text: 'さいごに「はじめてガイド」をやってみてニャ！ クリアするとコインがもらえるニャ。' }
 ];
 
 // よく食べるもの（手入力用・カロリーは目安）

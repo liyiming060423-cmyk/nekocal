@@ -47,6 +47,7 @@ const TR_SVG = `<svg viewBox="0 0 48 44" width="40" height="37" aria-hidden="tru
 
 function openWalk() {
   if (W) return;
+  if (typeof guideHit === "function") guideHit('walk');   // v9.1 はじめてガイド
   W = { dist: 0, credited: 0, last: null, segs: [[]], start: Date.now(), watch: null, lock: null, map: null, line: null, dot: null, ring: null,
     free: 0, dirty: false, savedAt: Date.now(), timer: 0, endArmed: 0, cur: null, fast: false, tr: [], got: 0, swapAt: 0 };
   const el = document.createElement('div');

@@ -82,6 +82,7 @@ function defaultState() {
     user: { name: 'プレイヤー', sex: 'male', age: 20, height: 170, weight: 60, goal: 'keep', delta: 300 },
     cat: { name: 'もち', breed: 'tabby', idx: 0, dead: null, level: 1, exp: 0, stats: { pow: 20, spd: 20, sta: 20 }, equip: { head: 'band_none', top: 'tee_orange', hand: 'gloves_brown', suit: 'suit_none' } },
     stamina: 65, coins: 850, stones: 0, pity: 0,
+    guide: { tour: false, hits: [], got: [], done: false },   // v9.1 はじめてガイド（tour=ホーム案内を見た）
     items: { drink: 0, protein: 0, goldbag: 0 }, protein: false, goldbag: 0, mood: RULE.moodStart,
     owned: ['band_none', 'tee_orange', 'gloves_brown', 'suit_none'],
     start: t, last: t, days: {}, history: [],
@@ -103,6 +104,8 @@ function load() {
     // v8.8：コスチューム（suit）の欄を追加
     if (!st.owned.includes('suit_none')) st.owned.push('suit_none');
     if (!st.cat.equip.suit) st.cat.equip.suit = 'suit_none';
+    // v9.1：はじめてガイド（前からのデータにも出す）
+    st.guide = Object.assign({ tour: false, hits: [], got: [], done: false }, s.guide);
     return st;
   } catch (e) { return defaultState(); }
 }
@@ -350,7 +353,14 @@ function renderHome() {
   $('kcalBar').style.width = Math.min(100, it / scale * 100) + '%';
   $('kcalBar').style.background = Math.abs(it - tg) <= 100 ? 'var(--green)' : it > tg ? 'var(--orange)' : 'var(--blue)';
   $('kcalMark').style.left = (tg / scale * 100) + '%';
-  $('eventBanner').innerHTML = `<span class="ev-ico">${I.luckyBag}</span><span class="ev-txt"><small>${esc(EVENT.tag)}</small>${EVENT.title}</span>`;
+  if (!S.guide.done) {   // はじめてガイドのあいだは、バナーをガイドにする
+    const g = guideCount();
+    $('eventBanner').classList.add('guide');
+    $('eventBanner').innerHTML = `<span class="ev-ico">${I.mission}</span><span class="ev-txt"><small>はじめてガイド</small>${g.got} / ${GUIDE.tasks.length} クリア<br>${g.ready ? '<b>受けとれるよ！</b>' : 'コインがもらえる！'}</span>`;
+  } else {
+    $('eventBanner').classList.remove('guide');
+    $('eventBanner').innerHTML = `<span class="ev-ico">${I.luckyBag}</span><span class="ev-txt"><small>${esc(EVENT.tag)}</small>${EVENT.title}</span>`;
+  }
   $('stamIco').innerHTML = I.bolt; $('moodIco').innerHTML = I.heart;
   renderMeters();
   mountHomeCat();
@@ -372,7 +382,7 @@ $('btnUser').addEventListener('click', () => openProfile(false));
 $('kcalCard').addEventListener('click', () => { UI.histTab = 'week'; UI.histDate = todayStr(); setTab('history'); });
 $('pillCoins').addEventListener('click', () => { UI.shopTab = 'shop'; setTab('shop'); });
 $('btnGacha').addEventListener('click', () => { UI.shopTab = 'gacha'; setTab('shop'); });
-$('eventBanner').addEventListener('click', () => { UI.shopTab = 'gacha'; setTab('shop'); });
+$('eventBanner').addEventListener('click', () => { if (!S.guide.done) { openGuide(); return; } UI.shopTab = 'gacha'; setTab('shop'); });
 $('bodyPill').addEventListener('click', () => { UI.histTab = 'status'; setTab('history'); });
 $('pillSteps').addEventListener('click', () => openWalk());
 $('btnLogin').addEventListener('click', openLogin);
@@ -470,7 +480,9 @@ function startFromTitle() {
   const t = $('title'); if (t.classList.contains('out')) return;
   se('get'); buzz(20); bgmUnlocked = true;
   t.classList.add('out'); setTimeout(() => { t.hidden = true; bgmUpdate(); }, 350);
-  if (!S.onboarded) openWelcome(); else { setTimeout(checkCrisis, 900); setTimeout(checkBackupNag, 1800); }
+  if (!S.onboarded) openWelcome();
+  else if (!S.guide.tour) setTimeout(startTour, 700);   // v9.1：まだホームの案内を見ていない人（前からの人も1回）
+  else { setTimeout(checkCrisis, 900); setTimeout(checkBackupNag, 1800); }
 }
 function openWelcome() {
   let name = S.user.name && S.user.name !== 'プレイヤー' ? S.user.name : '', breed = S.cat.breed || 'tabby', catName = S.cat.name || 'もち';
@@ -534,6 +546,7 @@ function openProfile(first) {
       const v = read();
       if (!(v.age >= 10 && v.age <= 100 && v.height >= 100 && v.height <= 230 && v.weight >= 25 && v.weight <= 250)) { toast('年齢・身長・体重を確かめてください'); return; }
       S.user = v; S.cat.name = root.querySelector('#pCat').value.trim() || 'もち'; S.onboarded = true; save(); closeModal(); toast(`目標は 1日 ${fmt(target(v))} kcal`);
+      if (first && !S.guide.tour) setTimeout(startTour, 900);
     };
   }, null, first);
 }
@@ -659,6 +672,99 @@ function openLogin() {
 }
 
 /* ---------- ミッション ---------- */
+/* ---------- はじめてガイド・ホームの案内（v9.1） ---------- */
+function guideHit(id) { if (!S.guide.hits.includes(id)) { S.guide.hits.push(id); save(); } }
+function guideCount() {
+  const g = S.guide; let got = 0, ready = false;
+  for (const t of GUIDE.tasks) { if (g.got.includes(t.id)) got++; else if (t.check(S, g.hits)) ready = true; }
+  if (got === GUIDE.tasks.length) ready = true;   // ボーナスが受けとれる
+  return { got, ready };
+}
+function openGuide() {
+  const draw = () => {
+    const g = S.guide, all = g.got.length >= GUIDE.tasks.length;
+    return `<h2 id="modalTitle">はじめてガイド</h2><p class="hint" style="margin:0 0 8px">1つクリアするごとに ${GUIDE.reward}コイン、ぜんぶで さらに ${GUIDE.bonus}コイン！</p><div class="list">${GUIDE.tasks.map(t => {
+      const got = g.got.includes(t.id), ok = got || t.check(S, g.hits);
+      return `<div class="card mission"><div class="grow"><div style="font-weight:900">${ok ? '✅ ' : ''}${esc(t.name)}</div><div class="hint">${esc(t.how)}　報酬 ${GUIDE.reward}コイン</div></div>
+      ${got ? '<span class="hint" style="font-weight:900">受けとり済み</span>' : `<button class="btn small ${ok ? 'yellow' : 'white'}" data-g="${t.id}" ${ok ? '' : 'disabled'}>受けとる</button>`}</div>`;
+    }).join('')}</div>
+    <button class="btn block ${all ? 'yellow' : 'white'}" id="gBonus" style="margin-top:10px" ${all ? '' : 'disabled'}>ぜんぶクリアのボーナス ${GUIDE.bonus}コイン</button>
+    <button class="btn block white" id="gTour" style="margin-top:8px">ホームの案内をもう一度見る</button>`;
+  };
+  openModal(draw(), root => {
+    root.addEventListener('click', e => {
+      if (e.target.closest('#gTour')) { closeModal(); setTab('home'); setTimeout(startTour, 300); return; }
+      if (e.target.closest('#gBonus')) {
+        if (S.guide.done || S.guide.got.length < GUIDE.tasks.length) return;
+        S.guide.done = true; S.coins += GUIDE.bonus; save(); se('get'); buzz([60, 40, 60]); closeModal(); toast(`はじめてガイド ぜんぶクリア！ コイン +${GUIDE.bonus}`); return;
+      }
+      const b = e.target.closest('[data-g]'); if (!b) return;
+      const t = GUIDE.tasks.find(x => x.id === b.dataset.g);
+      if (!t || S.guide.got.includes(t.id) || !t.check(S, S.guide.hits)) return;
+      S.guide.got.push(t.id); S.coins += GUIDE.reward; save(); se('coin'); buzz(); toast(`コイン +${GUIDE.reward}`); root.innerHTML = draw(); renderHome();
+    });
+  });
+}
+// ホームの案内：画面を暗くして、1か所ずつ照らす。右上の「スキップ」でいつでも終われる
+let tourI = -1;
+function startTour() {
+  if (tourI >= 0 || S.cat.dead) return;
+  if (!$('modal').hidden) closeModal();
+  $('toast').hidden = true;   // 照らす所にかぶらないように
+  if (UI.tab !== 'home') setTab('home');
+  const el = document.createElement('div');
+  el.id = 'tour'; el.className = 'tour'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'ホームの案内');
+  el.innerHTML = `<div class="tour-hole"></div><button class="tour-skip" id="tourSkip">スキップ ✕</button>
+    <div class="tour-box"><p class="tour-text" id="tourText" aria-live="polite"></p>
+      <div class="tour-nav"><span class="tour-n" id="tourN"></span><button class="btn small white" id="tourBack">もどる</button><button class="btn small" id="tourNext">つぎへ</button></div></div>`;
+  document.body.appendChild(el);
+  el.querySelector('#tourSkip').onclick = () => endTour();
+  el.querySelector('#tourBack').onclick = () => { if (tourI > 0) { se('tap'); tourShow(tourI - 1); } };
+  el.querySelector('#tourNext').onclick = () => { se('tap'); if (tourI < TOUR.length - 1) tourShow(tourI + 1); else endTour(); };
+  window.addEventListener('resize', tourPlace);
+  tourShow(0);
+}
+function tourRect(sel) {
+  let r = null;
+  for (const q of sel) {
+    const e = document.querySelector(q); if (!e) continue;
+    const b = e.getBoundingClientRect(); if (!b.width) continue;
+    r = r ? { left: Math.min(r.left, b.left), top: Math.min(r.top, b.top), right: Math.max(r.right, b.right), bottom: Math.max(r.bottom, b.bottom) } : { left: b.left, top: b.top, right: b.right, bottom: b.bottom };
+  }
+  return r;
+}
+function tourShow(i) {
+  tourI = i;
+  const st = TOUR[i];
+  $('tourText').textContent = st.text.replace(/\{cat\}/g, S.cat.name || '猫');
+  $('tourN').textContent = `${i + 1} / ${TOUR.length}`;
+  $('tourBack').hidden = i === 0;
+  $('tourNext').textContent = i === TOUR.length - 1 ? 'はじめる！' : 'つぎへ';
+  tourPlace();
+}
+function tourPlace() {
+  const el = $('tour'); if (!el || tourI < 0) return;
+  const hole = el.querySelector('.tour-hole'), box = el.querySelector('.tour-box'), skip = el.querySelector('.tour-skip');
+  const r = tourRect(TOUR[tourI].sel), pad = 6, vh = window.innerHeight;
+  skip.style.top = '';
+  if (!r) { hole.style.cssText = 'left:50%;top:50%;width:0;height:0'; box.style.top = ''; box.style.bottom = '30%'; return; }
+  hole.style.cssText = `left:${r.left - pad}px;top:${r.top - pad}px;width:${r.right - r.left + pad * 2}px;height:${r.bottom - r.top + pad * 2}px`;
+  // 右上の「スキップ」が照らす所にかぶるときは、その下にずらす（説明はさらにその下）
+  const sk = skip.getBoundingClientRect(), hit = r.left - pad < sk.right && r.right + pad > sk.left && r.top - pad < sk.bottom && r.bottom + pad > sk.top;
+  let below = r.bottom + pad + 14;
+  if (hit) { skip.style.top = (r.bottom + pad + 10) + 'px'; below += sk.height + 12; }
+  // 照らした所が上半分なら、説明はその下。下半分なら、その上
+  if ((r.top + r.bottom) / 2 < vh / 2) { box.style.top = Math.min(below, vh - 190) + 'px'; box.style.bottom = ''; }
+  else { box.style.top = ''; box.style.bottom = Math.min(vh - r.top + pad + 14, vh - 190) + 'px'; }
+}
+function endTour() {
+  const el = $('tour'); if (el) el.remove();
+  window.removeEventListener('resize', tourPlace);
+  const first = !S.guide.tour;
+  tourI = -1; S.guide.tour = true; save(); renderHome();
+  if (first) setTimeout(checkCrisis, 600);
+}
+
 function openMissions() {
   const draw = () => {
     const d = day(), cl = claimedToday();
@@ -835,7 +941,7 @@ function confirmGacha(bag) {
 }
 function pullGacha() {
   if (S.coins < GACHA_COST) { toast(`コインが ${fmt(GACHA_COST - S.coins)} 足りません`); se('bad'); return; }
-  S.coins -= GACHA_COST;
+  S.coins -= GACHA_COST; guideHit('gacha');
   // 天井：SR が出ないまま GACHA_PITY 回目になったら SR 確定（S.pity = 前の SR から何回引いたか）
   const since = (S.pity || 0) + 1, r = Math.random() * 100;
   const rar = r < GACHA_RATE.SR || since >= GACHA_PITY ? 'SR' : r < GACHA_RATE.SR + GACHA_RATE.R ? 'R' : 'N';
@@ -865,7 +971,7 @@ function pullGacha() {
   openModal(`<h2 id="modalTitle">${rar === 'SR' ? '大当たり！' : 'でたよ！'}</h2><div class="reveal">${body}
     <div class="gacha-pity">${pityHTML()}</div>
     <button class="btn white block" id="againG">もう1回（${GACHA_COST}コイン）</button></div>`, root => {
-    const eq = root.querySelector('#equipNow'); if (eq) eq.onclick = () => { S.cat.equip[eq.dataset.slot] = eq.dataset.id; save(); closeModal(); toast('着がえました'); };
+    const eq = root.querySelector('#equipNow'); if (eq) eq.onclick = () => { S.cat.equip[eq.dataset.slot] = eq.dataset.id; guideHit('wear'); save(); closeModal(); toast('着がえました'); };
     root.querySelector('#againG').onclick = () => { closeModal(); confirmGacha(); };
   });
 }
@@ -926,7 +1032,7 @@ $('trainBody').addEventListener('click', e => {
   else if (t.dataset.mini === 'quiz') playQuiz();
   else if (t.dataset.mini === 'tap') playTap();
   else if (MINI_PAGES[t.dataset.mini]) openMiniPage(t.dataset.mini);
-  else if (t.dataset.wear) { const k = t.dataset.wear; S.cat.equip[WEAR[k].slot] = k; save(); se('tap'); renderAll(); }
+  else if (t.dataset.wear) { const k = t.dataset.wear; S.cat.equip[WEAR[k].slot] = k; guideHit('wear'); save(); se('tap'); renderAll(); }
 });
 function doTraining(t) {
   if (S.cat.dead) return;
@@ -1176,6 +1282,7 @@ function renderSettings() {
     <div class="section-title">そのほか</div>
     <div class="card set-group">
       <div class="set-row"><div class="grow">猫の種類<small>いまは「${esc((CATS[S.cat.breed] || CATS.tabby).name)}」</small></div><button class="btn small white" id="sCat">かえる</button></div>
+      <div class="set-row"><div class="grow">使い方ガイド<small>ホームの案内をもう一度見る</small></div><button class="btn small white" id="sTour">見る</button></div>
       <div class="set-row"><div class="grow">プロフィール・目標カロリー</div><button class="btn small white" id="sProfile">ひらく</button></div>
       <div class="set-row"><div class="grow">データをすべて消す<small>猫・コイン・記録が最初にもどります</small></div><button class="btn small ${resetArmed ? 'red' : 'white'}" id="sReset">${resetArmed ? 'もう一度押すと消えます' : '消す'}</button></div>
     </div>
@@ -1193,6 +1300,7 @@ $('setBody').addEventListener('click', async e => {
     else s.notify = false;
   }
   else if (b.id === 'sProfile') { openProfile(false); return; }
+  else if (b.id === 'sTour') { setTab('home'); setTimeout(startTour, 300); return; }
   else if (b.id === 'sBackup') { doBackup(); return; }
   else if (b.id === 'sRestore') { openRestore(); return; }
   else if (b.id === 'sCat') { openCatPicker(); return; }

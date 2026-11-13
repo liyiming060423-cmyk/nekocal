@@ -469,3 +469,17 @@ body.sos::after { content: ""; position: fixed; inset: 0; z-index: 80; pointer-e
 
 /* タイトル画面の音楽ボタン */
 .t-music { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 12px; width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--ink); background: var(--white); font-size: 20px; box-shadow: 0 3px 0 var(--ink); cursor: pointer; }
+
+/* ===== v9.1 ホームの案内（スポットライト）・はじめてガイド ===== */
+.tour { position: fixed; inset: 0; z-index: 50; }
+.tour-hole { position: fixed; border-radius: 18px; box-shadow: 0 0 0 200vmax rgba(40, 20, 8, .66); border: 3px solid #FFD966; pointer-events: none; transition: all .3s ease; }
+.tour-skip { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); right: 12px; z-index: 2; padding: 8px 14px; border-radius: 999px; border: 2.5px solid var(--ink); background: var(--white); color: var(--ink); font-weight: 900; font-size: 14px; box-shadow: 0 3px 0 var(--ink); }
+.tour-skip:active { transform: translateY(3px); box-shadow: 0 0 0 var(--ink); }
+.tour-box { position: fixed; left: 50%; transform: translateX(-50%); width: min(440px, calc(100vw - 28px)); background: var(--white); border: 3px solid var(--ink); border-radius: 18px; box-shadow: 0 4px 0 var(--ink); padding: 14px 16px 12px; }
+.tour-text { margin: 0 0 10px; font-weight: 700; line-height: 1.6; color: var(--ink); }
+.tour-nav { display: flex; align-items: center; gap: 8px; }
+.tour-n { flex: 1; font-weight: 900; color: var(--ink); opacity: .7; }
+@media (prefers-reduced-motion: reduce) { .tour-hole { transition: none; } }
+.event-banner.guide { background: linear-gradient(135deg, #BFE8A6, #6CC27A); }
+.event-banner.guide .ev-ico svg { width: 30px; height: 30px; }
+.event-banner.guide b { color: #C0392B; }
