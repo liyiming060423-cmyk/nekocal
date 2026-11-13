@@ -470,7 +470,7 @@ function startFromTitle() {
   const t = $('title'); if (t.classList.contains('out')) return;
   se('get'); buzz(20); bgmUnlocked = true;
   t.classList.add('out'); setTimeout(() => { t.hidden = true; bgmUpdate(); }, 350);
-  if (!S.onboarded) openWelcome(); else setTimeout(checkCrisis, 900);
+  if (!S.onboarded) openWelcome(); else { setTimeout(checkCrisis, 900); setTimeout(checkBackupNag, 1800); }
 }
 function openWelcome() {
   let name = S.user.name && S.user.name !== 'プレイヤー' ? S.user.name : '', breed = S.cat.breed || 'tabby', catName = S.cat.name || 'もち';
@@ -478,7 +478,9 @@ function openWelcome() {
     root.innerHTML = `<h2 id="modalTitle">はじめまして！（1/3）</h2><div class="stack">
       <p style="margin:0">あなたの名前を教えてね。猫がこの名前で呼んでくれます。</p>
       <label class="f">あなたの名前<input type="text" id="wName" maxlength="12" value="${esc(name)}" placeholder="例：かいり" autocomplete="nickname"></label>
-      <button class="btn block" id="wNext1">つぎへ</button></div>`;
+      <button class="btn block" id="wNext1">つぎへ</button>
+      <button type="button" class="btn block white" id="wRestore" style="font-size:14px">前のスマホのデータがある → バックアップから復元</button></div>`;
+    root.querySelector('#wRestore').onclick = () => openRestore();
     const inp = root.querySelector('#wName');
     root.querySelector('#wNext1').onclick = () => { name = inp.value.trim(); if (!name) { toast('名前を入れてね'); inp.focus(); return; } se('tap'); step2(root); };
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') root.querySelector('#wNext1').click(); });
@@ -553,6 +555,93 @@ function applySteps(d) {
   d.stepUnits = units; addStamina(add * RULE.staminaPerUnit); S.coins += add * RULE.coinPerUnit;
   return add;
 }
+/* ---------- バックアップ・復元（v8.9） ---------- */
+// データはこのスマホの中（localStorage）にしかないので、機種変更やブラウザのデータ削除で消える。
+// 全データ（写真こみ）を1つの JSON ファイルにして保存し、新しいスマホで「復元」すると同じ状態にもどる。
+const BK_APP = 'nyankalo', DAY_MS = 864e5, BK_NAG_DAYS = 7;
+const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+const verNum = v => String(v || '0').split('.').reduce((a, x) => a * 1000 + (parseInt(x, 10) || 0), 0);
+function backupAgoText() {
+  if (!S.lastBackup) return 'まだ一度も保存していません';
+  const n = Math.floor((Date.now() - S.lastBackup) / DAY_MS);
+  return `最後のバックアップ：${n <= 0 ? '今日' : n + '日前'}`;
+}
+async function doBackup() {
+  const name = `nyankalo-backup-${todayStr().replace(/-/g, '')}.json`;
+  const blob = new Blob([JSON.stringify({ app: BK_APP, ver: APP_VER, at: Date.now(), data: S })], { type: 'application/json' });
+  // スマホで共有シートが使えるときはそちら（「ファイルに保存」や LINE に送れる）
+  let file = null; try { file = new File([blob], name, { type: 'application/json' }); } catch (e) {}
+  if (file && navigator.canShare && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+    try { if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'にゃんカロのバックアップ' }); markBackup(); return; } }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  markBackup();
+}
+function markBackup() {
+  S.lastBackup = Date.now(); save(); se('coin');
+  toast(isIOS() ? 'バックアップを保存しました（「ファイル」アプリに入っています）' : 'バックアップを保存しました（ダウンロードに入っています）');
+  if (UI.tab === 'settings') renderSettings();
+}
+// ファイルの中身をチェック。問題があればメッセージを返す
+function checkBackup(o) {
+  if (!o || o.app !== BK_APP || !o.data) return 'にゃんカロのバックアップファイルではありません';
+  const d = o.data;
+  if (typeof d !== 'object' || !d.cat || !d.user || !d.days || typeof d.days !== 'object' || !Array.isArray(d.owned) || typeof d.coins !== 'number') return 'ファイルがこわれているようです';
+  if (verNum(o.ver) > verNum(APP_VER)) return `新しいバージョン（v${o.ver}）のバックアップです。アプリを最新にしてから復元してください`;
+  return null;
+}
+function openRestore() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/json,.json';
+  inp.onchange = () => {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    if (f.size > 60e6) { toast('ファイルが大きすぎます'); return; }
+    const r = new FileReader();
+    r.onerror = () => toast('ファイルを読みこめませんでした');
+    r.onload = () => {
+      let o; try { o = JSON.parse(r.result); } catch (e) { toast('にゃんカロのバックアップファイルではありません'); return; }
+      const err = checkBackup(o); if (err) { toast(err); se('bad'); return; }
+      const d = o.data, at = new Date(o.at || 0);
+      const back = () => { if (!S.onboarded) openWelcome(); else closeModal(); };
+      openModal(`<h2 id="modalTitle">バックアップから復元</h2><div class="stack">
+        <div class="card" style="padding:12px 14px;font-weight:700;line-height:1.8">保存した日：${at.getFullYear()}/${at.getMonth() + 1}/${at.getDate()} ${pad(at.getHours())}:${pad(at.getMinutes())}<br>
+          猫：${esc(d.cat.name || '')}（Lv.${Number(d.cat.level) || 1}）<br>コイン：${fmt(d.coins)}<br>記録：${Object.keys(d.days).length}日分</div>
+        <p class="hint" style="color:var(--red);font-weight:900;margin:0">今のデータはすべて上書きされます（元にはもどせません）</p>
+        <button class="btn red block" id="rsGo">復元する</button><button class="btn white block" id="rsNo">やめる</button></div>`, root => {
+        root.querySelector('#rsNo').onclick = back;
+        root.querySelector('#rsGo').onclick = () => {
+          d.lastBackup = o.at || Date.now(); d.onboarded = true;
+          try { localStorage.setItem(KEY, JSON.stringify(d)); }
+          catch (e) { toast('スマホの容量が足りず、復元できませんでした'); return; }
+          toast('復元しました！ 読みこみなおします'); se('get');
+          setTimeout(() => location.reload(), 700);
+        };
+      }, null, !S.onboarded);   // はじめての設定の途中なら、外をタップしても閉じない
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+// しばらくバックアップしていないとき、週に1回だけお知らせ（使いはじめて7日たってから）
+function checkBackupNag() {
+  if (!S.onboarded || !$('modal').hidden) return;
+  const first = Object.keys(S.days).sort()[0], firstT = first ? new Date(first).getTime() : Date.now();
+  const base = S.lastBackup || firstT, now = Date.now();
+  if (now - base < BK_NAG_DAYS * DAY_MS || now - (S.backupNag || 0) < BK_NAG_DAYS * DAY_MS) return;
+  S.backupNag = now; save();
+  openModal(`<h2 id="modalTitle">バックアップしよう</h2><div class="stack">
+    <p style="margin:0">${S.lastBackup ? `最後のバックアップから${Math.floor((now - S.lastBackup) / DAY_MS)}日たちました。` : 'まだ一度もバックアップしていません。'}データはこのスマホの中にしかないので、機種変更やブラウザのデータ削除で${esc(S.cat.name)}が消えてしまいます。</p>
+    ${isIOS() && !isStandalone() ? '<p class="hint" style="margin:0">iPhone は Safari の共有ボタン →「ホーム画面に追加」から開くと、データが消えにくくなります。</p>' : ''}
+    <button class="btn block" id="bnGo">今すぐ保存</button><button class="btn white block" id="bnNo">あとで</button></div>`, root => {
+    root.querySelector('#bnGo').onclick = () => { closeModal(); doBackup(); };
+    root.querySelector('#bnNo').onclick = closeModal;
+  });
+}
+
 /* ---------- ログボ・プレゼント ---------- */
 function openLogin() {
   const t = todayStr(), can = S.login.last !== t;
@@ -1065,6 +1154,12 @@ function renderSettings() {
     </div>
     <div class="section-title">言語</div>
     <div class="card set-group"><div class="set-row"><div class="grow">言語 / Language</div><select id="sLang" style="width:150px"><option value="ja" selected>日本語</option><option value="zh" disabled>中文（準備中）</option><option value="en" disabled>English（準備中）</option></select></div></div>
+    <div class="section-title">データ</div>
+    <div class="card set-group">
+      <div class="set-row"><div class="grow">バックアップを保存<small>${esc(backupAgoText())}。写真もふくめて1つのファイルにします</small></div><button class="btn small" id="sBackup">保存</button></div>
+      <div class="set-row"><div class="grow">バックアップから復元<small>機種変更のときなど。今のデータは上書きされます</small></div><button class="btn small white" id="sRestore">えらぶ</button></div>
+      ${isIOS() && !isStandalone() ? '<div class="set-row"><div class="grow">iPhone の人へ<small>Safari の共有ボタン →「ホーム画面に追加」から開くと、データが消えにくくなります</small></div></div>' : ''}
+    </div>
     <div class="section-title">そのほか</div>
     <div class="card set-group">
       <div class="set-row"><div class="grow">猫の種類<small>いまは「${esc((CATS[S.cat.breed] || CATS.tabby).name)}」</small></div><button class="btn small white" id="sCat">かえる</button></div>
@@ -1085,6 +1180,8 @@ $('setBody').addEventListener('click', async e => {
     else s.notify = false;
   }
   else if (b.id === 'sProfile') { openProfile(false); return; }
+  else if (b.id === 'sBackup') { doBackup(); return; }
+  else if (b.id === 'sRestore') { openRestore(); return; }
   else if (b.id === 'sCat') { openCatPicker(); return; }
   else if (b.id === 'sReset') {
     if (!resetArmed) { resetArmed = true; renderSettings(); setTimeout(() => { resetArmed = false; if (UI.tab === 'settings') renderSettings(); }, 4000); return; }
