@@ -1,7 +1,7 @@
 // にゃんカロ service worker
 // アプリ本体はキャッシュしてオフラインでも起動できるようにする。
 // 更新したら VERSION の数字を上げると、利用者のスマホに新しい版が届く。
-const VERSION = '9.2';   // index.html などの ?v= と同じ数字にする
+const VERSION = '9.3';   // index.html などの ?v= と同じ数字にする
 const CACHE = 'nekocal-v' + VERSION;
 const V = '?v=' + VERSION;
 const APP_FILES = [
@@ -18,25 +18,25 @@ const APP_FILES = [
   './slot.html',
   './baseball.html',
   './sagase.css' + V,
-  './home-bg.jpg',
-  './tabby-body.png',
-  './tabby-tail.png',
-  './tabby-shirt.png',
-  './tabby-gloves.png',
-  './white-body.png',
-  './white-tail.png',
-  './white-shirt.png',
-  './white-gloves.png',
-  './longwhite-body.png',
-  './longwhite-tail.png',
-  './longwhite-shirt.png',
-  './longwhite-gloves.png',
-  './grey-body.png',
-  './grey-tail.png',
-  './grey-shirt.png',
-  './grey-gloves.png',
-  './gym-bg.jpg',
-  './shop-bg.jpg',
+  './home-bg.webp',
+  './tabby-body.webp',
+  './tabby-tail.webp',
+  './tabby-shirt.webp',
+  './tabby-gloves.webp',
+  './white-body.webp',
+  './white-tail.webp',
+  './white-shirt.webp',
+  './white-gloves.webp',
+  './longwhite-body.webp',
+  './longwhite-tail.webp',
+  './longwhite-shirt.webp',
+  './longwhite-gloves.webp',
+  './grey-body.webp',
+  './grey-tail.webp',
+  './grey-shirt.webp',
+  './grey-gloves.webp',
+  './gym-bg.webp',
+  './shop-bg.webp',
   './battle.js' + V,
   './battle.css' + V,
   './walk.js' + V,

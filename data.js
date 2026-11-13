@@ -1,5 +1,5 @@
 // アプリの版。index.html の ?v= と sw.js の VERSION もこれにそろえる
-const APP_VER = '9.2';
+const APP_VER = '9.3';
 
 // にゃんカロ データ定義
 // アイテム・ショップ・トレーニング・ミッションなど「数字や名前」はここだけで管理する。
@@ -38,7 +38,7 @@ const WEAR = {
 const SLOT_NAME = { suit: 'コスチューム', head: '頭', top: '服', hand: '手' };
 
 // 猫の種類（はじめに選ぶ・せっていで変えられる）
-// 絵は ○○-body.png / -tail.png / -shirt.png / -gloves.png（高さ813の透過PNG、4枚とも同じ大きさ）
+// 絵は ○○-body.webp / -tail.webp / -shirt.webp / -gloves.webp（高さ813の透過画像、4枚とも同じ大きさ。v9.3 で PNG→WebP。新しい猫を足すときは透過PNGを WebP（品質85）にする）
 //   w,h  : 絵の大きさ    x : 横の位置あわせ（600幅の枠の中で、頭の真ん中がそろうようにずらす量）
 //   pivot: しっぽを振る中心    head: 頭の中心と半径（頭の着せかえの位置）    hands: ダンベルを持つ位置
 //   zones: タップの当たり判定 [部位, 中心x, 中心y, 半径x, 半径y]（上から順に優先）

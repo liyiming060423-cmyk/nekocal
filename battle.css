@@ -3,7 +3,7 @@
 .vs-badge { position: absolute; right: 10px; bottom: 10px; background: var(--red, #E0573F); color: #fff; font-weight: 900; font-size: 16px; padding: 6px 14px; border-radius: 999px; border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink); animation: vsPulse 1.6s ease-in-out infinite; }
 @keyframes vsPulse { 50% { transform: scale(1.08); } }
 
-.b-ui { position: fixed; inset: 0; z-index: 70; background: var(--bg) url("gym-bg.jpg") center / cover no-repeat; display: flex; flex-direction: column; }
+.b-ui { position: fixed; inset: 0; z-index: 70; background: var(--bg) url("gym-bg.webp") center / cover no-repeat; display: flex; flex-direction: column; }
 .b-ui::before { content: ""; position: absolute; inset: 0; background: rgba(255, 246, 230, .86); }
 .b-head { position: relative; display: flex; align-items: center; justify-content: center; padding: max(10px, env(safe-area-inset-top)) 12px 6px; }
 .b-head h2 { margin: 0; font-size: 22px; font-weight: 900; }

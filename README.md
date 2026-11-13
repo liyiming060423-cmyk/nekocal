@@ -10,17 +10,17 @@
 | data.js | アイテム・値段・ミッション・クイズ問題などの数字、猫の種類（CATS） | 企画担当（ここだけ直せばバランス調整できる） |
 | cat.js | 骸骨・爆発の絵、頭の着せかえの絵 | 絵担当 |
 | petcat.js / petcat.css | イラスト猫の動き・タップ反応・着せかえの色 | 絵担当・プログラム担当 |
-| ○○-body.png / -tail.png / -shirt.png / -gloves.png | 猫のイラスト（体・しっぽ・服・手袋に分けた透過PNG）。○○＝tabby（茶トラ）/ white（白猫）/ longwhite（白い長毛猫）/ grey（灰色の長毛猫） | 絵担当（同じ名前で差しかえ） |
+| ○○-body.webp / -tail.webp / -shirt.webp / -gloves.webp | 猫のイラスト（体・しっぽ・服・手袋に分けた透過WebP。元のPNGは nyankalo-原図.zip）。○○＝tabby（茶トラ）/ white（白猫）/ longwhite（白い長毛猫）/ grey（灰色の長毛猫） | 絵担当（同じ名前の WebP で差しかえ） |
 | walk.js / walk.css | さんぽモード（GPS）。アプリを開いたまま歩くと地図に道のりを描いて歩数にし、地図のお宝を拾える。GPSの数字は walk.js の上の WALK、お宝の数字は data.js の TREASURE | プログラム担当 |
 | leaflet.js / leaflet.css | 地図のライブラリ（Leaflet 1.9.4）。地図の絵は OpenStreetMap | 触らなくてOK |
 | battle.js / battle.css | 猫バトル（対戦）。ジムの絵をタップするとひらく。数字とカードは data.js の BATTLE / BCARDS | 対戦担当 |
-| home-bg.jpg | ホームとタイトル画面の背景 | 絵担当（同じ名前で差しかえ） |
+| home-bg.webp | ホームとタイトル画面の背景 | 絵担当（同じ名前の WebP で差しかえ） |
 | sagase.html / sagase.css | ミニゲーム「お題の猫を探せ！」（組員作）。コインはアプリのコインにたまる（1回最大50） | ミニゲーム担当 |
 | dash.html | ミニゲーム「にゃんこダッシュ」（組員作）。拾ったコインがアプリにたまる（1回最大50） | ミニゲーム担当 |
 | bgm-title.mp3 / bgm-home.mp3 / bgm-shop.mp3 / bgm-train.mp3 | BGM（タイトル：Cat life／ホーム・りれき・せってい：自宅にて／ショップ・更衣室：青空／トレーニング：Sunrise）。組員が用意した曲を軽くしたもの | 音担当（同じ名前で差しかえ） |
 | baseball.html | ミニゲーム「にゃんこバッティング」。犬のピッチャー（柴犬・ブルドッグ・ハスキー）の10球を打つ。自分の猫の能力・毛色・服の色が使われる。数字はファイルの上の「バランス」で調整 | ミニゲーム担当 |
 | slot.html / slot-bgm.mp3 | ミニゲーム「にゃんこスロット」（組員作）。アプリのコインをかける（1日のもうけ上限100）。BGMは組員が用意した曲を軽くしたもの | ミニゲーム担当 |
-| gym-bg.jpg / shop-bg.jpg | ジムとガチャのお店の絵 | 絵担当 |
+| gym-bg.webp / shop-bg.webp | ジムとガチャのお店の絵 | 絵担当 |
 | app.js | 計算・保存・各タブの動き | プログラム担当 |
 | sw.js / manifest.webmanifest | オフライン起動・アプリ名とアイコン | 触らなくてOK |
 
@@ -137,3 +137,10 @@
   - しらべ終わったら「今日のAIあと○回」を出す
 - 更新の順番：Worker を先 → アプリ。Worker は d なし（古いアプリ）でも動く（IPと全員の上限だけかかる）
 - Worker に DB のバインディングが無いと、AIは動くが上限がかからない（返事に "limit": "off"）。アプリに「今日のAIあと○回」が出れば上限が効いている
+
+## v9.3 で変わったこと（画像を軽く）
+- 猫の絵16枚（4種類×body/tail/shirt/gloves）を PNG → WebP（品質85・透過そのまま）：2,346KB → 382KB
+- 背景3枚（home-bg / gym-bg / shop-bg）を JPG → WebP：324KB → 217KB
+- はじめて開いたときに読みこむ量が約2MB へった
+- 元の PNG / JPG は別の zip（nyankalo-原図.zip）。絵を直すときはそっちを直して、WebP（猫は品質85、背景は82）にしてから入れる
+- アイコン（icon-○○.png・apple-touch-icon.png）は PNG のまま（iPhone のホーム画面用）

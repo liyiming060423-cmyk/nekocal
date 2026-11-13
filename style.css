@@ -328,7 +328,7 @@ label.f { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font
 @media (prefers-reduced-motion: reduce) { .tr-cat .pc-act, .bag-hit.picked { animation: none; } }
 
 /* ===== ホーム v7（チームのデザイン案に合わせた配置） ===== */
-#tab-home { background: var(--bg) url("home-bg.jpg") center top / cover no-repeat; gap: 8px; padding-top: 10px; padding-bottom: 6px; }
+#tab-home { background: var(--bg) url("home-bg.webp") center top / cover no-repeat; gap: 8px; padding-top: 10px; padding-bottom: 6px; }
 .h-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 6px; }
 .coin-chip, .name-chip { display: flex; align-items: center; gap: 6px; min-height: 46px; border: 3px solid var(--ink); border-radius: 999px; box-shadow: 0 3px 0 var(--ink); font-weight: 900; padding: 0 6px; }
 .coin-chip { background: #5A3A28; color: var(--white); font-size: 18px; padding-left: 4px; }
@@ -406,7 +406,7 @@ label.f { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font
 
 /* ===== タイトル画面 ===== */
 .title { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom)); text-align: center; cursor: pointer; overflow: hidden;
-  background: linear-gradient(rgba(255, 246, 230, .55), rgba(253, 233, 201, .85)), var(--bg) url("home-bg.jpg") center / cover no-repeat; transition: opacity .35s, transform .35s; }
+  background: linear-gradient(rgba(255, 246, 230, .55), rgba(253, 233, 201, .85)), var(--bg) url("home-bg.webp") center / cover no-repeat; transition: opacity .35s, transform .35s; }
 .title.out { opacity: 0; transform: scale(1.04); pointer-events: none; }
 .t-logo { font-size: clamp(44px, 14vw, 64px); font-weight: 900; line-height: 1; letter-spacing: .02em; color: var(--orange-d); -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; text-shadow: 0 5px 0 var(--ink); animation: tPop .8s cubic-bezier(.3, 1.6, .5, 1) both; }
 .t-logo span:last-child { color: var(--yellow); }
