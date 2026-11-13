@@ -61,15 +61,20 @@ function wearIcon(id) {
     if (id === 'band_none') return `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="14" fill="none" stroke="#B9A48E" stroke-width="3" stroke-dasharray="4 4"/></svg>`;
     if (id === 'crown') return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 36 V14 l9 10 7 -14 7 14 9 -10 V36 Z" fill="#E9B730" stroke="${L}" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
     if (id === 'cap_red') return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 30 Q10 10 28 10 Q40 10 40 30 Z" fill="#D33A3A" stroke="${L}" stroke-width="2.5"/><path d="M4 30 h36" stroke="${L}" stroke-width="4" stroke-linecap="round"/></svg>`;
-    return `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="18" width="36" height="12" rx="5" fill="${w.color}" stroke="${L}" stroke-width="2.5"/></svg>`;
+    if (id === 'band_pink' || id === 'band_blue') return `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="18" width="36" height="12" rx="5" fill="${w.color}" stroke="${L}" stroke-width="2.5"/></svg>`;
+    // v9.4 からの頭のきせかえ：小さい顔にかぶせて見せる（cat.js の headGear をそのまま使う）
+    return `<svg viewBox="14 -22 272 252" aria-hidden="true"><ellipse cx="150" cy="130" rx="97" ry="80" fill="#FBE3C6" stroke="${L}" stroke-width="5"/><circle cx="112" cy="124" r="8" fill="${L}"/><circle cx="188" cy="124" r="8" fill="${L}"/><path d="M140 150 q10 10 20 0" fill="none" stroke="${L}" stroke-width="4" stroke-linecap="round"/>${headGear(id, 97)}</svg>`;
   }
   if (w.slot === 'suit') {
     if (id === 'suit_none') return `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="14" fill="none" stroke="#B9A48E" stroke-width="3" stroke-dasharray="4 4"/></svg>`;
     return `<svg viewBox="-20 -70 340 300" aria-hidden="true"><ellipse cx="150" cy="140" rx="84" ry="66" fill="#FBE3C6" stroke="${L}" stroke-width="5"/><circle cx="120" cy="135" r="7" fill="${L}"/><circle cx="180" cy="135" r="7" fill="${L}"/>${suitHead(id)}</svg>`;
   }
-  if (w.slot === 'top') return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 6 L8 12 L4 22 L11 24 L12 42 H36 L37 24 L44 22 L40 12 L32 6 Q24 12 16 6 Z" fill="${w.color}" stroke="${L}" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
+  // にじ色（v9.4）はグラデーション
+  const rb = /rainbow/.test(id), fill = rb ? 'url(#wRainbow)' : w.color;
+  const defs = rb ? '<defs><linearGradient id="wRainbow" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F26B6B"/><stop offset=".25" stop-color="#F5C84A"/><stop offset=".5" stop-color="#6CC27A"/><stop offset=".75" stop-color="#5B8FE0"/><stop offset="1" stop-color="#A86AD8"/></linearGradient></defs>' : '';
+  if (w.slot === 'top') return `<svg viewBox="0 0 48 48" aria-hidden="true">${defs}<path d="M16 6 L8 12 L4 22 L11 24 L12 42 H36 L37 24 L44 22 L40 12 L32 6 Q24 12 16 6 Z" fill="${fill}" stroke="${L}" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
   if (id === 'dumbbell') return I.barbell;
-  return `<svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="24" cy="22" rx="14" ry="15" fill="${w.color}" stroke="${L}" stroke-width="2.5"/><rect x="13" y="34" width="22" height="9" rx="3" fill="#FFFFFF" stroke="${L}" stroke-width="2.5"/></svg>`;
+  return `<svg viewBox="0 0 48 48" aria-hidden="true">${defs}<ellipse cx="24" cy="22" rx="14" ry="15" fill="${fill}" stroke="${L}" stroke-width="2.5"/><rect x="13" y="34" width="22" height="9" rx="3" fill="#FFFFFF" stroke="${L}" stroke-width="2.5"/></svg>`;
 }
 
 /* =========================================================
@@ -914,7 +919,7 @@ function renderShop() {
     </div>
     <div class="card gacha-info"><div class="gacha-cost">1回引く：<b class="num">${GACHA_COST}</b>コイン<span class="muted">　もっている ${fmt(S.coins)}</span></div>
       <div class="gacha-pity">${pityHTML()}</div>
-      <p class="hint">福袋をタップすると引けます。きせかえとトレーニングアイテムが出ます。SR ${GACHA_RATE.SR}%・R ${GACHA_RATE.R}%・N ${GACHA_RATE.N}%　${GACHA_PITY}回のうちに SR が必ず出ます（まだ持っていない SR から先に出ます）　かぶったら ${DUP_REFUND}コインに交換</p></div>`;
+      <p class="hint">福袋をタップすると引けます。きせかえとトレーニングアイテムが出ます。SR ${GACHA_RATE.SR}%・R ${GACHA_RATE.R}%・N ${GACHA_RATE.N}%　${GACHA_PITY}回のうちに SR が必ず出ます（まだ持っていないきせかえから先に出ます）　かぶったら ${DUP_REFUND}コインに交換</p></div>`;
   }
 }
 $('shopSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; UI.shopTab = b.dataset.v; se('tap'); renderShop(); });
@@ -956,9 +961,10 @@ function pullGacha() {
   const rar = r < GACHA_RATE.SR || since >= GACHA_PITY ? 'SR' : r < GACHA_RATE.SR + GACHA_RATE.R ? 'R' : 'N';
   S.pity = rar === 'SR' ? 0 : since;
   let wears = Object.keys(WEAR).filter(k => WEAR[k].rar === rar && k !== 'band_none' && k !== 'suit_none');
-  // SR はまだ持っていないきせかえから先に出す（そのあいだは金のサンドバッグも出ない。ぜんぶ持っていたら、かぶり・アイテムもあり）
-  const srNew = rar === 'SR' && wears.some(k => !S.owned.includes(k));
-  if (srNew) wears = wears.filter(k => !S.owned.includes(k));
+  // まだ持っていないきせかえから先に出す（v9.4 から N・R も）。SR はそのあいだ金のサンドバッグも出ない
+  // N・R はアイテム（ドリンク・プロテイン）はそのまま出る。ぜんぶ持っていたら、かぶり（コインに交換）もあり
+  const hasNew = wears.some(k => !S.owned.includes(k)), srNew = rar === 'SR' && hasNew;
+  if (hasNew) wears = wears.filter(k => !S.owned.includes(k));
   wears = wears.map(k => ({ wear: k }));
   const pool = srNew ? wears : wears.concat((GACHA_ITEMS[rar] || []).map(x => ({ item: x.id, n: x.n })));
   const got = pool[Math.floor(Math.random() * pool.length)];
@@ -1016,9 +1022,27 @@ function renderTrain() {
     const eq = S.cat.equip;
     $('trainBody').innerHTML = `<div class="locker"><div class="card preview">${petCatHTML({ breed: S.cat.breed, idx: S.cat.idx, equip: eq, dead: S.cat.dead })}</div>
       <div class="card stats"><div style="font-weight:900">${esc(S.cat.name)}　Lv.${S.cat.level}</div>${statRows()}</div></div>
-      ${['suit', 'head', 'top', 'hand'].map(sl => `<div class="section-title">${SLOT_NAME[sl]}</div>${sl === 'suit' ? '<p class="hint" style="margin:-4px 0 8px;text-align:center">着ている間は 頭・服 が見えません（能力のボーナスはそのまま）</p>' : ''}<div class="wear-grid">${S.owned.filter(k => WEAR[k] && WEAR[k].slot === sl).map(k => `<button class="wear" data-wear="${k}" aria-pressed="${eq[sl] === k}">${wearIcon(k)}<span>${esc(WEAR[k].name)}</span><span class="rar ${WEAR[k].rar}">${WEAR[k].rar}</span></button>`).join('')}</div>`).join('')}
+      ${lockerHTML(eq)}
       <p class="hint" style="margin-top:10px">ガチャで新しいきせかえが手に入ります。</p>`;
   }
+}
+// 更衣室（v9.4）：部位のタブ＋図鑑。持っていないものは「？」で出す
+const LOCKER_SLOTS = ['head', 'top', 'hand', 'suit'];
+const RAR_ORDER = { N: 0, R: 1, SR: 2 };
+function lockerHTML(eq) {
+  const sl = LOCKER_SLOTS.includes(UI.lockerSlot) ? UI.lockerSlot : 'head';
+  const isNone = k => /_none$/.test(k);
+  const all = Object.keys(WEAR).filter(k => !isNone(k)), got = all.filter(k => S.owned.includes(k)).length;
+  const cnt = x => { const ks = all.filter(k => WEAR[k].slot === x); return `${ks.filter(k => S.owned.includes(k)).length}/${ks.length}`; };
+  const list = Object.keys(WEAR).filter(k => WEAR[k].slot === sl)
+    .sort((a, b) => (isNone(b) - isNone(a)) || (RAR_ORDER[WEAR[a].rar] - RAR_ORDER[WEAR[b].rar]));
+  const cell = k => S.owned.includes(k)
+    ? `<button class="wear" data-wear="${k}" aria-pressed="${eq[sl] === k}">${wearIcon(k)}<span>${esc(WEAR[k].name)}</span><span class="rar ${WEAR[k].rar}">${WEAR[k].rar}</span></button>`
+    : `<div class="wear locked" aria-label="まだ持っていない ${WEAR[k].rar} のきせかえ"><span class="q">？</span><span>？？？</span><span class="rar ${WEAR[k].rar}">${WEAR[k].rar}</span></div>`;
+  return `<div class="card zukan"><div class="zk-top"><b>きせかえ図鑑</b><span>集めた <b class="num">${got}</b> / ${all.length}</span></div><div class="prog"><i style="width:${got / all.length * 100}%"></i></div></div>
+    <div class="seg locker-seg" role="tablist">${LOCKER_SLOTS.map(x => `<button role="tab" data-lslot="${x}" aria-selected="${x === sl}">${SLOT_NAME[x]}<small>${cnt(x)}</small></button>`).join('')}</div>
+    ${sl === 'suit' ? '<p class="hint" style="margin:0 0 8px;text-align:center">着ている間は 頭・服 が見えません（能力のボーナスはそのまま）</p>' : ''}
+    <div class="wear-grid">${list.map(cell).join('')}</div>`;
 }
 function statRows() {
   const col = { pow: 'var(--red)', spd: 'var(--blue)', sta: 'var(--green)' };
@@ -1041,6 +1065,7 @@ $('trainBody').addEventListener('click', e => {
   else if (t.dataset.mini === 'quiz') playQuiz();
   else if (t.dataset.mini === 'tap') playTap();
   else if (MINI_PAGES[t.dataset.mini]) openMiniPage(t.dataset.mini);
+  else if (t.dataset.lslot) { UI.lockerSlot = t.dataset.lslot; se('tap'); renderTrain(); }
   else if (t.dataset.wear) { const k = t.dataset.wear; S.cat.equip[WEAR[k].slot] = k; guideHit('wear'); save(); se('tap'); renderAll(); }
 });
 function doTraining(t) {

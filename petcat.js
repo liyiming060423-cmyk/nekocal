@@ -54,7 +54,10 @@ function petCatHTML(o) {
 }
 
 // 着せかえ（服・手袋は色フィルター、頭とダンベルは絵を重ねる）
-const PC_GEAR_DY = { cap_red: 36, crown: 24, band_pink: 16, band_blue: 16 };
+const PC_GEAR_DY = { cap_red: 36, crown: 24, band_pink: 16, band_blue: 16,
+  hachimaki: 16, ribbon: 14, straw_hat: 30, knit_cat: 22, sunglasses: 14, headphones: 4, school_cap: 30, halo: 44, tiara: 22 };   // v9.4 追加分
+// 猫の種類ごとの微調整（目の高さ・頭のかたむきがちがうので）。{ 種類: { きせかえ: { dy: 下にずらす量（＋で下）, rot: 回す角度 } } }
+const PC_GEAR_FIX = { grey: { sunglasses: { dy: -4, rot: -7 }, knit_cat: { dy: -8 } }, white: { sunglasses: { dy: 4 } } };
 // コスチューム（全身）を着ているか
 const pcSuit = eq => eq && eq.suit && eq.suit !== 'suit_none' && typeof WEAR !== 'undefined' && WEAR[eq.suit] ? eq.suit : null;
 // 体のうしろ（マント・リュックなど）
@@ -75,8 +78,8 @@ function petCatWear(b, eq) {
     const [hx, hy, hr] = c.head, k = hr / 97;
     g += `<g transform="translate(${(hx - 150 * k).toFixed(1)} ${(hy - 130 * k).toFixed(1)}) scale(${k.toFixed(3)})">${suitHead(su)}</g>`;
   } else if (eq.head && eq.head !== 'band_none' && typeof headGear === 'function') {
-    const [hx, hy, hr] = c.head, k = hr / 97, dy = PC_GEAR_DY[eq.head] || 0;
-    g += `<g transform="translate(${(hx - 150 * k).toFixed(1)} ${(hy - (130 - dy) * k).toFixed(1)}) scale(${k.toFixed(3)})">${headGear(eq.head, 97)}</g>`;
+    const [hx, hy, hr] = c.head, k = hr / 97, fx = (PC_GEAR_FIX[b] || {})[eq.head] || {}, dy = (PC_GEAR_DY[eq.head] || 0) + (fx.dy || 0);
+    g += `<g transform="translate(${(hx - 150 * k).toFixed(1)} ${(hy - (130 - dy) * k).toFixed(1)}) scale(${k.toFixed(3)})${fx.rot ? ` rotate(${fx.rot} 150 130)` : ''}">${headGear(eq.head, 97)}</g>`;
   }
   if (eq.hand === 'dumbbell') {
     for (const [x, y] of c.hands) {

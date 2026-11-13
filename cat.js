@@ -107,6 +107,72 @@ function headGear(id, hr) {
     return `<path d="M110 60 L110 24 L126 42 L150 14 L174 42 L190 24 L190 60 Z" fill="#E9B730" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` +
       `<circle cx="150" cy="46" r="6" fill="#D93A6F"/><circle cx="124" cy="52" r="4" fill="#3A72D0"/><circle cx="176" cy="52" r="4" fill="#3A72D0"/>`;
   }
+  // ===== v9.4 で追加した頭のきせかえ（頭の中心 150,130・半径 hr。おでこは y≈60〜100） =====
+  if (id === 'hachimaki') {
+    return `<path d="M${150 - hr + 4} 96 Q150 60 ${150 + hr - 4} 96 L${150 + hr - 6} 112 Q150 78 ${150 - hr + 6} 112 Z" fill="#FFFFFF" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` +
+      `<path d="M${150 - hr + 8} 102 Q150 70 ${150 + hr - 8} 102" fill="none" stroke="#E0573F" stroke-width="3"/>` +
+      `<path d="M${150 + hr - 8} 100 q22 -14 34 -2 q-10 8 -30 8 M${150 + hr - 8} 106 q20 10 26 30 q-14 -6 -28 -24" fill="#FFFFFF" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` +
+      `<circle cx="${150 + hr - 8}" cy="103" r="7" fill="#FFFFFF" stroke="${L}" stroke-width="3"/>`;
+  }
+  if (id === 'ribbon') {
+    const x = 150 + hr * 0.5, y = 52;
+    return `<g transform="translate(${x} ${y}) rotate(18)"><path d="M0 0 L-34 -20 Q-44 0 -34 20 Z M0 0 L34 -20 Q44 0 34 20 Z" fill="#E8607A" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` +
+      `<path d="M-6 6 L-16 34 L-6 30 Z M6 6 L16 34 L6 30 Z" fill="#D04A66" stroke="${L}" stroke-width="2.5" stroke-linejoin="round"/>` +
+      `<path d="M-26 -8 Q-30 0 -26 8 M26 -8 Q30 0 26 8" fill="none" stroke="#FFFFFF" stroke-opacity=".6" stroke-width="3" stroke-linecap="round"/>` +
+      `<circle r="9" fill="#F28CA0" stroke="${L}" stroke-width="3"/></g>`;
+  }
+  if (id === 'straw_hat') {
+    const w = hr * 0.62;
+    let weave = '';
+    for (let i = 1; i < 4; i++) weave += `<path d="M${150 - w + i * 4} ${66 - i * 11} Q150 ${58 - i * 12} ${150 + w - i * 4} ${66 - i * 11}" fill="none" stroke="#C99A45" stroke-width="2"/>`;
+    return `<ellipse cx="150" cy="74" rx="${hr * 1.3}" ry="20" fill="#E8C26A" stroke="${L}" stroke-width="3"/>` +
+      `<ellipse cx="150" cy="70" rx="${hr * 1.1}" ry="13" fill="none" stroke="#C99A45" stroke-width="2"/>` +
+      `<path d="M${150 - w} 72 Q${150 - w} 16 150 16 Q${150 + w} 16 ${150 + w} 72 Z" fill="#EFCD7A" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` + weave +
+      `<path d="M${150 - w} 60 Q150 52 ${150 + w} 60 L${150 + w} 72 Q150 64 ${150 - w} 72 Z" fill="#D33A3A" stroke="${L}" stroke-width="2.5" stroke-linejoin="round"/>`;
+  }
+  if (id === 'knit_cat') {
+    let rib = '';
+    for (let x = 150 - hr * 0.86; x < 150 + hr * 0.86; x += 12) rib += `<path d="M${x.toFixed(1)} 86 v18" stroke="#3A7F7C" stroke-width="2.5"/>`;
+    return `<path d="M${150 - hr * 0.72} 56 L${150 - hr * 0.62} 6 L${150 - hr * 0.22} 34 Z M${150 + hr * 0.72} 56 L${150 + hr * 0.62} 6 L${150 + hr * 0.22} 34 Z" fill="#4FA3A0" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` +
+      `<path d="M${150 - hr * 0.6} 46 L${150 - hr * 0.56} 20 L${150 - hr * 0.36} 36 Z M${150 + hr * 0.6} 46 L${150 + hr * 0.56} 20 L${150 + hr * 0.36} 36 Z" fill="#F29BB0"/>` +
+      `<path d="M${150 - hr * 0.92} 92 Q${150 - hr * 0.96} 24 150 24 Q${150 + hr * 0.96} 24 ${150 + hr * 0.92} 92 Z" fill="#4FA3A0" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` +
+      `<path d="M${150 - hr * 0.5} 50 q12 -8 24 0 M${150 + hr * 0.1} 44 q12 -8 24 0" fill="none" stroke="#7CC4C1" stroke-width="3" stroke-linecap="round"/>` +
+      `<rect x="${150 - hr * 0.95}" y="84" width="${hr * 1.9}" height="22" rx="10" fill="#3F8E8B" stroke="${L}" stroke-width="3"/>` + rib;
+  }
+  if (id === 'sunglasses') {
+    const lens = x => `<path d="M${x - 30} 108 h60 q2 0 2 4 q-2 26 -30 26 q-28 0 -32 -26 q0 -4 0 -4 Z" fill="#26282E" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` +
+      `<path d="M${x - 20} 114 l14 0 M${x - 22} 120 l8 0" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="3" stroke-linecap="round"/>`;
+    return `<path d="M${150 - hr * 0.93} 112 L80 110 M${150 + hr * 0.93} 112 L220 110" stroke="${L}" stroke-width="4" stroke-linecap="round"/>` +
+      lens(112) + lens(188) + `<path d="M142 112 Q150 104 158 112" fill="none" stroke="${L}" stroke-width="4"/>`;
+  }
+  if (id === 'headphones') {
+    const cup = x => `<rect x="${x - 17}" y="102" width="34" height="58" rx="15" fill="#3A72D0" stroke="${L}" stroke-width="3"/><rect x="${x - 9}" y="112" width="18" height="38" rx="8" fill="#5B8FE0"/>`;
+    return `<path d="M${150 - hr * 0.98} 120 Q${150 - hr * 1.02} 14 150 14 Q${150 + hr * 1.02} 14 ${150 + hr * 0.98} 120" fill="none" stroke="${L}" stroke-width="15" stroke-linecap="round"/>` +
+      `<path d="M${150 - hr * 0.98} 120 Q${150 - hr * 1.02} 14 150 14 Q${150 + hr * 1.02} 14 ${150 + hr * 0.98} 120" fill="none" stroke="#2E3A4A" stroke-width="9" stroke-linecap="round"/>` +
+      cup(150 - hr) + cup(150 + hr);
+  }
+  if (id === 'school_cap') {
+    const w = hr * 0.78;
+    return `<path d="M${150 - w} 84 L${150 - w - 6} 40 Q150 28 ${150 + w + 6} 40 L${150 + w} 84 Z" fill="#22252B" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` +
+      `<ellipse cx="150" cy="38" rx="${w + 6}" ry="10" fill="#2E323A" stroke="${L}" stroke-width="3"/>` +
+      `<path d="M${150 - w} 74 Q150 66 ${150 + w} 74 L${150 + w} 84 Q150 76 ${150 - w} 84 Z" fill="#14161A"/>` +
+      `<path d="M${150 - w + 4} 84 Q150 76 ${150 + w - 4} 84 Q${150 + w * 0.6} 104 150 106 Q${150 - w * 0.6} 104 ${150 - w + 4} 84 Z" fill="#14161A" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` +
+      `<path d="M${150 - w * 0.5} 92 Q150 100 ${150 + w * 0.3} 92" fill="none" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="3" stroke-linecap="round"/>` +
+      `<circle cx="150" cy="58" r="9" fill="#E9B730" stroke="${L}" stroke-width="2.5"/><path d="M150 51 l2.5 5 5 .7 -3.7 3.5 1 5 -4.8 -2.6 -4.8 2.6 1 -5 -3.7 -3.5 5 -.7 Z" fill="#FFF3B0"/>`;
+  }
+  if (id === 'halo') {
+    return `<g class="gear-bob"><ellipse cx="150" cy="8" rx="66" ry="17" fill="none" stroke="#FFF3B0" stroke-opacity=".6" stroke-width="18"/>` +
+      `<ellipse cx="150" cy="8" rx="66" ry="17" fill="none" stroke="${L}" stroke-width="12"/>` +
+      `<ellipse cx="150" cy="8" rx="66" ry="17" fill="none" stroke="#F5D45C" stroke-width="7"/>` +
+      `<path d="M108 0 Q130 -8 152 -9" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/></g>`;
+  }
+  if (id === 'tiara') {
+    return `<path d="M104 74 Q150 58 196 74 L192 62 L178 64 L172 42 L160 56 L150 26 L140 56 L128 42 L122 64 L108 62 Z" fill="#DDE6F2" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>` +
+      `<path d="M112 68 Q150 56 188 68" fill="none" stroke="#9FB2CC" stroke-width="3"/>` +
+      `<path d="M150 38 l7 10 -7 10 -7 -10 Z" fill="#E8607A" stroke="${L}" stroke-width="2"/>` +
+      `<circle cx="128" cy="56" r="4.5" fill="#6CC6E8" stroke="${L}" stroke-width="1.5"/><circle cx="172" cy="56" r="4.5" fill="#6CC6E8" stroke="${L}" stroke-width="1.5"/>` +
+      `<circle cx="146" cy="44" r="2" fill="#FFFFFF"/>`;
+  }
   return '';
 }
 

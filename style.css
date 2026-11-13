@@ -483,3 +483,15 @@ body.sos::after { content: ""; position: fixed; inset: 0; z-index: 80; pointer-e
 .event-banner.guide { background: linear-gradient(135deg, #BFE8A6, #6CC27A); }
 .event-banner.guide .ev-ico svg { width: 30px; height: 30px; }
 .event-banner.guide b { color: #C0392B; }
+
+/* ===== v9.4 更衣室の図鑑・部位タブ ===== */
+.zukan { padding: 10px 14px; margin: 12px 0 10px; }
+.zk-top { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; }
+.zk-top b.num { font-size: 20px; color: var(--red); }
+.zukan .prog { height: 10px; border-radius: 999px; background: #F4E9D7; border: 2px solid var(--ink); overflow: hidden; margin-top: 6px; }
+.zukan .prog i { display: block; height: 100%; background: linear-gradient(90deg, var(--yellow), var(--orange)); }
+.locker-seg button { font-size: 14px; line-height: 1.15; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.locker-seg button small { font-size: 11px; font-weight: 700; opacity: .75; }
+.wear.locked { background: #F1EBE2; border-style: dashed; color: #9A8A7A; justify-content: center; }
+.wear.locked .q { width: 46px; height: 46px; display: grid; place-items: center; font-size: 30px; font-weight: 900; color: #C9B8A4; }
+.locker-seg button { font-size: 12.5px; white-space: nowrap; letter-spacing: -.3px; padding: 0 2px; }

@@ -1,5 +1,5 @@
 // アプリの版。index.html の ?v= と sw.js の VERSION もこれにそろえる
-const APP_VER = '9.3';
+const APP_VER = '9.4';
 
 // にゃんカロ データ定義
 // アイテム・ショップ・トレーニング・ミッションなど「数字や名前」はここだけで管理する。
@@ -16,15 +16,39 @@ const WEAR = {
   band_blue:   { slot: 'head', name: '青のヘアバンド',     rar: 'N',  color: '#3A7BD5' },
   cap_red:     { slot: 'head', name: '赤いキャップ',       rar: 'R',  color: '#D33A3A', bonus: { spd: 3 } },
   crown:       { slot: 'head', name: '金の王冠',           rar: 'SR', color: '#E9B730', bonus: { pow: 5, spd: 5, sta: 5 } },
+  // v9.4 で追加（絵は cat.js の headGear）
+  hachimaki:   { slot: 'head', name: 'ハチマキ',           rar: 'N',  color: '#FFFFFF' },
+  ribbon:      { slot: 'head', name: 'リボン',             rar: 'N',  color: '#E8607A' },
+  straw_hat:   { slot: 'head', name: '麦わら帽子',         rar: 'N',  color: '#E8C26A' },
+  knit_cat:    { slot: 'head', name: 'ねこみみニット帽',   rar: 'N',  color: '#4FA3A0' },
+  sunglasses:  { slot: 'head', name: 'サングラス',         rar: 'R',  color: '#2A2A2A', bonus: { spd: 3 } },
+  headphones:  { slot: 'head', name: 'ヘッドホン',         rar: 'R',  color: '#3A72D0', bonus: { sta: 3 } },
+  school_cap:  { slot: 'head', name: '学生帽',             rar: 'R',  color: '#22252B', bonus: { pow: 3 } },
+  halo:        { slot: 'head', name: '天使の輪',           rar: 'SR', color: '#F5D45C', bonus: { spd: 6, sta: 8 } },
+  tiara:       { slot: 'head', name: 'ティアラ',           rar: 'SR', color: '#C9D6E8', bonus: { pow: 6, spd: 6, sta: 2 } },
   tee_orange:  { slot: 'top',  name: 'オレンジTシャツ',    rar: 'N',  color: '#F08A3C' },
   jersey_blue: { slot: 'top',  name: '青ジャージ',         rar: 'N',  color: '#3A72D0' },
   tank_paw:    { slot: 'top',  name: '肉球タンクトップ',   rar: 'R',  color: '#2BA37A', bonus: { sta: 4 } },
   gi_white:    { slot: 'top',  name: '白い道着',           rar: 'R',  color: '#FFFFFF', bonus: { pow: 4 } },
   gold_jacket: { slot: 'top',  name: 'チャンピオンジャケット', rar: 'SR', color: '#E9B730', bonus: { pow: 8, sta: 8 } },
+  // v9.4 で追加（服の絵の色を petcat.css の .wear-○○ で変える）
+  tee_pink:    { slot: 'top',  name: 'ピンクTシャツ',      rar: 'N',  color: '#F08AA8' },
+  tee_yellow:  { slot: 'top',  name: '黄色Tシャツ',        rar: 'N',  color: '#F5D24A' },
+  tee_black:   { slot: 'top',  name: '黒Tシャツ',          rar: 'N',  color: '#33302E' },
+  jersey_cyan: { slot: 'top',  name: '水色ジャージ',       rar: 'N',  color: '#6CC6E8' },
+  jersey_purple:{ slot: 'top', name: '紫ジャージ',         rar: 'R',  color: '#8A5AC8', bonus: { spd: 4 } },
+  uni_red:     { slot: 'top',  name: '赤いユニフォーム',   rar: 'R',  color: '#D33A3A', bonus: { pow: 4 } },
+  rainbow_jacket:{ slot: 'top', name: 'にじ色ジャケット',  rar: 'SR', color: '#E86AA8', bonus: { pow: 6, spd: 4, sta: 4 } },
   gloves_brown:{ slot: 'hand', name: '茶色グローブ',       rar: 'N',  color: '#7A4A2A' },
   gloves_red:  { slot: 'hand', name: '赤グローブ',         rar: 'N',  color: '#D33A3A' },
   dumbbell:    { slot: 'hand', name: 'ダンベル',           rar: 'R',  bonus: { pow: 4 } },
   gloves_gold: { slot: 'hand', name: '金のグローブ',       rar: 'SR', color: '#E9B730', bonus: { pow: 10 } },
+  // v9.4 で追加（手袋の絵の色を petcat.css で変える）
+  gloves_blue: { slot: 'hand', name: '青グローブ',         rar: 'N',  color: '#3A72D0' },
+  gloves_green:{ slot: 'hand', name: '緑グローブ',         rar: 'N',  color: '#4FAE5B' },
+  gloves_white:{ slot: 'hand', name: '白グローブ',         rar: 'N',  color: '#F4F1EC' },
+  gloves_pink: { slot: 'hand', name: 'ピンクグローブ',     rar: 'R',  color: '#F08AA8', bonus: { pow: 3 } },
+  gloves_rainbow:{ slot: 'hand', name: 'にじ色グローブ',   rar: 'SR', color: '#E86AA8', bonus: { pow: 8, spd: 4 } },
   // コスチューム（全身の着ぐるみ・コスプレ。着ている間は 頭・服 の見た目をかくす。body=服の色）
   // 絵は cat.js の suitHead（頭）と suitBack（体のうしろ）、服の色は petcat.css の .wear-suit-○○
   suit_none:   { slot: 'suit', name: 'なし',                 rar: 'N' },
