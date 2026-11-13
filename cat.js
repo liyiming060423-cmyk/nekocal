@@ -298,6 +298,64 @@ function suitHead(id) {
       `<path d="M62 70 Q86 30 132 18" fill="none" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round" stroke-opacity=".8"/>` +
       `<path d="M78 236 Q150 262 222 236 L214 254 Q150 280 86 254 Z" fill="#B9C6D2" stroke="${L}" stroke-width="5" stroke-linejoin="round"/>`;
   }
+  // ---- v9.5 で追加 ----
+  const cheek = (col = '#F28CA0') => `<ellipse cx="70" cy="196" rx="14" ry="8" fill="${col}" fill-opacity=".7"/><ellipse cx="230" cy="196" rx="14" ry="8" fill="${col}" fill-opacity=".7"/>`;
+  const beak = y => `<path d="M130 ${y} Q150 ${y - 12} 170 ${y} Q150 ${y + 22} 130 ${y} Z" fill="#F39A2B" stroke="${L}" stroke-width="4" stroke-linejoin="round"/><path d="M134 ${y + 2} Q150 ${y + 6} 166 ${y + 2}" fill="none" stroke="${L}" stroke-width="3" stroke-linecap="round"/>`;
+  if (id === 'chick_suit') {
+    const tuft = `<path d="M150 32 C140 8 148 -10 162 -16 C156 0 160 16 150 32 Z M146 32 C128 16 120 0 126 -10 C134 6 142 18 146 32 Z" fill="#F5D24A" stroke="${L}" stroke-width="4" stroke-linejoin="round"/>`;
+    return tuft + hood('#F5D24A', beak(52) + cheek());
+  }
+  if (id === 'panda_suit') {
+    const ear = x => `<circle cx="${x}" cy="50" r="31" fill="#2B2A2E" stroke="${L}" stroke-width="5"/>`;
+    return ear(70) + ear(230) + hood('#F7F5F0', '<ellipse cx="62" cy="168" rx="16" ry="22" fill="#2B2A2E" transform="rotate(-20 62 168)"/><ellipse cx="238" cy="168" rx="16" ry="22" fill="#2B2A2E" transform="rotate(20 238 168)"/>');
+  }
+  if (id === 'bunny_suit') {
+    const ear = (x, r) => `<g transform="rotate(${r} ${x} 60)"><ellipse cx="${x}" cy="-10" rx="27" ry="76" fill="#F7F2EE" stroke="${L}" stroke-width="5"/><ellipse cx="${x}" cy="-4" rx="13" ry="56" fill="#F6B3C6"/></g>`;
+    return ear(108, -12) + ear(192, 12) + hood('#F7F2EE', cheek());
+  }
+  if (id === 'santa') {
+    return `<path d="M94 92 Q104 26 160 10 Q214 -4 246 44 Q236 52 226 48 Q210 30 190 34 Q204 60 206 92 Z" fill="#D33A3A" stroke="${L}" stroke-width="5" stroke-linejoin="round"/>` +
+      `<circle cx="240" cy="56" r="20" fill="#FFFFFF" stroke="${L}" stroke-width="4"/>` +
+      `<path d="M88 82 Q150 68 212 82 Q220 96 212 110 Q150 96 88 110 Q80 96 88 82 Z" fill="#FFFFFF" stroke="${L}" stroke-width="5" stroke-linejoin="round"/>` +
+      `<path d="M94 226 Q150 244 206 226 Q218 240 206 254 Q194 266 180 258 Q166 272 150 262 Q134 272 120 258 Q106 266 94 254 Q82 240 94 226 Z" fill="#FFFFFF" stroke="${L}" stroke-width="4" stroke-linejoin="round"/>` +
+      `<circle cx="150" cy="280" r="8" fill="#FFFFFF" stroke="${L}" stroke-width="3"/>`;
+  }
+  if (id === 'penguin_suit') {
+    return hood('#2E3A4A', `<ellipse cx="150" cy="142" rx="90" ry="76" fill="none" stroke="#FFFFFF" stroke-width="12"/>` + beak(50) + cheek('#F6A5B8'));
+  }
+  if (id === 'ninja') {
+    const tail = `<path d="M244 112 Q290 92 318 104 Q294 112 300 124 Q276 116 252 128 Z M248 128 Q286 140 304 168 Q280 160 270 172 Q262 150 244 140 Z" fill="#2A3040" stroke="${L}" stroke-width="4" stroke-linejoin="round"/>`;
+    return tail + hood('#2A3040', '<path d="M60 96 Q150 70 240 96" fill="none" stroke="#C0392B" stroke-width="10" stroke-linecap="round"/><circle cx="246" cy="118" r="12" fill="#2A3040" stroke="' + L + '" stroke-width="4"/>');
+  }
+  if (id === 'pirate') {
+    return `<path d="M30 104 Q46 38 104 50 Q150 4 196 50 Q254 38 270 104 Q150 76 30 104 Z" fill="#26262B" stroke="${L}" stroke-width="5" stroke-linejoin="round"/>` +
+      `<path d="M36 100 Q150 72 264 100" fill="none" stroke="#E9B730" stroke-width="6" stroke-linecap="round"/>` +
+      `<path d="M128 70 L172 88 M172 70 L128 88" stroke="#F4F1EC" stroke-width="6" stroke-linecap="round"/>` +
+      `<path d="M136 64 Q136 44 150 44 Q164 44 164 64 Q164 72 158 74 L158 80 L142 80 L142 74 Q136 72 136 64 Z" fill="#F4F1EC" stroke="${L}" stroke-width="2.5"/>` +
+      `<circle cx="144" cy="62" r="4" fill="#26262B"/><circle cx="156" cy="62" r="4" fill="#26262B"/>`;
+  }
+  if (id === 'baseball_uni') {   // 目にかからないよう少し上にずらす
+    return `<g transform="translate(0 -18)"><path d="M50 126 Q48 30 150 26 Q252 30 250 126 Q150 112 50 126 Z" fill="#24346A" stroke="${L}" stroke-width="5" stroke-linejoin="round"/>` +
+      `<path d="M58 150 Q40 150 38 122 Q40 102 58 104 Q76 112 74 132 Q72 150 58 150 Z" fill="#24346A" stroke="${L}" stroke-width="5" stroke-linejoin="round"/>` +
+      `<path d="M92 118 Q150 104 208 118 Q216 132 206 138 Q150 126 94 138 Q84 132 92 118 Z" fill="#1A2550" stroke="${L}" stroke-width="5" stroke-linejoin="round"/>` +
+      `<path d="M84 60 Q110 38 140 34" fill="none" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" stroke-opacity=".45"/>` +
+      `<text x="150" y="90" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="40" fill="#FFFFFF" stroke="${L}" stroke-width="2">N</text></g>`;
+  }
+  if (id === 'dragon_suit') {
+    const horn = (x, d) => `<path d="M${x} 60 Q${x - d * 6} 10 ${x - d * 34} -22 Q${x + d * 14} 4 ${x + d * 26} 52 Z" fill="#F3D27A" stroke="${L}" stroke-width="5" stroke-linejoin="round"/>`;
+    const fin = d => `<path d="M${150 + d * 108} 120 L${150 + d * 156} 86 L${150 + d * 140} 120 L${150 + d * 162} 132 L${150 + d * 112} 156 Z" fill="#E8775F" stroke="${L}" stroke-width="4" stroke-linejoin="round"/>`;
+    let sp = '';
+    [[118, 34, 14], [150, 26, 18], [182, 34, 14]].forEach(([x, y, s]) => { sp += `<path d="M${x - s} ${y + 6} L${x} ${y - s * 1.4} L${x + s} ${y + 6} Z" fill="#F7A93B" stroke="${L}" stroke-width="4" stroke-linejoin="round"/>`; });
+    return horn(98, 1) + horn(202, -1) + fin(-1) + fin(1) + sp + hood('#D9503A', '<path d="M86 210 q8 -8 16 0 q8 -8 16 0 M182 210 q8 -8 16 0 q8 -8 16 0" fill="none" stroke="#B8402F" stroke-width="4" stroke-linecap="round"/>');
+  }
+  if (id === 'knight') {
+    const plume = `<path d="M150 30 Q140 -10 168 -40 Q196 -62 230 -50 Q206 -40 214 -20 Q190 -28 186 -6 Q170 -10 164 30 Z" fill="#D33A3A" stroke="${L}" stroke-width="5" stroke-linejoin="round"/>`;
+    let rv = '';
+    [[64, 176], [236, 176], [56, 136], [244, 136]].forEach(([x, y]) => { rv += `<circle cx="${x}" cy="${y}" r="5" fill="#8C9AA6"/>`; });
+    return plume + hood('#B8C4CE', `<path d="M66 84 Q150 52 234 84 L228 104 Q150 76 72 104 Z" fill="#8C9AA6" stroke="${L}" stroke-width="5" stroke-linejoin="round"/>` +
+      `<path d="M110 84 L190 84" stroke="${L}" stroke-width="4" stroke-linecap="round"/><path d="M150 26 L150 62" stroke="#8C9AA6" stroke-width="10" stroke-linecap="round"/>` +
+      `<path d="M82 52 Q110 34 140 30" fill="none" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" stroke-opacity=".6"/>` + rv);
+  }
   return '';
 }
 // suitBack(id, cat)：体のうしろに出す部分（マント・リュック）。cat は data.js の CATS の1匹。絵の座標で描く
@@ -316,6 +374,49 @@ function suitBack(id, c) {
   }
   if (id === 'dino_hood') {   // しっぽ
     return `<path d="M${px + prx * .5} ${py - pry * .2} Q${px + prx * 1.6} ${py + pry * .2} ${px + prx * 1.8} ${py + pry * 1.4} Q${px + prx * 1.2} ${py + pry * .9} ${px + prx * .4} ${py + pry * .8} Z" fill="#4FA35A" stroke="${L}" stroke-width="6" stroke-linejoin="round"/>`;
+  }
+  // ---- v9.5 で追加 ----
+  const f = n => n.toFixed(0);
+  if (id === 'bunny_suit') {   // まるいしっぽ
+    const x = px + prx * 1.12, y = py + pry * .05;
+    return `<circle cx="${f(x)}" cy="${f(y)}" r="46" fill="#F9E4EC" stroke="${L}" stroke-width="6"/><circle cx="${f(x - 10)}" cy="${f(y - 10)}" r="18" fill="#FFFFFF"/>`;
+  }
+  if (id === 'santa') {   // プレゼントのふくろ（右肩のうしろ）
+    const x = bx + brx * .95, y = by - bry * 1.15;
+    return `<path d="M${f(x - 30)} ${f(y - 96)} Q${f(x - 120)} ${f(y - 30)} ${f(x - 92)} ${f(y + 70)} Q${f(x)} ${f(y + 120)} ${f(x + 92)} ${f(y + 70)} Q${f(x + 120)} ${f(y - 30)} ${f(x + 30)} ${f(y - 96)} Z" fill="#C8A060" stroke="${L}" stroke-width="6" stroke-linejoin="round"/>` +
+      `<path d="M${f(x - 34)} ${f(y - 96)} Q${f(x)} ${f(y - 80)} ${f(x + 34)} ${f(y - 96)}" fill="none" stroke="#D33A3A" stroke-width="12" stroke-linecap="round"/>` +
+      `<path d="M${f(x - 40)} ${f(y - 10)} Q${f(x - 20)} ${f(y + 10)} ${f(x - 30)} ${f(y + 40)}" fill="none" stroke="#A88048" stroke-width="5" stroke-linecap="round"/>`;
+  }
+  if (id === 'ninja') {   // まきもの（ななめにせおう）
+    const x1 = bx - brx * 1.15, y1 = by - bry * 1.9, x2 = bx + brx * 1.15, y2 = py + pry * .2;
+    return `<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" stroke="${L}" stroke-width="48" stroke-linecap="round"/>` +
+      `<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" stroke="#EADBB8" stroke-width="38" stroke-linecap="round"/>` +
+      `<circle cx="${f(x1)}" cy="${f(y1)}" r="24" fill="#C0392B" stroke="${L}" stroke-width="5"/><circle cx="${f(x2)}" cy="${f(y2)}" r="24" fill="#C0392B" stroke="${L}" stroke-width="5"/>`;
+  }
+  if (id === 'baseball_uni') {   // バット（ななめにせおう）
+    const x1 = bx + brx * 1.25, y1 = by - bry * 2.3, x2 = bx - brx * .6, y2 = py;
+    const mx = x1 + (x2 - x1) * .45, my = y1 + (y2 - y1) * .45;
+    return `<path d="M${f(x1)} ${f(y1)} L${f(mx)} ${f(my)}" stroke="${L}" stroke-width="44" stroke-linecap="round"/>` +
+      `<path d="M${f(x1)} ${f(y1)} L${f(x2)} ${f(y2)}" stroke="${L}" stroke-width="26" stroke-linecap="round"/>` +
+      `<path d="M${f(x1)} ${f(y1)} L${f(mx)} ${f(my)}" stroke="#D9A45B" stroke-width="34" stroke-linecap="round"/>` +
+      `<path d="M${f(x1)} ${f(y1)} L${f(x2)} ${f(y2)}" stroke="#D9A45B" stroke-width="16" stroke-linecap="round"/>`;
+  }
+  if (id === 'dragon_suit') {   // つばさ＋しっぽ
+    const wy = by - bry * 1.1;
+    const wing = d => {
+      const x0 = bx + d * brx * .3, x1 = bx + d * brx * 1.65, y1 = wy - bry * 2.1;
+      return `<path d="M${f(x0)} ${f(wy)} L${f(x1)} ${f(y1)} Q${f(x1 + d * 10)} ${f(wy - bry * .6)} ${f(bx + d * brx * 1.45)} ${f(wy + bry * .5)} Q${f(bx + d * brx * 1.15)} ${f(wy + bry * .1)} ${f(bx + d * brx * 1.05)} ${f(wy + bry * .8)} Q${f(bx + d * brx * .7)} ${f(wy + bry * .4)} ${f(x0)} ${f(wy + bry * .9)} Z" fill="#E8775F" stroke="${L}" stroke-width="6" stroke-linejoin="round"/>` +
+        `<path d="M${f(x0)} ${f(wy)} L${f(x1)} ${f(y1)}" stroke="#B8402F" stroke-width="12" stroke-linecap="round"/>`;
+    };
+    const tx = px + prx * 1.8, ty = py + pry * 1.4;
+    return wing(-1) + wing(1) +
+      `<path d="M${f(px + prx * .5)} ${f(py - pry * .2)} Q${f(px + prx * 1.6)} ${f(py + pry * .2)} ${f(tx)} ${f(ty)} Q${f(px + prx * 1.2)} ${f(py + pry * .9)} ${f(px + prx * .4)} ${f(py + pry * .8)} Z" fill="#D9503A" stroke="${L}" stroke-width="6" stroke-linejoin="round"/>` +
+      `<path d="M${f(tx)} ${f(ty)} l-16 -40 l40 18 Z" fill="#F7A93B" stroke="${L}" stroke-width="5" stroke-linejoin="round"/>`;
+  }
+  if (id === 'knight') {   // 赤いマント
+    const top = by - bry * 1.5, bot = py + pry * 1.1;
+    return `<path d="M${f(bx - brx * 1.05)} ${f(top)} Q${f(bx)} ${f(top - 30)} ${f(bx + brx * 1.05)} ${f(top)} L${f(px + prx * 1.25)} ${f(bot)} Q${f(px)} ${f(bot + 40)} ${f(px - prx * 1.25)} ${f(bot)} Z" fill="#B8302A" stroke="${L}" stroke-width="6" stroke-linejoin="round"/>` +
+      `<path d="M${f(bx - brx * .8)} ${f(top + 20)} L${f(px - prx * 1.0)} ${f(bot - 10)} M${f(bx + brx * .8)} ${f(top + 20)} L${f(px + prx * 1.0)} ${f(bot - 10)}" stroke="#D84A3E" stroke-width="10" stroke-linecap="round"/>`;
   }
   return '';
 }

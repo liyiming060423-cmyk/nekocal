@@ -332,6 +332,7 @@ function drawCat(c, x, y, s, bat, time) {
   c.strokeStyle = fr.base; c.lineWidth = fr.fluffy ? 19 : 11; c.stroke();
   if (su === 'wizard') { c.fillStyle = '#5A3A9A'; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.moveTo(-40, -166); c.lineTo(40, -166); c.lineTo(56 + sw * .2, -40); c.quadraticCurveTo(0, -28, -56, -40); c.closePath(); c.fill(); c.stroke(); }
   if (su === 'dino_hood') { c.fillStyle = '#4FA35A'; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.moveTo(-14, -70); c.quadraticCurveTo(-40, -30, -70 - sw * .2, -14); c.quadraticCurveTo(-30, -36, 6, -62); c.closePath(); c.fill(); c.stroke(); }
+  if (su) drawSuitBody(c, su, sw, ol);   // v9.5：マント・つばさ・ふくろ など体のうしろ
   if (CAT.breed === 'tabby') { c.strokeStyle = fr.dark; c.lineWidth = 4; [[48, -66], [70, -62], [80 + sw * .7, -82]].forEach(([tx, ty], i) => { c.beginPath(); c.moveTo(tx - (i < 2 ? 1 : 7), ty - 7); c.lineTo(tx + (i < 2 ? 1 : 7), ty + 7); c.stroke(); }); }
   // 足
   [[-1], [1]].forEach(([d]) => {
@@ -393,8 +394,27 @@ function drawCat(c, x, y, s, bat, time) {
 }
 
 // コスチュームの頭（うしろから見た形）
+// v9.5 コスチュームの体まわり（足より先に描く＝体のうしろ）
+function drawSuitBody(c, su, sw, ol) {
+  c.strokeStyle = ol; c.lineWidth = 3;
+  if (su === 'knight') { c.fillStyle = '#B8302A'; c.beginPath(); c.moveTo(-40, -166); c.lineTo(40, -166); c.lineTo(56 + sw * .2, -40); c.quadraticCurveTo(0, -28, -56, -40); c.closePath(); c.fill(); c.stroke(); }
+  else if (su === 'dragon_suit') {
+    [-1, 1].forEach(d => { c.fillStyle = '#E8775F'; c.beginPath(); c.moveTo(d * 20, -160); c.lineTo(d * 92, -214); c.quadraticCurveTo(d * 96, -170, d * 84, -146); c.quadraticCurveTo(d * 70, -150, d * 64, -134); c.quadraticCurveTo(d * 50, -142, d * 30, -126); c.closePath(); c.fill(); c.stroke();
+      c.strokeStyle = '#B8402F'; c.lineWidth = 5; c.beginPath(); c.moveTo(d * 22, -158); c.lineTo(d * 90, -212); c.stroke(); c.strokeStyle = ol; c.lineWidth = 3; });
+    c.fillStyle = '#D9503A'; c.beginPath(); c.moveTo(-14, -70); c.quadraticCurveTo(-40, -30, -72 - sw * .2, -12); c.quadraticCurveTo(-30, -36, 6, -62); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = '#F7A93B'; c.beginPath(); c.moveTo(-72 - sw * .2, -12); c.lineTo(-62 - sw * .2, -30); c.lineTo(-84 - sw * .2, -24); c.closePath(); c.fill(); c.stroke();
+  } else if (su === 'santa') {
+    c.fillStyle = '#C8A060'; c.beginPath(); c.ellipse(-46, -178, 26, 30, -.35, 0, 7); c.fill(); c.stroke();
+    c.strokeStyle = '#D33A3A'; c.lineWidth = 5; c.beginPath(); c.moveTo(-60, -200); c.lineTo(-40, -208); c.stroke();
+  } else if (su === 'ninja') {
+    c.strokeStyle = ol; c.lineWidth = 15; c.beginPath(); c.moveTo(-54, -178); c.lineTo(54, -104); c.stroke();
+    c.strokeStyle = '#EADBB8'; c.lineWidth = 11; c.stroke();
+    [[-54, -178], [54, -104]].forEach(([x, y]) => { c.fillStyle = '#C0392B'; c.strokeStyle = ol; c.lineWidth = 2.5; c.beginPath(); c.arc(x, y, 8, 0, 7); c.fill(); c.stroke(); });
+  }
+}
+
 function drawSuitBack(c, su, HY, ol) {
-  const E = (ex, ey, rx, ry, col) => { c.fillStyle = col; c.beginPath(); c.ellipse(ex, ey, rx, ry, 0, 0, 7); c.fill(); c.strokeStyle = ol; c.lineWidth = 3; c.stroke(); };
+  const E = (ex, ey, rx, ry, col, st = true, rot = 0) => { c.fillStyle = col; c.beginPath(); c.ellipse(ex, ey, rx, ry, rot, 0, 7); c.fill(); if (st) { c.strokeStyle = ol; c.lineWidth = 3; c.stroke(); } };
   const hood = col => { c.fillStyle = col; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.moveTo(-46, HY + 34); c.bezierCurveTo(-64, HY - 40, -36, HY - 66, 0, HY - 66); c.bezierCurveTo(36, HY - 66, 64, HY - 40, 46, HY + 34); c.quadraticCurveTo(0, HY + 48, -46, HY + 34); c.closePath(); c.fill(); c.stroke(); };
   if (su === 'frog_coat') { E(-24, HY - 56, 16, 15, '#7CC24A'); E(24, HY - 56, 16, 15, '#7CC24A'); hood('#7CC24A'); }
   else if (su === 'bear_suit') { E(-38, HY - 48, 15, 15, '#8A5A36'); E(38, HY - 48, 15, 15, '#8A5A36'); hood('#8A5A36'); }
@@ -409,6 +429,41 @@ function drawSuitBack(c, su, HY, ol) {
     c.fillStyle = '#6E4AB8'; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.moveTo(-28, HY - 30); c.lineTo(10, HY - 104); c.lineTo(28, HY - 30); c.closePath(); c.fill(); c.stroke();
     E(0, HY - 28, 54, 10, '#5A3A9A');
     c.fillStyle = '#FFE066'; c.beginPath(); c.arc(4, HY - 62, 4, 0, 7); c.fill();
+  } else if (su === 'chick_suit') {
+    c.fillStyle = '#F5D24A'; c.strokeStyle = ol; c.lineWidth = 3;
+    [[-20, -.3], [-8, .1]].forEach(([x, k]) => { c.beginPath(); c.moveTo(x - 3, HY - 62); c.quadraticCurveTo(x - 8 + k * 20, HY - 86, x + 4 + k * 20, HY - 96); c.quadraticCurveTo(x + 4, HY - 80, x + 4, HY - 62); c.closePath(); c.fill(); c.stroke(); });
+    hood('#F5D24A');
+  } else if (su === 'panda_suit') { E(-38, HY - 48, 15, 15, '#2B2A2E'); E(38, HY - 48, 15, 15, '#2B2A2E'); hood('#F7F5F0'); }
+  else if (su === 'bunny_suit') {
+    [-1, 1].forEach(d => { E(d * 18, HY - 92, 11, 34, '#F7F2EE', true, d * .2); E(d * 18, HY - 90, 5, 24, '#F6B3C6', false, d * .2); });
+    hood('#F7F2EE'); E(-4, -78, 11, 11, '#F9E4EC');
+  } else if (su === 'santa') {
+    c.fillStyle = '#D33A3A'; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.moveTo(-40, HY - 26); c.quadraticCurveTo(-30, HY - 80, 10, HY - 86); c.quadraticCurveTo(40, HY - 86, 50, HY - 62); c.quadraticCurveTo(30, HY - 64, 26, HY - 52); c.lineTo(40, HY - 26); c.closePath(); c.fill(); c.stroke();
+    E(52, HY - 60, 9, 9, '#FFFFFF');
+    c.fillStyle = '#FFFFFF'; c.beginPath(); c.roundRect(-46, HY - 34, 92, 16, 8); c.fill(); c.stroke();
+  } else if (su === 'penguin_suit') { hood('#2E3A4A'); }
+  else if (su === 'ninja') {
+    hood('#2A3040');
+    c.strokeStyle = '#C0392B'; c.lineWidth = 6; c.beginPath(); c.ellipse(0, HY - 10, 50, 34, 0, Math.PI * 1.05, Math.PI * 1.95); c.stroke();
+    c.fillStyle = '#2A3040'; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.moveTo(0, HY - 2); c.quadraticCurveTo(22, HY + 18, 30, HY + 42); c.lineTo(18, HY + 36); c.quadraticCurveTo(10, HY + 18, -2, HY + 8); c.closePath(); c.fill(); c.stroke();
+    E(0, HY - 2, 8, 7, '#2A3040');
+  } else if (su === 'pirate') {
+    c.fillStyle = '#26262B'; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.moveTo(-60, HY - 16); c.quadraticCurveTo(-46, HY - 56, -18, HY - 50); c.quadraticCurveTo(0, HY - 76, 18, HY - 50); c.quadraticCurveTo(46, HY - 56, 60, HY - 16); c.quadraticCurveTo(0, HY - 34, -60, HY - 16); c.closePath(); c.fill(); c.stroke();
+    c.strokeStyle = '#E9B730'; c.lineWidth = 3; c.beginPath(); c.moveTo(-56, HY - 18); c.quadraticCurveTo(0, HY - 34, 56, HY - 18); c.stroke();
+  } else if (su === 'baseball_uni') {
+    c.fillStyle = '#24346A'; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.ellipse(0, HY - 6, 46, 36, 0, Math.PI, 0); c.lineTo(46, HY + 2); c.lineTo(-46, HY + 2); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.ellipse(-16, HY - 26, 12, 6, -.4, 0, 7); c.fill();
+    E(38, HY + 4, 13, 15, '#24346A');
+  } else if (su === 'dragon_suit') {
+    [-1, 1].forEach(d => { c.fillStyle = '#F3D27A'; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.moveTo(d * 16, HY - 58); c.quadraticCurveTo(d * 26, HY - 86, d * 44, HY - 98); c.quadraticCurveTo(d * 40, HY - 76, d * 34, HY - 52); c.closePath(); c.fill(); c.stroke(); });
+    hood('#D9503A');
+    c.fillStyle = '#F7A93B'; c.strokeStyle = ol; c.lineWidth = 2.5;
+    [[-58, 12], [-34, 11], [-10, 10], [14, 9]].forEach(([y, s]) => { c.beginPath(); c.moveTo(-s, HY + y + s); c.lineTo(0, HY + y - s); c.lineTo(s, HY + y + s); c.closePath(); c.fill(); c.stroke(); });
+  } else if (su === 'knight') {
+    c.fillStyle = '#D33A3A'; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.moveTo(-4, HY - 62); c.quadraticCurveTo(-10, HY - 92, 12, HY - 104); c.quadraticCurveTo(30, HY - 110, 40, HY - 100); c.quadraticCurveTo(22, HY - 96, 22, HY - 84); c.quadraticCurveTo(10, HY - 84, 8, HY - 62); c.closePath(); c.fill(); c.stroke();
+    hood('#B8C4CE');
+    c.strokeStyle = '#8C9AA6'; c.lineWidth = 6; c.beginPath(); c.moveTo(0, HY - 62); c.lineTo(0, HY + 30); c.stroke();
+    c.fillStyle = 'rgba(255,255,255,.45)'; c.beginPath(); c.ellipse(-22, HY - 34, 10, 16, .4, 0, 7); c.fill();
   } else if (su === 'astronaut') {
     c.fillStyle = 'rgba(207,232,255,.3)'; c.strokeStyle = '#8FA9BF'; c.lineWidth = 6; c.beginPath(); c.arc(0, HY - 4, 64, 0, 7); c.fill(); c.stroke();
     c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 6; c.beginPath(); c.arc(0, HY - 4, 52, Math.PI * 1.1, Math.PI * 1.4); c.stroke();

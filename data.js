@@ -1,5 +1,5 @@
 // アプリの版。index.html の ?v= と sw.js の VERSION もこれにそろえる
-const APP_VER = '9.4';
+const APP_VER = '9.5';
 
 // にゃんカロ データ定義
 // アイテム・ショップ・トレーニング・ミッションなど「数字や名前」はここだけで管理する。
@@ -57,7 +57,18 @@ const WEAR = {
   dino_hood:   { slot: 'suit', name: '恐竜パーカー',         rar: 'R',  color: '#4FA35A', body: '#4FA35A', bonus: { pow: 4 } },
   chef:        { slot: 'suit', name: 'コックさん',           rar: 'R',  color: '#FFFFFF', body: '#FFFFFF', bonus: { sta: 4 } },
   wizard:      { slot: 'suit', name: '魔法使い',             rar: 'SR', color: '#6E4AB8', body: '#6E4AB8', bonus: { pow: 6, spd: 6 } },
-  astronaut:   { slot: 'suit', name: '宇宙飛行士',           rar: 'SR', color: '#E8EEF4', body: '#E8EEF4', bonus: { spd: 8, sta: 6 } }
+  astronaut:   { slot: 'suit', name: '宇宙飛行士',           rar: 'SR', color: '#E8EEF4', body: '#E8EEF4', bonus: { spd: 8, sta: 6 } },
+  // v9.5 で追加（コスチューム +10 → きせかえ 合計50こ）
+  chick_suit:  { slot: 'suit', name: 'ひよこの着ぐるみ',     rar: 'N',  color: '#F5D24A', body: '#F5D24A', bonus: { spd: 2 } },
+  panda_suit:  { slot: 'suit', name: 'パンダの着ぐるみ',     rar: 'N',  color: '#F4F1EC', body: '#F4F1EC', bonus: { sta: 3 } },
+  bunny_suit:  { slot: 'suit', name: 'うさぎの着ぐるみ',     rar: 'N',  color: '#F7DCE6', body: '#F7DCE6', bonus: { spd: 3 } },
+  santa:       { slot: 'suit', name: 'サンタさん',           rar: 'R',  color: '#D33A3A', body: '#D33A3A', bonus: { sta: 4 } },
+  penguin_suit:{ slot: 'suit', name: 'ペンギンの着ぐるみ',   rar: 'R',  color: '#2E3A4A', body: '#2E3A4A', bonus: { spd: 3 } },
+  ninja:       { slot: 'suit', name: '忍者',                 rar: 'R',  color: '#2A3040', body: '#2A3040', bonus: { spd: 4 } },
+  pirate:      { slot: 'suit', name: '海賊',                 rar: 'R',  color: '#9A2E2E', body: '#9A2E2E', bonus: { pow: 3 } },
+  baseball_uni:{ slot: 'suit', name: '野球のユニフォーム',   rar: 'R',  color: '#24346A', body: '#FFFFFF', bonus: { pow: 4 } },
+  dragon_suit: { slot: 'suit', name: 'ドラゴン',             rar: 'SR', color: '#D9503A', body: '#D9503A', bonus: { pow: 8, spd: 6 } },
+  knight:      { slot: 'suit', name: '騎士',                 rar: 'SR', color: '#B8C4CE', body: '#B8C4CE', bonus: { pow: 6, sta: 8 } }
 };
 const SLOT_NAME = { suit: 'コスチューム', head: '頭', top: '服', hand: '手' };
 

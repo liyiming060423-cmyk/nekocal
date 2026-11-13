@@ -103,6 +103,17 @@
 .wear-suit-chef { filter: grayscale(1) brightness(2.3) contrast(.8); }
 .wear-suit-wizard { filter: hue-rotate(240deg) saturate(.7) brightness(.85); }
 .wear-suit-astronaut { filter: grayscale(1) brightness(2.05) contrast(.85); }
+/* v9.5 で追加 */
+.wear-suit-chick_suit { filter: hue-rotate(42deg) saturate(1.1) brightness(1.6); }
+.wear-suit-panda_suit { filter: grayscale(1) brightness(2.3) contrast(.8); }
+.wear-suit-bunny_suit { filter: hue-rotate(-38deg) saturate(.45) brightness(1.55); }
+.wear-suit-santa { filter: hue-rotate(-20deg) saturate(1.5) brightness(.92); }
+.wear-suit-penguin_suit { filter: hue-rotate(190deg) saturate(.6) brightness(.45); }
+.wear-suit-ninja { filter: hue-rotate(200deg) saturate(.35) brightness(.38); }
+.wear-suit-pirate { filter: hue-rotate(-22deg) saturate(1.3) brightness(.62); }
+.wear-suit-baseball_uni { filter: grayscale(1) brightness(2.3) contrast(.8); }
+.wear-suit-dragon_suit { filter: hue-rotate(-18deg) saturate(1.35) brightness(.88); }
+.wear-suit-knight { filter: grayscale(1) brightness(1.55) contrast(.9); }
 .pc-back { z-index: 0; }
 
 /* v9.4 天使の輪：ふわふわ上下 */
