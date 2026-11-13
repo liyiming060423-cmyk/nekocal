@@ -419,6 +419,7 @@ const BGM_FILES = { title: 'bgm-title.mp3', home: 'bgm-home.mp3', shop: 'bgm-sho
 let bgmEl = null, bgmGain = null, bgmCur = '', bgmUnlocked = false;
 function bgmWant() {
   if (S.settings.bgm === false || document.hidden || $('miniFrame')) return '';
+  if ($('battleUI')) return 'train';
   const t = $('title');
   if ((t && !t.hidden && !t.classList.contains('out')) || modalLocked) return 'title';   // タイトル画面・はじめての設定
   if (UI.tab === 'shop') return 'shop';
@@ -772,7 +773,7 @@ function renderTrain() {
   const d = day();
   if (UI.trainTab === 'gym') {
     $('trainBody').innerHTML = `${S.protein ? '<p class="boost">プロテイン効果中：次のトレーニングが1.5倍</p>' : ''}${S.goldbag > 0 ? `<p class="boost">金のサンドバッグ効果中：あと${S.goldbag}回 2倍</p>` : ''}
-      <div class="scene gym-scene"><img src="gym-bg.jpg" alt="ジムで猫たちがトレーニングしている絵" width="900" height="718"></div>
+      <div class="scene gym-scene b-entry" data-battle="1" role="button" tabindex="0" aria-label="猫バトル（対戦）をひらく"><img src="gym-bg.jpg" alt="ジムで猫たちがトレーニングしている絵" width="900" height="718"><span class="vs-badge">⚔️ 対戦</span></div>
       <div class="gym-cards">${TRAININGS.map(t => { const ok = S.stamina >= t.cost && !S.cat.dead; return `<div class="gym-card2" id="gc-${t.id}"><div class="gc-head">${{ bag: 'サンドバッグ<br>連打', tread: 'トレッドミル', weight: 'ウェイト<br>トレーニング' }[t.id] || esc(t.name)}</div>
         <div class="gc-body"><span class="gc-ico">${I[{ bag: 'sandbag', tread: 'tread', weight: 'barbell' }[t.id]]}</span><span class="gc-cost">スタミナ −${t.cost}</span><span class="gc-label">${esc(t.label)}</span>
         <button class="btn small red gc-start" data-train="${t.id}" ${ok ? '' : 'disabled'}>START</button></div></div>`; }).join('')}</div>
@@ -803,7 +804,9 @@ function statRows() {
     `<div class="stat-row"><span>EXP</span><span class="bar"><i style="width:${S.cat.exp / expNeed(S.cat.level) * 100}%;background:var(--yellow)"></i></span><b class="num" style="font-size:11px">${S.cat.exp}/${expNeed(S.cat.level)}</b></div>`;
 }
 $('trainSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; UI.trainTab = b.dataset.v; se('tap'); renderTrain(); bgmUpdate(); });
+$('trainBody').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-battle]')) { e.preventDefault(); openBattleLobby(); } });
 $('trainBody').addEventListener('click', e => {
+  if (e.target.closest('[data-battle]')) { openBattleLobby(); return; }
   const t = e.target.closest('button'); if (!t) return;
   if (t.dataset.train) doTraining(TRAININGS.find(x => x.id === t.dataset.train));
   else if (t.dataset.use) {

@@ -1,5 +1,5 @@
 // アプリの版。index.html の ?v= と sw.js の VERSION もこれにそろえる
-const APP_VER = '8.2';
+const APP_VER = '8.3';
 
 // にゃんカロ データ定義
 // アイテム・ショップ・トレーニング・ミッションなど「数字や名前」はここだけで管理する。
@@ -153,3 +153,29 @@ const QUIZ_FOODS = [
 
 const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
 const SLOTS = { morning: '朝', noon: '昼', night: '夜', snack: '間食' };
+
+// ===== 対戦（PvP） =====
+// サーバー（Cloudflare Worker）。Worker を作ったらここの URL をその Worker の URL にする
+const BATTLE_API = 'https://nekocal-battle.liyiming060423.workers.dev';
+const BATTLE = {
+  rounds: 5,              // 最大ラウンド数（どちらかのたいりょくが0になったら終わり）
+  winCoin: 30,            // 勝ったときのコイン
+  loseCoin: 5,            // 負けたときのコイン
+  hpBase: 80, hpPerSta: 1.5,     // たいりょく(HP) = 80 + スタミナ×1.5
+  powDiv: 40,             // ダメージ倍率 = 1 + ちから÷40
+  guardCut: 0.3,          // ガード中にうけるダメージ（3割）
+  guardCutSpecial: 0.7,   // 必殺技はガードしても7割うける
+  chargeMul: 1.5,         // ため の次の攻撃の倍率
+  counterMul: 1.5,        // カウンターではね返す倍率
+  specialGauge: 3,        // 必殺技に必要なゲージ
+  gaugeMax: 5
+};
+// スキルカード（kind: atk 攻撃 / guard ガード / counter カウンター / charge ため）
+const BCARDS = {
+  jab:      { name: 'ジャブ',       icon: '👊', kind: 'atk', p: 8,  fast: true, w: 3, desc: 'すばやい攻撃。カウンターに強い' },
+  straight: { name: 'ストレート',   icon: '💥', kind: 'atk', p: 14, w: 3, desc: '強い攻撃。カウンターに弱い' },
+  guard:    { name: 'ガード',       icon: '🛡️', kind: 'guard', w: 2, desc: '攻撃を3割にへらす・ゲージ+1' },
+  counter:  { name: 'カウンター',   icon: '🔄', kind: 'counter', w: 2, desc: 'ストレート・必殺技をはね返す' },
+  charge:   { name: 'ため',         icon: '🔥', kind: 'charge', w: 2, desc: 'ゲージ+2・次の攻撃1.5倍' },
+  special:  { name: '必殺ねこパンチ', icon: '🌟', kind: 'atk', p: 30, special: true, w: 0, desc: 'ゲージ3で使える大技' }
+};
