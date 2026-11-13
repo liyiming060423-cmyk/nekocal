@@ -1,5 +1,5 @@
 // アプリの版。index.html の ?v= と sw.js の VERSION もこれにそろえる
-const APP_VER = '8.9';
+const APP_VER = '9.0';
 
 // にゃんカロ データ定義
 // アイテム・ショップ・トレーニング・ミッションなど「数字や名前」はここだけで管理する。
@@ -92,6 +92,7 @@ const STONE_PACKS = [
 // ガチャ
 const GACHA_COST = 500;          // コイン
 const GACHA_RATE = { N: 70, R: 25, SR: 5 };   // %
+const GACHA_PITY = 10;          // 天井：この回数のうちに SR が出なければ、この回で SR が確定（SR はまだ持っていないきせかえから先に出る）
 // 福袋から出るトレーニングアイテム（きせかえと同じ確率の箱に入る）
 const GACHA_ITEMS = {
   N:  [{ id: 'drink', n: 2 }, { id: 'protein', n: 1 }],
@@ -155,14 +156,15 @@ const TREASURE = {
 };
 
 // ログインボーナス（7日で1周）
-const LOGIN_REWARDS = [50, 60, 70, 80, 90, 100, 300];
+const LOGIN_REWARDS = [80, 90, 100, 110, 120, 130, 300];   // v9.0：1〜6日目を +30（少しだけ遊ぶ人もためやすく）
 
 // 毎日のミッション（check は今日のデータから達成数を数える）
+// v9.0：かんたんな3つ（ごはん1回・トレーニング・ミニゲーム）の報酬を上げた
 const MISSIONS = [
-  { id: 'photo1',  name: 'ごはんを1回記録する', goal: 1, reward: 30, check: d => d.meals.length },
+  { id: 'photo1',  name: 'ごはんを1回記録する', goal: 1, reward: 50, check: d => d.meals.length },
   { id: 'meal3',   name: '朝・昼・夜を記録する', goal: 3, reward: 50, check: d => new Set(d.meals.map(m => m.slot).filter(s => s !== 'snack')).size },
-  { id: 'train1',  name: 'ジムでトレーニングする', goal: 1, reward: 30, check: d => d.trains || 0 },
-  { id: 'mini1',   name: 'ミニゲームをあそぶ',   goal: 1, reward: 20, check: d => d.minis || 0 },
+  { id: 'train1',  name: 'ジムでトレーニングする', goal: 1, reward: 50, check: d => d.trains || 0 },
+  { id: 'mini1',   name: 'ミニゲームをあそぶ',   goal: 1, reward: 40, check: d => d.minis || 0 },
   { id: 'steps2k', name: 'さんぽで2,000歩あるく', goal: 2000, reward: 50, check: d => d.steps || 0 },
   { id: 'treasure3', name: 'さんぽでお宝を3つ拾う', goal: 3, reward: 50, check: d => d.treasures || 0 }
 ];

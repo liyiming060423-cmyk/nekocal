@@ -322,6 +322,9 @@ label.f { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font
 .gacha-info { margin-top: 12px; padding: 12px 14px; display: grid; gap: 4px; }
 .gacha-cost { font-weight: 900; font-size: 16px; }
 .gacha-cost b { font-size: 22px; color: var(--red); }
+.gacha-pity { font-weight: 700; font-size: 14px; color: var(--ink, #333); }
+.gacha-pity b { color: #C8901A; }
+.gacha-pity b.num { font-size: 18px; }
 @media (prefers-reduced-motion: reduce) { .tr-cat .pc-act, .bag-hit.picked { animation: none; } }
 
 /* ===== ホーム v7（チームのデザイン案に合わせた配置） ===== */

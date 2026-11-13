@@ -81,7 +81,7 @@ function defaultState() {
     v: 1,
     user: { name: 'プレイヤー', sex: 'male', age: 20, height: 170, weight: 60, goal: 'keep', delta: 300 },
     cat: { name: 'もち', breed: 'tabby', idx: 0, dead: null, level: 1, exp: 0, stats: { pow: 20, spd: 20, sta: 20 }, equip: { head: 'band_none', top: 'tee_orange', hand: 'gloves_brown', suit: 'suit_none' } },
-    stamina: 65, coins: 850, stones: 0,
+    stamina: 65, coins: 850, stones: 0, pity: 0,
     items: { drink: 0, protein: 0, goldbag: 0 }, protein: false, goldbag: 0, mood: RULE.moodStart,
     owned: ['band_none', 'tee_orange', 'gloves_brown', 'suit_none'],
     start: t, last: t, days: {}, history: [],
@@ -798,7 +798,8 @@ function renderShop() {
       ${['緑の福袋', '麻の福袋', '赤の福袋', '白の福袋'].map((n, i) => `<button class="bag-hit b${i}" data-bag="${i}" aria-label="${n}をえらぶ（${GACHA_COST}コイン）"></button>`).join('')}
     </div>
     <div class="card gacha-info"><div class="gacha-cost">1回引く：<b class="num">${GACHA_COST}</b>コイン<span class="muted">　もっている ${fmt(S.coins)}</span></div>
-      <p class="hint">福袋をタップすると引けます。きせかえとトレーニングアイテムが出ます。SR ${GACHA_RATE.SR}%・R ${GACHA_RATE.R}%・N ${GACHA_RATE.N}%　かぶったら ${DUP_REFUND}コインに交換</p></div>`;
+      <div class="gacha-pity">${pityHTML()}</div>
+      <p class="hint">福袋をタップすると引けます。きせかえとトレーニングアイテムが出ます。SR ${GACHA_RATE.SR}%・R ${GACHA_RATE.R}%・N ${GACHA_RATE.N}%　${GACHA_PITY}回のうちに SR が必ず出ます（まだ持っていない SR から先に出ます）　かぶったら ${DUP_REFUND}コインに交換</p></div>`;
   }
 }
 $('shopSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; UI.shopTab = b.dataset.v; se('tap'); renderShop(); });
@@ -815,6 +816,9 @@ $('shopBody').addEventListener('click', e => {
   else if (t.dataset.bag) { t.classList.add('picked'); setTimeout(() => confirmGacha(+t.dataset.bag), 300); }
 });
 const BAG_NAMES = ['緑の福袋', '麻の福袋', '赤の福袋', '白の福袋'];
+// 天井までの表示（あと何回で SR 確定か）
+const pityLeft = () => Math.max(1, GACHA_PITY - (S.pity || 0));
+const pityHTML = () => pityLeft() === 1 ? '<b>つぎの1回は SR 確定！</b>' : `SR 確定まで あと <b class="num">${pityLeft()}</b> 回`;
 function confirmGacha(bag) {
   bag = bag ?? rand(0, 3);
   const enough = S.coins >= GACHA_COST;
@@ -822,6 +826,7 @@ function confirmGacha(bag) {
     <div class="item-big">${I.luckyBag}</div>
     <div style="font-weight:900;font-size:18px">${I.coin.replace('width="24" height="24"', 'width="20" height="20" style="vertical-align:-4px"')} ${fmt(GACHA_COST)}コインを使います</div>
     <div class="hint">もっているコイン：${fmt(S.coins)} → ${enough ? fmt(S.coins - GACHA_COST) : 'たりません'}</div>
+    <div class="gacha-pity">${pityHTML()}</div>
     <button class="btn block" id="gYes" ${enough ? '' : 'disabled'}>はい、引く！</button>
     <button class="btn white block" id="gNo">やめる</button></div>`, root => {
     root.querySelector('#gYes').onclick = () => { closeModal(); pullGacha(); };
@@ -831,9 +836,16 @@ function confirmGacha(bag) {
 function pullGacha() {
   if (S.coins < GACHA_COST) { toast(`コインが ${fmt(GACHA_COST - S.coins)} 足りません`); se('bad'); return; }
   S.coins -= GACHA_COST;
-  const r = Math.random() * 100, rar = r < GACHA_RATE.SR ? 'SR' : r < GACHA_RATE.SR + GACHA_RATE.R ? 'R' : 'N';
-  const wears = Object.keys(WEAR).filter(k => WEAR[k].rar === rar && k !== 'band_none' && k !== 'suit_none').map(k => ({ wear: k }));
-  const pool = wears.concat((GACHA_ITEMS[rar] || []).map(x => ({ item: x.id, n: x.n })));
+  // 天井：SR が出ないまま GACHA_PITY 回目になったら SR 確定（S.pity = 前の SR から何回引いたか）
+  const since = (S.pity || 0) + 1, r = Math.random() * 100;
+  const rar = r < GACHA_RATE.SR || since >= GACHA_PITY ? 'SR' : r < GACHA_RATE.SR + GACHA_RATE.R ? 'R' : 'N';
+  S.pity = rar === 'SR' ? 0 : since;
+  let wears = Object.keys(WEAR).filter(k => WEAR[k].rar === rar && k !== 'band_none' && k !== 'suit_none');
+  // SR はまだ持っていないきせかえから先に出す（そのあいだは金のサンドバッグも出ない。ぜんぶ持っていたら、かぶり・アイテムもあり）
+  const srNew = rar === 'SR' && wears.some(k => !S.owned.includes(k));
+  if (srNew) wears = wears.filter(k => !S.owned.includes(k));
+  wears = wears.map(k => ({ wear: k }));
+  const pool = srNew ? wears : wears.concat((GACHA_ITEMS[rar] || []).map(x => ({ item: x.id, n: x.n })));
   const got = pool[Math.floor(Math.random() * pool.length)];
   let body;
   if (got.item) {
@@ -851,6 +863,7 @@ function pullGacha() {
   }
   save(); se(rar === 'SR' ? 'get' : 'coin'); buzz(rar === 'SR' ? [60, 40, 60] : 40);
   openModal(`<h2 id="modalTitle">${rar === 'SR' ? '大当たり！' : 'でたよ！'}</h2><div class="reveal">${body}
+    <div class="gacha-pity">${pityHTML()}</div>
     <button class="btn white block" id="againG">もう1回（${GACHA_COST}コイン）</button></div>`, root => {
     const eq = root.querySelector('#equipNow'); if (eq) eq.onclick = () => { S.cat.equip[eq.dataset.slot] = eq.dataset.id; save(); closeModal(); toast('着がえました'); };
     root.querySelector('#againG').onclick = () => { closeModal(); confirmGacha(); };
