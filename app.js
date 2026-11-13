@@ -788,6 +788,7 @@ function renderTrain() {
         <div class="card gym-card"><div class="ico">${I.sandbag}</div><div><div style="font-weight:900">サンドバッグ連打</div><div class="hint">10秒でできるだけタップ！</div></div><button class="btn small" data-mini="tap">あそぶ</button></div>
         <div class="card gym-card"><div class="ico" style="background:#E3F4E5;font-size:30px">🐱</div><div><div style="font-weight:900">お題の猫を探せ！</div><div class="hint">30秒でお題の猫をたくさんタップ！（最大${RULE.miniRewardMax}コイン）</div></div><button class="btn small" data-mini="sagase">あそぶ</button></div>
         <div class="card gym-card"><div class="ico" style="background:#F6E7C4;font-size:30px">🏃</div><div><div style="font-weight:900">にゃんこダッシュ</div><div class="hint">ベンチや茂みをよけてコインを集めよう（最大${RULE.miniRewardMax}コイン）</div></div><button class="btn small" data-mini="dash">あそぶ</button></div>
+        <div class="card gym-card"><div class="ico" style="background:#DDEBFF;font-size:30px">⚾</div><div><div style="font-weight:900">にゃんこバッティング</div><div class="hint">犬のピッチャーの10球を打ちかえせ！（最大${RULE.miniRewardMax}コイン）</div></div><button class="btn small" data-mini="baseball">あそぶ</button></div>
         <div class="card gym-card"><div class="ico" style="background:#EBDDFF;font-size:30px">🎰</div><div><div style="font-weight:900">にゃんこスロット</div><div class="hint">アプリのコインをかけて目押し！（1日のもうけ上限 ${RULE.slotNetMax}コイン・回数に数えません）</div></div><button class="btn small" data-mini="slot">あそぶ</button></div>
       </div><p class="hint" style="margin-top:10px">ミニゲームはスタミナを使いません。カロリーは一般的な目安です。</p>`;
   } else {
@@ -850,10 +851,20 @@ function miniReward(coins) {
 }
 // 組員作のミニゲーム（別ページ）を全画面で開く。
 // ゲームの中からは window.parent.nyankaloMini を通してコインなどを読み書きする。
-const MINI_PAGES = { sagase: ['sagase.html', 'お題の猫を探せ！'], dash: ['dash.html', 'にゃんこダッシュ'], slot: ['slot.html', 'にゃんこスロット'] };
+const MINI_PAGES = { sagase: ['sagase.html', 'お題の猫を探せ！'], dash: ['dash.html', 'にゃんこダッシュ'], slot: ['slot.html', 'にゃんこスロット'], baseball: ['baseball.html', 'にゃんこバッティング'] };
+// ミニゲームに渡す猫の情報（能力は装備ボーナスこみ。shirt / gloves は着せかえの色、なければ null）
+function miniCatInfo() {
+  const eq = S.cat.equip || {};
+  return {
+    name: S.cat.name, breed: S.cat.breed, level: S.cat.level,
+    pow: statWithBonus('pow'), spd: statWithBonus('spd'), sta: statWithBonus('sta'),
+    head: eq.head || null, top: eq.top || null, hand: eq.hand || null,
+    shirt: (WEAR[eq.top] || {}).color || null, gloves: (WEAR[eq.hand] || {}).color || null
+  };
+}
 window.nyankaloMini = {
   // 共通
-  info: () => ({ coins: S.coins, left: miniLeft(), max: RULE.miniRewardMax, sound: S.settings.sound, vibrate: S.settings.vibrate }),
+  info: () => ({ coins: S.coins, left: miniLeft(), max: RULE.miniRewardMax, sound: S.settings.sound, vibrate: S.settings.vibrate, cat: miniCatInfo() }),
   // 報酬つきプレイ1回ぶん：コインは上限 miniRewardMax まで。回数が残っていなければ0
   reward: n => {
     n = Math.max(0, Math.round(n || 0));

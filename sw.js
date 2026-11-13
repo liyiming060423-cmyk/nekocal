@@ -1,7 +1,7 @@
 // にゃんカロ service worker
 // アプリ本体はキャッシュしてオフラインでも起動できるようにする。
 // 更新したら VERSION の数字を上げると、利用者のスマホに新しい版が届く。
-const VERSION = '8.3';   // index.html などの ?v= と同じ数字にする
+const VERSION = '8.4';   // index.html などの ?v= と同じ数字にする
 const CACHE = 'nekocal-v' + VERSION;
 const V = '?v=' + VERSION;
 const APP_FILES = [
@@ -16,6 +16,7 @@ const APP_FILES = [
   './sagase.html',
   './dash.html',
   './slot.html',
+  './baseball.html',
   './sagase.css' + V,
   './home-bg.jpg',
   './tabby-body.png',
@@ -45,7 +46,7 @@ const APP_FILES = [
   './apple-touch-icon.png'
 ];
 
-const GAME_PAGES = ['sagase.html', 'dash.html', 'slot.html'];
+const GAME_PAGES = ['sagase.html', 'dash.html', 'slot.html', 'baseball.html'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(APP_FILES)).then(() => self.skipWaiting()));

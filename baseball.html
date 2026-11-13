@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2E7D46">
+<title>にゃんこバッティング</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<style>
+:root{--ink:#4A2A1A;--orange:#F0943F;--red:#E0573F;--cream:#FFF8EC;--font:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:#1E4A2E;display:flex;align-items:center;justify-content:center;overflow:hidden;font-family:var(--font);color:var(--ink);
+  touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+  padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0)}
+#stage{position:relative;width:min(100vw,calc(100vh*9/16));width:min(100vw,calc(100dvh*9/16));aspect-ratio:9/16;max-height:100vh;max-height:100dvh;overflow:hidden;font-size:14px;background:#7EC8F2}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#backBtn{position:absolute;top:.6em;left:.6em;z-index:8;width:2.7em;height:2.7em;border-radius:50%;border:3px solid var(--ink);background:#fff;color:var(--ink);font:900 1.3em/1 var(--font);box-shadow:0 3px 0 var(--ink);cursor:pointer;padding:0}
+#swingBtn{position:absolute;right:4%;bottom:3.2%;z-index:4;width:30%;aspect-ratio:1;border-radius:50%;border:4px solid var(--ink);
+  background:radial-gradient(circle at 35% 30%,#FF8A6B,#E0573F 55%,#B83A26);color:#fff;font:900 1.3em/1 var(--font);letter-spacing:.04em;
+  text-shadow:0 2px 0 rgba(0,0,0,.35);box-shadow:0 .4em 0 var(--ink);cursor:pointer;touch-action:none;padding:0}
+#swingBtn small{display:block;font-size:.55em;margin-top:.35em;opacity:.9;letter-spacing:0}
+#swingBtn.on{transform:translateY(.3em);box-shadow:0 .1em 0 var(--ink)}
+#swingBtn[hidden]{display:none}
+@media (pointer:coarse){#swingBtn small{display:none}}
+#padHint{position:absolute;left:4%;bottom:5%;z-index:3;width:56%;padding:.55em .7em;border-radius:1em;background:rgba(255,255,255,.82);border:2px dashed rgba(74,42,26,.55);
+  font-weight:900;font-size:.86em;line-height:1.35;text-align:center;pointer-events:none;transition:opacity .4s}
+#padHint.fade{opacity:0}
+.ov{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;gap:.6em;padding:3.6em .9em 1.1em;overflow-y:auto;
+  background:rgba(30,60,40,.55);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);touch-action:pan-y}
+.ov[hidden]{display:none}
+.ov h1{margin:0;font-size:1.75em;font-weight:900;color:#fff;text-align:center;line-height:1.15;text-shadow:0 3px 0 var(--ink),2px 0 0 var(--ink),-2px 0 0 var(--ink),0 -2px 0 var(--ink)}
+.ov h1 span{display:block;font-size:.5em;margin-top:.35em;color:#FFE38A}
+.card{width:100%;background:var(--cream);border:3px solid var(--ink);border-radius:1.1em;box-shadow:0 4px 0 var(--ink);padding:.7em .85em}
+.catcard .ttl{font-weight:900;margin-bottom:.35em}
+.st{display:grid;grid-template-columns:5.3em 2.2em 1fr;align-items:center;gap:.4em;font-weight:900;font-size:.9em;margin:.25em 0}
+.st .bar{height:.75em;border-radius:1em;background:#E9DCC8;border:2px solid var(--ink);overflow:hidden;position:relative}
+.st .bar i{position:absolute;inset:0 auto 0 0;border-radius:1em}
+.st .eff{grid-column:3;font-size:.78em;font-weight:700;margin-top:-.2em;opacity:.8}
+.dogs{display:grid;grid-template-columns:repeat(3,1fr);gap:.5em;width:100%}
+.dog{display:flex;flex-direction:column;align-items:center;gap:.15em;padding:.45em .25em .55em;background:#fff;border:3px solid var(--ink);border-radius:1em;box-shadow:0 4px 0 var(--ink);
+  font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+.dog:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.dog canvas{width:100%;aspect-ratio:1;display:block;border-radius:.7em;background:linear-gradient(#BFE6FA,#E8F6FF 60%,#8CCB7A 61%)}
+.dog b{font-size:1em}
+.dog .lv{font-size:.72em;font-weight:900;color:#fff;padding:.1em .6em;border-radius:1em}
+.dog .sm{font-size:.68em;font-weight:700;line-height:1.3;text-align:center}
+.dog .sm i{font-style:normal;display:inline-block}
+.dog .best{font-size:.72em;font-weight:900;color:#B5482B}
+.left{font-weight:900;font-size:.88em;text-align:center;color:#fff;text-shadow:0 2px 0 var(--ink)}
+.how{font-size:.8em;font-weight:700;line-height:1.5}
+.how b{color:#B5482B}
+.res .big{font-size:2.1em;font-weight:900;text-align:center;line-height:1.1}
+.res .big small{font-size:.45em;display:block}
+.res .nb{text-align:center;font-weight:900;color:#D9772B}
+.log{display:grid;grid-template-columns:1.6em 1fr auto;gap:.15em .5em;font-size:.82em;font-weight:700;margin:.5em 0 0}
+.log .k{font-weight:900;text-align:right}
+.coin{font-weight:900;text-align:center;font-size:1.05em;padding:.45em;border-radius:.8em;background:#FFE7A8;border:2px solid var(--ink)}
+.btns{display:flex;gap:.6em;width:100%}
+.btn{flex:1;border:3px solid var(--ink);background:var(--orange);color:var(--ink);font:900 1em var(--font);border-radius:1em;padding:.7em .4em;box-shadow:0 4px 0 var(--ink);cursor:pointer;touch-action:manipulation}
+.btn.white{background:#fff}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+</style>
+</head>
+<body>
+<!-- ミニゲーム「にゃんこバッティング」。にゃんカロの中で開くと、自分の猫の能力・毛色・服の色で遊べて、コインがアプリにたまる（1回の上限あり） -->
+<div id="stage">
+  <canvas id="cv" width="360" height="640" aria-label="バッティングの画面（キャッチャーの後ろから見た球場）"></canvas>
+  <button id="backBtn" aria-label="にゃんカロにもどる">×</button>
+  <div id="padHint" hidden>画面をドラッグして<br>カーソルを動かす</div>
+  <button id="swingBtn" hidden aria-label="スイング">スイング<small>（スペースキー）</small></button>
+
+  <div class="ov" id="titleOv">
+    <h1>にゃんこバッティング<span>犬のピッチャーの10球を打ちかえせ！</span></h1>
+    <div class="card catcard" id="catCard"></div>
+    <div class="dogs" id="dogList"></div>
+    <div class="left" id="leftMsg"></div>
+    <div class="card how">
+      <b>あそびかた</b>　画面のどこでもドラッグすると黄色い<b>カーソル</b>が動く。ボールがカーソルに重なったときに<b>スイング</b>！<br>
+      カーソルの真ん中（オレンジ）で打つと遠くへ飛ぶ。ボールの<b>下</b>を打つとフライ、<b>上</b>を打つとゴロ。早く振ると左へ、おそいと右へ。<br>
+      ホームラン100・長打50・ヒット30・ファウル5点。合計点でコインがもらえる（最大<span id="maxC">50</span>）。
+    </div>
+  </div>
+
+  <div class="ov" id="resultOv" hidden>
+    <h1>結果</h1>
+    <div class="card res" id="resBody"></div>
+    <div class="btns"><button class="btn" id="againBtn">もう一回</button><button class="btn white" id="pickBtn">ピッチャーをえらぶ</button></div>
+  </div>
+</div>
+<script>
+'use strict';
+/* =========================================================
+   にゃんこバッティング
+   キャッチャーの後ろから見た画面。遠くに犬のピッチャー、手前にストライクゾーン、左に自分の猫（うしろ姿）。
+   座標：画面は 360×640。遠近法は「奥行き Z（ゾーン＝1、ピッチャー＝6）」で 画面x = CX + X*F/Z、画面y = CY + Y*F/Z。
+   ========================================================= */
+
+// ===== バランス（ここの数字で調整できる） =====
+const PITCHES = 10;                                 // 1回の球数
+const PTS = { hr: 100, xbh: 50, hit: 30, foul: 5 }; // 点数（ホームラン／長打／ヒット／ファウル）
+const COIN_DIV = 8;                                 // コイン = 合計点 × 投手のコイン倍率 ÷ これ（上限はアプリの miniRewardMax）
+const eff = v => v / (v + 60);                      // 能力の効き目（0〜1。数値が上がるほどゆるやかに増える）
+// 投手（犬）。kmh=ストレートの球速、T=ストレートがとどく時間（秒・ゲーム用にゆっくり）、out=ボール球の割合、brk=変化の大きさ、mix=球種の割合
+const DOGS = {
+  shiba:   { name: '柴犬',     lv: '初級', lvc: '#3FA35B', kmh: [100, 115], T: 1.15, out: .15, brk: .75, mix: { st: 70, cv: 30 },                 coin: 1.0, num: '1',
+             fur: '#D9893B', light: '#FFF3E0', dark: '#6B3E1C', uni: '#2F8F4E' },
+  bulldog: { name: 'ブルドッグ', lv: '中級', lvc: '#E0952B', kmh: [122, 138], T: .95,  out: .2,  brk: 1.0, mix: { st: 50, cv: 20, sl: 30 },          coin: 1.2, num: '22',
+             fur: '#E6CFA8', light: '#FFF9EF', dark: '#5E4A36', uni: '#2B3F7A' },
+  husky:   { name: 'ハスキー',   lv: '上級', lvc: '#C2335E', kmh: [142, 158], T: .78,  out: .25, brk: 1.2, mix: { st: 40, cv: 15, sl: 25, fk: 20 }, coin: 1.5, num: '18',
+             fur: '#7D8794', light: '#FFFFFF', dark: '#2E3440', uni: '#6E3AA8' }
+};
+// 球種。spd=ストレートとくらべた速さ、bx/by=変化（右／下）、k=曲がりはじめのおそさ（大きいほど手元で曲がる）
+const PTYPE = {
+  st: { name: 'ストレート', spd: 1.0,  bx: 0,   by: 0,   k: 2 },
+  cv: { name: 'カーブ',     spd: .8,   bx: .14, by: .24, k: 1.7 },
+  sl: { name: 'スライダー', spd: .9,   bx: .24, by: .05, k: 2.4 },
+  fk: { name: 'フォーク',   spd: .92,  bx: 0,   by: .30, k: 3.6 }
+};
+const LAG = .07;   // スイングボタンを押してからバットがボールの位置にくるまで（秒）
+
+// ===== アプリとのつなぎ =====
+const APP = (() => { try { return window.parent !== window && window.parent.nyankaloMini ? window.parent.nyankaloMini : null; } catch (e) { return null; } })();
+const DEF_CAT = { name: 'もち', breed: 'tabby', level: 1, pow: 20, spd: 20, sta: 20, head: null, top: 'tee_orange', hand: 'gloves_brown', shirt: '#F08A3C', gloves: '#7A4A2A' };
+let INFO = null, CAT = DEF_CAT;
+function loadInfo() {
+  try { INFO = APP ? APP.info() : null; } catch (e) { INFO = null; }
+  CAT = Object.assign({}, DEF_CAT, (INFO && INFO.cat) || {});
+}
+loadInfo();
+const sndOn = () => !INFO || INFO.sound !== false;
+const vibOn = () => (!INFO || INFO.vibrate !== false) && typeof navigator.vibrate === 'function';
+const buzz = p => { if (vibOn()) try { navigator.vibrate(p); } catch (e) {} };
+function getBest() {
+  try { return APP ? (APP.getRec('baseball') || {}) : JSON.parse(localStorage.getItem('nb_best') || '{}'); } catch (e) { return {}; }
+}
+function setBest(o) {
+  try { if (APP) APP.setRec('baseball', o); else localStorage.setItem('nb_best', JSON.stringify(o)); } catch (e) {}
+}
+
+// ===== 画面・遠近法 =====
+const cv = document.getElementById('cv'), g = cv.getContext('2d'), stage = document.getElementById('stage');
+const W = 360, H = 640, F = 300, CX = 180, CY = 200;
+const M = .271;                                     // 球場の 1m を奥行きの単位に直す倍率（ピッチャーまで18.44m → Z=6）
+const PZ = 6;                                       // ピッチャーの奥行き
+const ZCY = .667, ZHW = .225, ZHH = .25, BRW = .038; // ゾーンの中心の高さ・半分の幅・半分の高さ、ボールの半径
+const ZL = CX - ZHW * F, ZR = CX + ZHW * F, ZT = CY + (ZCY - ZHH) * F, ZB = CY + (ZCY + ZHH) * F;
+const REL = { X: -.03, Y: -.14 };                   // ボールをはなす位置（ピッチャーの手）
+const pj = (X, Y, Z) => [CX + X * F / Z, CY + Y * F / Z, F / Z];
+const fieldPt = (xm, zm, hm = 0) => pj(xm * M, 1 - hm * M, 1 + zm * M);   // 球場の地面の点（m）
+const CATX = 52, CATY = 506, CATS = 1.0;            // 猫の足もとの位置と大きさ
+
+// 能力から決まる値
+let CRW, CRH, TW, MAXD;
+function calcStats() {
+  CRW = (ZR - ZL) * (.16 + .2 * eff(CAT.spd));   // カーソルの半分の幅（すばやさ）
+  CRH = CRW * .72;
+  TW = .10 + .09 * eff(CAT.sta);                 // タイミングのゆるさ（たいりょく）：ずれてよい秒数
+  MAXD = 100 + 70 * eff(CAT.pow);                // 最大飛距離 m（ちから）
+}
+calcStats();
+const fence = dir => 92 + 24 * (1 - Math.min(1, Math.abs(dir) / 45));   // フェンスまでの距離（センター116m・両翼92m）
+
+let dpr = 1;
+function resize() {
+  dpr = Math.min(3, window.devicePixelRatio || 1);
+  const w = stage.clientWidth;
+  stage.style.fontSize = (w / 360 * 14) + 'px';
+  cv.width = Math.round(w * dpr); cv.height = Math.round(cv.width * H / W);
+  makeBg();
+}
+
+// 色の明るさ（0〜1）
+function lum(hex) { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return .5; const n = parseInt(m[1], 16); return (.299 * (n >> 16) + .587 * (n >> 8 & 255) + .114 * (n & 255)) / 255; }
+// 古いスマホ（roundRect がないブラウザ）用
+if (!CanvasRenderingContext2D.prototype.roundRect) CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r); this.arcTo(x, y + h, x, y, r); this.arcTo(x, y, x + w, y, r); this.closePath(); };
+
+// ===== 乱数 =====
+const R = Math.random, rnd = (a, b) => a + R() * (b - a), clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function pickMix(mix) { let s = 0; for (const k in mix) s += mix[k]; let r = R() * s; for (const k in mix) { r -= mix[k]; if (r <= 0) return k; } return 'st'; }
+function seeded(seed) { return () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
+
+// ===== 背景（球場）を1回だけ描いておく =====
+let bg = null;
+function makeBg() {
+  bg = document.createElement('canvas'); bg.width = cv.width; bg.height = cv.height;
+  const c = bg.getContext('2d'), s = bg.width / W; c.scale(s, s);
+  const rr = seeded(7);
+  // 空
+  let gr = c.createLinearGradient(0, 0, 0, 200); gr.addColorStop(0, '#6EC1F0'); gr.addColorStop(1, '#D4F0FF');
+  c.fillStyle = gr; c.fillRect(0, 0, W, 220);
+  c.fillStyle = 'rgba(255,255,255,.9)';
+  [[60, 52, 1], [270, 34, .8], [330, 86, .6], [150, 92, .55]].forEach(([x, y, k]) => { c.beginPath(); c.ellipse(x, y, 30 * k, 11 * k, 0, 0, 7); c.ellipse(x + 18 * k, y - 7 * k, 20 * k, 12 * k, 0, 0, 7); c.ellipse(x - 20 * k, y - 3 * k, 16 * k, 9 * k, 0, 0, 7); c.fill(); });
+  // 照明塔
+  [[22, 112], [338, 112]].forEach(([x, y]) => { c.fillStyle = '#5B6B7A'; c.fillRect(x - 1.5, y, 3, 60); c.fillStyle = '#E8EEF2'; c.fillRect(x - 11, y - 9, 22, 11); c.strokeStyle = '#5B6B7A'; c.lineWidth = 1.5; c.strokeRect(x - 11, y - 9, 22, 11); });
+  // スタンド（観客）
+  c.fillStyle = '#3F5D78'; c.beginPath(); c.moveTo(0, 150); c.quadraticCurveTo(180, 128, 360, 150); c.lineTo(360, 215); c.lineTo(0, 215); c.fill();
+  c.fillStyle = '#2F4A62'; c.fillRect(0, 186, W, 30);
+  const cols = ['#FFD166', '#EF476F', '#FFFFFF', '#06D6A0', '#F78C6B', '#A0C4FF', '#FFC6D9'];
+  for (let i = 0; i < 520; i++) { const x = rr() * W, y = 142 + rr() * 64; if (y < 150 - Math.sin(x / W * Math.PI) * 18) continue; c.fillStyle = cols[Math.floor(rr() * cols.length)]; c.fillRect(x, y, 2, 2); }
+  // 外野フェンス
+  const fen = [], top = [];
+  for (let a = -60; a <= 60; a += 2) { const d = fence(a), r = a * Math.PI / 180; fen.push(fieldPt(Math.sin(r) * d, Math.cos(r) * d)); top.push(fieldPt(Math.sin(r) * d, Math.cos(r) * d, 4)); }
+  // 芝（しま模様）
+  c.fillStyle = '#3E9E4A'; c.fillRect(0, 205, W, H);
+  for (let z = 0; z < 130; z += 8) { const y1 = fieldPt(0, z)[1], y2 = fieldPt(0, z + 4)[1]; c.fillStyle = '#48AC53'; c.fillRect(0, Math.min(y1, y2), W, Math.abs(y1 - y2)); }
+  c.fillStyle = '#1D5E35'; c.beginPath(); fen.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); for (let i = top.length - 1; i >= 0; i--) c.lineTo(top[i][0], top[i][1]); c.fill();
+  c.strokeStyle = '#F2C14E'; c.lineWidth = 1.6; c.beginPath(); top.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); c.stroke();
+  // 内野の土（ファウルラインの間＋円弧）
+  const dirt = '#C98B55', dirtD = '#B57846';
+  c.fillStyle = dirt; c.beginPath(); c.moveTo(...fieldPt(0, -0.5));
+  c.lineTo(...fieldPt(-27.5, 27.5));
+  for (let a = -45; a <= 45; a += 3) { const r = a * Math.PI / 180, p = [Math.sin(r) * 29, 18.44 + Math.cos(r) * 29]; c.lineTo(...fieldPt(p[0], p[1])); }
+  c.lineTo(...fieldPt(27.5, 27.5)); c.closePath(); c.fill();
+  // 内野の芝（ダイヤモンド）
+  c.fillStyle = '#45A851'; c.beginPath(); [[0, 2.6], [16.8, 19.4], [0, 36.2], [-16.8, 19.4]].forEach((p, i) => i ? c.lineTo(...fieldPt(...p)) : c.moveTo(...fieldPt(...p))); c.closePath(); c.fill();
+  // マウンド
+  const mc = fieldPt(0, 18.44), mr = fieldPt(2.7, 18.44)[0] - mc[0], mt = fieldPt(0, 21.1)[1], mb = fieldPt(0, 15.8)[1];
+  c.fillStyle = dirtD; c.beginPath(); c.ellipse(mc[0], (mt + mb) / 2, mr, (mb - mt) / 2 + 1, 0, 0, 7); c.fill();
+  c.fillStyle = dirt; c.beginPath(); c.ellipse(mc[0], (mt + mb) / 2 - 1, mr * .8, (mb - mt) / 2 - 1, 0, 0, 7); c.fill();
+  c.fillStyle = '#fff'; c.fillRect(mc[0] - 5, mc[1] - 1, 10, 2);
+  // 2塁ベース
+  const b2 = fieldPt(0, 38.8); c.fillStyle = '#fff'; c.fillRect(b2[0] - 3, b2[1] - 1, 6, 2);
+  // ファウルライン
+  c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 1.6;
+  [-1, 1].forEach(sg => { c.beginPath(); c.moveTo(...fieldPt(sg * 1, 1)); c.lineTo(...fieldPt(sg * 100, 100)); c.stroke(); });
+  // ホームまわりの土（ゾーンにあわせて大きめに描く）
+  c.fillStyle = dirt; c.beginPath(); c.ellipse(CX, 540, 250, 120, 0, 0, 7); c.fill();
+  c.fillStyle = dirtD; c.fillRect(0, 600, W, 40); c.fillStyle = dirt; c.beginPath(); c.ellipse(CX, 600, 260, 22, 0, 0, 7); c.fill();
+  // バッターボックス
+  c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 2.5;
+  [[-1], [1]].forEach(([sg]) => { c.beginPath(); const x1 = CX + sg * 82, x2 = CX + sg * 200; c.moveTo(x1 + sg * 6, 460); c.lineTo(x2 + sg * 6, 460); c.lineTo(x2 + sg * 40, 590); c.lineTo(x1 + sg * 14, 590); c.closePath(); c.stroke(); });
+  // ホームベース
+  c.fillStyle = '#fff'; c.strokeStyle = '#9A8F84'; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(ZL + 4, 520); c.lineTo(ZR - 4, 520); c.lineTo(ZR - 10, 506); c.lineTo(CX, 494); c.lineTo(ZL + 10, 506); c.closePath(); c.fill(); c.stroke();
+  c.fillStyle = '#E4DCD2'; c.fillRect(ZL + 4, 520, ZR - ZL - 8, 4);
+}
+
+// ===== 犬（ピッチャー）を描く =====
+// 足もと (x,y)、k=大きさ（1で高さ100）、pose: w=ふりかぶり 0〜1、f=投げたあと 0〜1、ball=手にボールを持つか
+function drawDog(c, key, x, y, k, pose) {
+  const D = DOGS[key], w = pose.w || 0, f = pose.f || 0, ol = '#3A2418';
+  c.save(); c.translate(x, y); c.scale(k, k); c.lineJoin = 'round'; c.lineCap = 'round';
+  const L = (pts, col, lw) => { c.strokeStyle = col; c.lineWidth = lw; c.beginPath(); pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])); c.stroke(); };
+  const E = (ex, ey, rx, ry, col, st = true, rot = 0) => { c.fillStyle = col; c.beginPath(); c.ellipse(ex, ey, rx, ry, rot, 0, 7); c.fill(); if (st) { c.strokeStyle = ol; c.lineWidth = 2; c.stroke(); } };
+  // 影
+  c.fillStyle = 'rgba(0,0,0,.22)'; c.beginPath(); c.ellipse(0, 0, 26, 5, 0, 0, 7); c.fill();
+  // 足を上げる（ふりかぶりの途中で左足＝画面の右の足）
+  const lift = Math.sin(clamp((w - .25) / .7, 0, 1) * Math.PI) * (f ? 0 : 1);
+  const lean = f ? Math.sin(Math.min(1, f * 1.4) * Math.PI / 2) * 6 : 0;
+  // しっぽ
+  if (key === 'shiba') { c.strokeStyle = D.fur; c.lineWidth = 7; c.beginPath(); c.arc(20, -44, 7, Math.PI * .9, Math.PI * 2.4); c.stroke(); c.strokeStyle = D.light; c.lineWidth = 2.5; c.beginPath(); c.arc(20, -44, 7, Math.PI * 1.3, Math.PI * 2.1); c.stroke(); }
+  if (key === 'husky') { E(-21, -34, 6, 13, D.fur, true, .35); E(-23, -26, 3.5, 5, D.light, false, .35); }
+  // 足
+  E(-9, -3, 7, 3.6, '#2A2A30', false);
+  const ry = -lift * 16, rx = lift * 3;
+  E(9 + rx, -3 + ry, 7, 3.6, '#2A2A30', false);
+  c.fillStyle = '#F4F1EA'; c.strokeStyle = ol; c.lineWidth = 2;
+  c.beginPath(); c.roundRect(-15, -32, 11, 28, 4); c.fill(); c.stroke();
+  c.beginPath(); c.roundRect(4 + rx, -32 + ry * .6, 11, 28 - lift * 6, 4); c.fill(); c.stroke();
+  c.translate(lean * .3, lean);
+  // 体（ユニフォーム）
+  c.fillStyle = D.uni; c.beginPath(); c.roundRect(-18, -64, 36, 36, 9); c.fill(); c.stroke();
+  c.fillStyle = '#fff'; c.font = '900 11px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(D.num, 6, -48);
+  c.fillStyle = '#F4F1EA'; c.fillRect(-17, -33, 34, 3);
+  // グラブの腕（画面の右）
+  const gx = w < 1 && !f ? 14 - w * 8 : 24 - (1 - f) * 2, gy = w < 1 && !f ? -46 - w * 22 : -56;
+  L([[15, -58], [gx, gy]], D.uni, 8);
+  E(gx + 2, gy, 7.5, 7, '#8A4B22');
+  // 頭
+  const hy = -80;
+  if (key === 'shiba') {
+    c.fillStyle = D.fur; [[-1], [1]].forEach(([s]) => { c.beginPath(); c.moveTo(s * 6, hy - 12); c.lineTo(s * 15, hy - 26); c.lineTo(s * 18, hy - 8); c.closePath(); c.fill(); c.stroke(); });
+    E(0, hy, 18, 16, D.fur);
+    c.fillStyle = D.light; c.beginPath(); c.ellipse(0, hy + 6, 13, 9, 0, 0, 7); c.fill();
+    E(-7, hy + 2, 6, 5, D.light, false); E(7, hy + 2, 6, 5, D.light, false);
+    E(-6, hy - 9, 2, 1.4, D.light, false); E(6, hy - 9, 2, 1.4, D.light, false);
+    E(-6.5, hy - 3, 1.9, 2.3, '#222', false); E(6.5, hy - 3, 1.9, 2.3, '#222', false);
+    E(0, hy + 3, 3, 2.2, '#222', false);
+    c.strokeStyle = '#222'; c.lineWidth = 1.3; c.beginPath(); c.moveTo(-3, hy + 7); c.quadraticCurveTo(0, hy + 9, 3, hy + 7); c.stroke();
+    E(-11, hy + 4, 3, 1.8, 'rgba(240,120,120,.45)', false); E(11, hy + 4, 3, 1.8, 'rgba(240,120,120,.45)', false);
+  } else if (key === 'bulldog') {
+    E(-19, hy - 6, 5.5, 4.5, D.dark, true, -.5); E(19, hy - 6, 5.5, 4.5, D.dark, true, .5);
+    E(0, hy, 21, 15.5, D.fur);
+    c.strokeStyle = D.dark; c.lineWidth = 1.3; [-11, -8].forEach(o => { c.beginPath(); c.moveTo(-7, hy + o); c.quadraticCurveTo(0, hy + o - 2, 7, hy + o); c.stroke(); });
+    E(-8, hy + 6, 9, 6.5, D.light); E(8, hy + 6, 9, 6.5, D.light);
+    c.fillStyle = '#5A2A2A'; c.beginPath(); c.ellipse(0, hy + 11, 6, 3, 0, 0, Math.PI); c.fill();
+    c.fillStyle = '#fff'; c.fillRect(-4.5, hy + 9.5, 2, 2.5); c.fillRect(2.5, hy + 9.5, 2, 2.5);
+    E(-8, hy - 3, 1.8, 1.8, '#222', false); E(8, hy - 3, 1.8, 1.8, '#222', false);
+    E(0, hy + 1.5, 4.5, 2.8, '#222', false);
+  } else {
+    c.fillStyle = D.fur; [[-1], [1]].forEach(([s]) => { c.beginPath(); c.moveTo(s * 5, hy - 12); c.lineTo(s * 13, hy - 31); c.lineTo(s * 18, hy - 8); c.closePath(); c.fill(); c.stroke(); c.fillStyle = '#F2C6C6'; c.beginPath(); c.moveTo(s * 9, hy - 13); c.lineTo(s * 13, hy - 24); c.lineTo(s * 15, hy - 11); c.closePath(); c.fill(); c.fillStyle = D.fur; });
+    E(0, hy, 17.5, 16, D.fur);
+    c.fillStyle = D.light; c.beginPath(); c.moveTo(-15, hy - 2); c.quadraticCurveTo(-8, hy - 8, -2, hy - 4); c.lineTo(0, hy - 13); c.lineTo(2, hy - 4); c.quadraticCurveTo(8, hy - 8, 15, hy - 2); c.quadraticCurveTo(16, hy + 14, 0, hy + 15); c.quadraticCurveTo(-16, hy + 14, -15, hy - 2); c.fill();
+    E(-6, hy - 10, 2.2, 1.5, D.light, false); E(6, hy - 10, 2.2, 1.5, D.light, false);
+    E(-6.5, hy - 2, 2.6, 2.6, '#4DA8E8', false); E(6.5, hy - 2, 2.6, 2.6, '#4DA8E8', false);
+    E(-6.5, hy - 2, 1.1, 1.3, '#111', false); E(6.5, hy - 2, 1.1, 1.3, '#111', false);
+    E(0, hy + 4, 3.2, 2.3, '#222', false);
+    c.strokeStyle = '#222'; c.lineWidth = 1.3; c.beginPath(); c.moveTo(-3, hy + 8); c.quadraticCurveTo(0, hy + 10, 3, hy + 8); c.stroke();
+  }
+  // 投げる腕（画面の左＝犬の右手）
+  let hx, hy2;
+  if (!f) { const t = w; hx = -20 - t * 12; hy2 = -40 - t * 60; if (t > .85) { hx += (t - .85) * 20; } }
+  else { const t = Math.min(1, f * 1.6); hx = -32 + t * 46; hy2 = -98 + t * 66; }
+  L([[-16, -59], [(hx - 16) / 2 - 3, (hy2 - 59) / 2], [hx, hy2]], D.uni, 8);
+  E(hx, hy2, 5, 5, D.fur);
+  if (pose.ball) E(hx - 1, hy2 - 4, 3.2, 3.2, '#fff');
+  c.restore();
+}
+
+// ===== 猫（バッターのうしろ姿）を描く =====
+const FUR = {
+  tabby:     { base: '#E9A752', dark: '#B86B2B', light: '#F8E0B5', ol: '#5A3520', fluffy: false },
+  white:     { base: '#FFFFFF', dark: '#E1D8CE', light: '#FFFFFF', ol: '#6B5A4E', fluffy: false },
+  longwhite: { base: '#FFFFFF', dark: '#E4DDD4', light: '#FFFFFF', ol: '#6B5A4E', fluffy: true },
+  grey:      { base: '#55565E', dark: '#3A3B42', light: '#74757E', ol: '#1E1E22', fluffy: true }
+};
+// ふわふわの輪郭（長毛の猫用）
+function fluffEllipse(c, x, y, rx, ry, n, bump) {
+  c.beginPath(); c.moveTo(x + rx, y);
+  for (let i = 0; i < n; i++) {
+    const a2 = (i + .5) / n * Math.PI * 2, a3 = (i + 1) / n * Math.PI * 2;
+    c.quadraticCurveTo(x + Math.cos(a2) * (rx + bump), y + Math.sin(a2) * (ry + bump), x + Math.cos(a3) * rx, y + Math.sin(a3) * ry);
+  }
+  c.closePath();
+}
+// bat: { ang（バットの向き・ラジアン）, len（長さの倍率）, hx, hy（手の位置・ローカル） }
+function drawCat(c, x, y, s, bat, time) {
+  const fr = FUR[CAT.breed] || FUR.tabby, ol = fr.ol, shirt = CAT.shirt || '#F08A3C', glove = CAT.gloves || '#F4F4F4';
+  c.save(); c.translate(x, y); c.scale(s, s); c.lineJoin = 'round'; c.lineCap = 'round';
+  const E = (ex, ey, rx, ry, col, st = true, rot = 0) => { c.fillStyle = col; c.beginPath(); c.ellipse(ex, ey, rx, ry, rot, 0, 7); c.fill(); if (st) { c.strokeStyle = ol; c.lineWidth = 3; c.stroke(); } };
+  const bob = Math.sin(time * 2.2) * 1.5;
+  // 影
+  c.fillStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.ellipse(0, 2, 58, 11, 0, 0, 7); c.fill();
+  // しっぽ
+  const sw = Math.sin(time * 2.6) * 10 + (bat.swing ? Math.sin(bat.swing * 9) * 14 : 0);
+  c.strokeStyle = ol; c.lineWidth = fr.fluffy ? 24 : 16; c.beginPath(); c.moveTo(18, -74); c.bezierCurveTo(62, -66, 84 + sw * .3, -52, 82 + sw, -96); c.stroke();
+  c.strokeStyle = fr.base; c.lineWidth = fr.fluffy ? 19 : 11; c.stroke();
+  if (CAT.breed === 'tabby') { c.strokeStyle = fr.dark; c.lineWidth = 4; [[48, -66], [70, -62], [80 + sw * .7, -82]].forEach(([tx, ty], i) => { c.beginPath(); c.moveTo(tx - (i < 2 ? 1 : 7), ty - 7); c.lineTo(tx + (i < 2 ? 1 : 7), ty + 7); c.stroke(); }); }
+  // 足
+  [[-1], [1]].forEach(([d]) => {
+    c.fillStyle = fr.base; c.strokeStyle = ol; c.lineWidth = 3;
+    c.beginPath(); c.roundRect(d * 21 - 12, -62, 24, 56, 10); c.fill(); c.stroke();
+    E(d * 24, -6, 17, 9, fr.base);
+  });
+  c.translate(0, bob);
+  // 短パン
+  c.fillStyle = '#FBFAF7'; c.strokeStyle = ol; c.lineWidth = 3;
+  c.beginPath(); c.moveTo(-36, -98); c.lineTo(36, -98); c.lineTo(42, -54); c.lineTo(4, -50); c.lineTo(0, -62); c.lineTo(-4, -50); c.lineTo(-42, -54); c.closePath(); c.fill(); c.stroke();
+  c.strokeStyle = shirt; c.lineWidth = 3; c.beginPath(); c.moveTo(-38, -90); c.lineTo(-41, -58); c.moveTo(38, -90); c.lineTo(41, -58); c.stroke();
+  // 手の位置（ローカル）
+  const hx = bat.hx, hy = bat.hy;
+  // 左腕（ひじだけ見える）
+  c.strokeStyle = ol; c.lineWidth = 17; c.beginPath(); c.moveTo(-30, -150); c.lineTo(-46, -128); c.stroke();
+  c.strokeStyle = fr.base; c.lineWidth = 12; c.stroke();
+  // シャツ（せなか）
+  c.fillStyle = shirt; c.strokeStyle = ol; c.lineWidth = 3;
+  c.beginPath(); c.moveTo(-28, -168); c.quadraticCurveTo(-46, -166, -50, -140); c.lineTo(-40, -132); c.lineTo(-40, -96); c.quadraticCurveTo(0, -90, 40, -96); c.lineTo(40, -132); c.lineTo(50, -140); c.quadraticCurveTo(46, -166, 28, -168); c.closePath(); c.fill(); c.stroke();
+  c.fillStyle = lum(shirt) > .62 ? '#4A2A1A' : '#FFFFFF';   // 明るい服は字をこげ茶に c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.font = '900 10px "Zen Maru Gothic",sans-serif'; c.fillText(String(CAT.name || '').slice(0, 6), 0, -141);
+  c.font = '900 30px "Zen Maru Gothic",sans-serif'; c.fillText(String(Math.min(99, CAT.level || 1)), 0, -115);
+  // 頭（うしろ）
+  const HY = -196;
+  if (fr.fluffy) { c.fillStyle = fr.base; c.strokeStyle = ol; c.lineWidth = 3; fluffEllipse(c, 0, -166, 38, 12, 14, 5); c.fill(); c.stroke(); }
+  [[-1], [1]].forEach(([d]) => { c.fillStyle = fr.base; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.moveTo(d * 12, HY - 30); c.lineTo(d * 34, HY - 58); c.lineTo(d * 42, HY - 14); c.closePath(); c.fill(); c.stroke(); c.fillStyle = fr.dark; c.beginPath(); c.moveTo(d * 22, HY - 31); c.lineTo(d * 33, HY - 49); c.lineTo(d * 37, HY - 24); c.closePath(); c.fill(); });
+  c.fillStyle = fr.base; c.strokeStyle = ol; c.lineWidth = 3;
+  if (fr.fluffy) fluffEllipse(c, 0, HY, 44, 39, 18, 6); else { c.beginPath(); c.ellipse(0, HY, 45, 40, 0, 0, 7); }
+  c.fill(); c.stroke();
+  if (CAT.breed === 'tabby') { c.strokeStyle = fr.dark; c.lineWidth = 5; [[-14, -32], [0, -36], [14, -32]].forEach(([tx, ty]) => { c.beginPath(); c.moveTo(tx, HY + ty); c.lineTo(tx * 1.2, HY + ty + 18); c.stroke(); }); c.beginPath(); c.moveTo(-30, HY + 10); c.quadraticCurveTo(0, HY + 22, 30, HY + 10); c.stroke(); }
+  // 頭の着せかえ
+  const hd = CAT.head;
+  if (hd === 'cap_red') { // バッティングヘルメット
+    c.fillStyle = '#D33A3A'; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.ellipse(0, HY - 6, 46, 36, 0, Math.PI, 0); c.lineTo(46, HY + 2); c.lineTo(-46, HY + 2); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.ellipse(-16, HY - 26, 12, 6, -.4, 0, 7); c.fill();
+    E(38, HY + 4, 13, 15, '#D33A3A');
+  } else if (hd === 'crown') {
+    c.fillStyle = '#E9B730'; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.moveTo(-22, HY - 30); c.lineTo(-24, HY - 56); c.lineTo(-11, HY - 42); c.lineTo(0, HY - 62); c.lineTo(11, HY - 42); c.lineTo(24, HY - 56); c.lineTo(22, HY - 30); c.closePath(); c.fill(); c.stroke();
+  } else if (hd === 'band_pink' || hd === 'band_blue') {
+    c.strokeStyle = ol; c.lineWidth = 13; c.beginPath(); c.ellipse(0, HY - 6, 44, 30, 0, Math.PI * 1.05, Math.PI * 1.95); c.stroke();
+    c.strokeStyle = hd === 'band_pink' ? '#E8607A' : '#3A7BD5'; c.lineWidth = 8; c.stroke();
+  }
+  // 右腕（画面の右）→ 手 → バット
+  c.strokeStyle = ol; c.lineWidth = 17; c.beginPath(); c.moveTo(34, -152); c.lineTo(50, -132); c.lineTo(hx, hy); c.stroke();
+  c.strokeStyle = fr.base; c.lineWidth = 12; c.stroke();
+  c.save(); c.translate(hx, hy); c.rotate(bat.ang);
+  const bl = 150 * bat.len / s;
+  c.fillStyle = '#D9A45B'; c.strokeStyle = '#5A3520'; c.lineWidth = 2.5;
+  c.beginPath(); c.moveTo(-10, -3); c.lineTo(bl * .45, -4); c.quadraticCurveTo(bl * .8, -8.5, bl, -8); c.quadraticCurveTo(bl + 4, 0, bl, 8); c.quadraticCurveTo(bl * .8, 8.5, bl * .45, 4); c.lineTo(-10, 3); c.closePath(); c.fill(); c.stroke();
+  c.fillStyle = '#3B2A20'; c.fillRect(-10, -3.5, 26, 7); E(-12, 0, 4, 5, '#3B2A20', false);
+  c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(bl * .5, -5, bl * .4, 2);
+  c.restore();
+  E(hx - 4, hy + 3, 11, 10, glove); E(hx + 6, hy - 2, 10, 9, glove);
+  c.restore();
+}
+
+// ===== 効果音（WebAudio） =====
+let ac = null;
+function audio() { if (!sndOn()) return null; if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } } if (ac.state === 'suspended') ac.resume(); return ac; }
+function noise(a, dur) { const b = a.createBuffer(1, Math.floor(a.sampleRate * dur), a.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = R() * 2 - 1; const s = a.createBufferSource(); s.buffer = b; return s; }
+function tone(a, type, f1, f2, t0, dur, vol) { const o = a.createOscillator(), gn = a.createGain(); o.type = type; o.frequency.setValueAtTime(f1, t0); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + dur); gn.gain.setValueAtTime(vol, t0); gn.gain.exponentialRampToValueAtTime(.001, t0 + dur); o.connect(gn).connect(a.destination); o.start(t0); o.stop(t0 + dur + .02); }
+function nz(a, t0, dur, vol, ftype, freq, q, attack = .005) { const s = noise(a, dur), f = a.createBiquadFilter(), gn = a.createGain(); f.type = ftype; f.frequency.value = freq; f.Q.value = q || 1; gn.gain.setValueAtTime(.0001, t0); gn.gain.exponentialRampToValueAtTime(vol, t0 + attack); gn.gain.exponentialRampToValueAtTime(.001, t0 + dur); s.connect(f).connect(gn).connect(a.destination); s.start(t0); }
+function se(k, q = 1) {
+  const a = audio(); if (!a) return; const t = a.currentTime;
+  if (k === 'pitch') nz(a, t, .35, .12, 'bandpass', 900, .8, .2);
+  else if (k === 'swing') nz(a, t, .2, .22, 'bandpass', 1600, 1.2, .06);
+  else if (k === 'hit') { tone(a, 'triangle', 1900, 1500, t, .35 * q + .1, .28); tone(a, 'sine', 2900, 2600, t, .25, .12); nz(a, t, .06, .4, 'highpass', 2500, .7); }
+  else if (k === 'foul') { tone(a, 'triangle', 900, 600, t, .15, .2); nz(a, t, .05, .25, 'highpass', 1500, .7); }
+  else if (k === 'mitt') { tone(a, 'sine', 160, 70, t, .12, .45); nz(a, t, .07, .3, 'lowpass', 900, .8); }
+  else if (k === 'cheer') { nz(a, t, 2.2, .18, 'bandpass', 1100, .5, .5); nz(a, t + .1, 2, .1, 'bandpass', 2300, .6, .6); }
+  else if (k === 'start') { tone(a, 'square', 660, 0, t, .1, .06); tone(a, 'square', 990, 0, t + .1, .16, .06); }
+  else if (k === 'bad') tone(a, 'sawtooth', 200, 120, t, .2, .07);
+  else if (k === 'tap') tone(a, 'sine', 880, 0, t, .06, .08);
+}
+
+// ===== ゲームの状態 =====
+let dogKey = 'shiba', state = 'title', P = null, phaseT = 0, relT = 0, swing = null, fl = null, caught = false;
+let results = [], score = 0, label = null, particles = [], flash = 0, lastRes = null;
+const cur = { x: CX, y: (ZT + ZB) / 2 };
+const now = () => performance.now() / 1000;
+const HAND0 = { x: 38, y: -150 }, HAND1 = { x: 56, y: -118 };   // 手の位置（かまえ／ふったとき）ローカル
+const A0 = -1.84;                                                 // かまえのバットの向き
+
+function makePitch() {
+  const D = DOGS[dogKey], type = pickMix(D.mix), pt = PTYPE[type];
+  const inZone = R() > D.out;
+  let tx, ty;
+  if (inZone) {
+    tx = rnd(-1, 1) * ZHW * .95;
+    ty = ZCY + (type === 'fk' || type === 'cv' ? rnd(-.2, 1) : rnd(-1, 1)) * ZHH * .95;
+  } else {
+    const r = R(), o = rnd(.04, .13);
+    if (r < .3) { tx = -ZHW - o; ty = ZCY + rnd(-1, 1) * ZHH; }
+    else if (r < .6) { tx = ZHW + o; ty = ZCY + rnd(-1, 1) * ZHH; }
+    else if (r < .85) { tx = rnd(-1, 1) * ZHW; ty = ZCY + ZHH + o; }
+    else { tx = rnd(-1, 1) * ZHW; ty = ZCY - ZHH - o; }
+  }
+  const kmhSt = rnd(D.kmh[0], D.kmh[1]);
+  return { type, name: pt.name, tx, ty, bx: pt.bx * D.brk, by: pt.by * D.brk, k: pt.k, inZone: Math.abs(tx) <= ZHW + BRW && Math.abs(ty - ZCY) <= ZHH + BRW,
+    kmh: Math.round(kmhSt * pt.spd), T: D.T * ((D.kmh[0] + D.kmh[1]) / 2 / kmhSt) / pt.spd };
+}
+function ballAt(p, t) {
+  const u = Math.min(t, 1), bk = Math.pow(u, p.k);
+  const X = REL.X + (p.tx - p.bx - REL.X) * u + p.bx * bk;
+  const Y = REL.Y + (p.ty - p.by - REL.Y) * u + p.by * bk;
+  // 奥行き：本物の遠近法（終わりに急に大きくなる）と、画面上でまっすぐ同じ速さで動く場合の中間にして見やすくする
+  const inv = .5 / (PZ - (PZ - 1) * u) + .5 * (1 / PZ + (1 - 1 / PZ) * u);
+  const Z = t <= 1 ? 1 / inv : Math.max(.92, 1 - (t - 1) * 2);
+  return { X, Y, Z };
+}
+
+// 当たり判定。e=タイミングのずれ（秒、＋はおそい）、(bx,by)=ボールの画面の位置
+function judge(e, bx, by) {
+  const te = Math.abs(e) / TW;
+  const br = BRW * F * .5;
+  const dx = (bx - cur.x) / (CRW + br), dy = (by - cur.y) / (CRH + br), d = Math.hypot(dx, dy);
+  if (te > 1 || d > 1) return { kind: 'miss' };
+  const posQ = d < .25 ? 1 : 1 - (d - .25) / .75 * .6;
+  const timQ = te < .2 ? 1 : 1 - Math.pow((te - .2) / .8, 1.5) * .55;
+  const q = posQ * timQ;
+  const dir = (e / TW) * 50 + dx * 8 + rnd(-4, 4);             // −＝左（引っぱり）／＋＝右（流し）
+  const ang = 18 - dy * 40 + rnd(-4, 4);                       // 打ち上げる角度（ボールの下を打つと大きい）
+  const base = { dir, ang, q, posQ, timQ };
+  if (d > .92) return Object.assign(base, { kind: 'foul', tip: true, label: 'ファウル', dist: 0 });
+  if (Math.abs(dir) > 45) return Object.assign(base, { kind: 'foul', label: 'ファウル', dist: rnd(30, 70) * q + 15 });
+  if (ang < 8) {
+    const dist = 22 + 40 * q;
+    if (q > .78 && R() < .55) return Object.assign(base, { kind: 'hit', ground: true, label: 'ヒット！', dist: dist + 15 });
+    return Object.assign(base, { kind: 'out', ground: true, label: 'ゴロ', dist });
+  }
+  if (ang > 58) return Object.assign(base, { kind: 'out', label: 'フライ', dist: rnd(12, 34), hmax: rnd(26, 40) });
+  const angF = ang >= 25 && ang <= 40 ? 1 : ang < 25 ? .55 + .45 * (ang - 8) / 17 : Math.max(.3, 1 - (ang - 40) / 30 * .6);
+  const dist = MAXD * q * angF;
+  if (dist >= fence(dir)) return Object.assign(base, { kind: 'hr', label: 'ホームラン！', dist, show: true });
+  if (dist >= 85) return Object.assign(base, { kind: 'xbh', label: dist >= 100 ? 'スリーベース！' : 'ツーベース！', dist, show: true });
+  if (dist >= 38) {
+    if (ang <= 26 || R() < .22) return Object.assign(base, { kind: 'hit', label: 'ヒット！', dist, show: true });
+    return Object.assign(base, { kind: 'out', label: 'フライ', dist });
+  }
+  if (ang <= 22 && R() < .45) return Object.assign(base, { kind: 'hit', label: 'ポテンヒット！', dist: Math.max(dist, 30) });
+  return Object.assign(base, { kind: 'out', label: ang <= 18 ? 'ライナー' : 'フライ', dist: Math.max(dist, 18) });
+}
+
+function startPitchCycle(delay) { state = 'ready'; phaseT = now() + delay; P = null; swing = null; fl = null; caught = false; label = null; }
+function doSwing() {
+  if (state !== 'pitch' || swing) return;
+  const t = now(), ts = t - relT, tc = ts + LAG, e = tc - P.T;
+  const fp = ballAt(P, 1), bx = CX + fp.X * F / fp.Z, by = CY + fp.Y * F / fp.Z;
+  const res = Math.abs(e) > TW ? { kind: 'miss' } : judge(e, bx, by);
+  swing = { t0: t, res, tcAbs: relT + tc, ang: Math.atan2(cur.y - (CATY + HAND1.y * CATS), cur.x - (CATX + HAND1.x * CATS)), applied: false };
+  se('swing'); hideHint();
+}
+function startFlight(res) {
+  const u = Math.min(1, (swing.tcAbs - relT) / P.T), bp = ballAt(P, u);
+  const X0 = bp.X / bp.Z, Y0 = bp.Y / bp.Z;   // Z=1 の面に直す
+  const h0 = (1 - Y0) / M;
+  const dirR = res.dir * Math.PI / 180, angR = clamp(res.ang, 0, 80) * Math.PI / 180;
+  const dist = res.dist || 0;
+  const hmax = res.hmax || (res.ground ? 0 : Math.min(45, Math.max(3, dist * Math.tan(angR) / 4)));
+  const dur = res.tip ? .6 : res.ground ? .9 : clamp(.8 + dist / 110 * 1.3, .9, 2.4);
+  fl = Object.assign({}, res, { X0, Y0, h0, dirR, hmax, dist, dur, t0: now(), shown: false });
+  const kind = res.kind;
+  if (kind === 'foul') { se('foul'); buzz(20); }
+  else { se('hit', res.q); buzz(kind === 'hr' ? [40, 40, 90] : 35); }
+}
+function flightPos(f, u) {
+  if (f.tip) return { X: f.X0 + .1 * u, Y: f.Y0 - 1.4 * u, Z: 1 - .7 * u, h: 1 };
+  const d = f.dist * (1 - Math.pow(1 - u, 1.6));
+  let h;
+  if (f.ground) h = Math.max(0, f.h0 * (1 - u * 4)) + Math.abs(Math.sin(u * Math.PI * 3)) * 1.4 * (1 - u);
+  else { const hEnd = f.kind === 'hr' ? 9 : 0; h = f.h0 * (1 - u) + hEnd * u + 4 * f.hmax * u * (1 - u); }
+  return { X: f.X0 + Math.sin(f.dirR) * d * M, Y: 1 - h * M, Z: 1 + Math.cos(f.dirR) * d * M, h };
+}
+function finish(res) {
+  const pts = PTS[res.kind] || 0;
+  score += pts;
+  results.push({ p: P, res, pts });
+  let txt = res.label;
+  if (!txt) txt = res.kind === 'miss' ? '空振り' : (P.inZone ? '見逃し' : 'ボール');
+  label = { txt, pts, sub: `${P.name}　${P.kmh}km/h${res.show || res.kind === 'hr' ? `　飛距離 ${Math.round(res.dist)}m` : ''}`, kind: res.kind, t0: now() };
+  if (res.kind === 'hr') { se('cheer'); flash = 1; for (let i = 0; i < 70; i++) particles.push({ x: rnd(0, W), y: rnd(-60, 0), vx: rnd(-30, 30), vy: rnd(60, 160), r: rnd(0, 6), c: ['#FFD43B', '#FF6B6B', '#4DABF7', '#69DB7C', '#fff'][i % 5], t: now() }); }
+  else if (res.kind === 'miss') se('bad');
+  state = 'after'; phaseT = now() + (res.kind === 'hr' ? 2.2 : 1.5);
+}
+
+// ===== 毎フレーム =====
+let lastT = now();
+function step() {
+  const t = now(), dt = Math.min(.05, t - lastT); lastT = t;
+  // キーボード
+  if (keys.size) { const v = 230 * dt; if (keys.has('ArrowLeft')) moveCur(-v, 0); if (keys.has('ArrowRight')) moveCur(v, 0); if (keys.has('ArrowUp')) moveCur(0, -v); if (keys.has('ArrowDown')) moveCur(0, v); }
+  if (state === 'ready' && t >= phaseT) {
+    if (results.length >= PITCHES) { state = 'end'; phaseT = t + .6; }
+    else { P = makePitch(); state = 'windup'; phaseT = t + .8; }
+  } else if (state === 'windup' && t >= phaseT) { state = 'pitch'; relT = t; se('pitch'); }
+  else if (state === 'pitch') {
+    const u = (t - relT) / P.T;
+    if (swing && !swing.applied && t >= swing.tcAbs) {
+      swing.applied = true;
+      if (swing.res.kind !== 'miss') { startFlight(swing.res); state = 'hit'; }
+    }
+    if (state === 'pitch') {
+      if (u >= 1 && !caught) { caught = true; se('mitt'); }
+      const closeAt = relT + Math.max(P.T + TW - LAG + .02, P.T + .08);
+      if (t >= closeAt && (!swing || swing.applied)) finish(swing ? swing.res : { kind: 'take' });
+    }
+  } else if (state === 'hit') {
+    const u = (t - fl.t0) / fl.dur;
+    if (u >= 1) finish(fl);
+  } else if (state === 'after' && t >= phaseT) startPitchCycle(rnd(.35, .9));
+  else if (state === 'end' && t >= phaseT) { state = 'over'; showResult(); }
+  draw(t);
+  requestAnimationFrame(step);
+}
+
+function batPose(t) {
+  const st = { ang: A0 + Math.sin(t * 2.2) * .04, len: 1, hx: HAND0.x, hy: HAND0.y, swing: 0 };
+  if (!swing) return st;
+  const s = t - swing.t0, ease = v => v * v * (3 - 2 * v);
+  const Af = -1.15;
+  if (s < LAG) { const v = ease(s / LAG); return { ang: A0 + (swing.ang - A0) * v, len: 1, hx: HAND0.x + (HAND1.x - HAND0.x) * v, hy: HAND0.y + (HAND1.y - HAND0.y) * v, swing: s }; }
+  if (s < LAG + .16) { const v = ease((s - LAG) / .16); return { ang: swing.ang + (Af - swing.ang) * v, len: 1 - .45 * v, hx: HAND1.x - 6 * v, hy: HAND1.y - 10 * v, swing: s }; }
+  if (s < .75) return { ang: Af, len: .55, hx: HAND1.x - 6, hy: HAND1.y - 10, swing: s };
+  if (s < 1.05) { const v = ease((s - .75) / .3); return { ang: Af + (A0 - Af) * v, len: .55 + .45 * v, hx: HAND1.x - 6 + (HAND0.x - HAND1.x + 6) * v, hy: HAND1.y - 10 + (HAND0.y - HAND1.y + 10) * v, swing: 0 }; }
+  return st;
+}
+
+function drawBall(x, y, r) {
+  r = Math.max(1.4, r);
+  g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+  g.strokeStyle = 'rgba(80,70,60,.6)'; g.lineWidth = Math.max(.6, r * .1); g.stroke();
+  if (r > 5) { g.strokeStyle = '#D9443A'; g.lineWidth = r * .12; g.beginPath(); g.arc(x - r * 1.2, y, r * .85, -.7, .7); g.stroke(); g.beginPath(); g.arc(x + r * 1.2, y, r * .85, Math.PI - .7, Math.PI + .7); g.stroke(); }
+}
+function draw(t) {
+  const s = cv.width / W;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  if (bg) g.drawImage(bg, 0, 0);
+  g.setTransform(s, 0, 0, s, 0, 0);
+  // ピッチャー
+  const dp = { w: 0, f: 0, ball: true };
+  if (state === 'windup') dp.w = 1 - (phaseT - t) / .8;
+  else if (state === 'pitch' || state === 'hit' || state === 'after') { dp.f = Math.min(1, (t - relT) / .5); dp.ball = false; if (state === 'after' && t > phaseT - .6) { dp.f = 0; dp.ball = true; } }
+  const mound = fieldPt(0, 18.44);
+  drawDog(g, dogKey, mound[0], mound[1] + 1, .64 + Math.sin(t * 3) * .003, dp);
+  // ゾーン
+  g.fillStyle = 'rgba(255,255,255,.07)'; g.fillRect(ZL, ZT, ZR - ZL, ZB - ZT);
+  g.strokeStyle = 'rgba(255,255,255,.28)'; g.lineWidth = 1;
+  g.beginPath(); for (let i = 1; i < 3; i++) { const x = ZL + (ZR - ZL) * i / 3, y = ZT + (ZB - ZT) * i / 3; g.moveTo(x, ZT); g.lineTo(x, ZB); g.moveTo(ZL, y); g.lineTo(ZR, y); } g.stroke();
+  g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 2; g.strokeRect(ZL, ZT, ZR - ZL, ZB - ZT);
+  // 猫
+  drawCat(g, CATX, CATY, CATS, batPose(t), t);
+  // 投げたボール
+  if (P && (state === 'pitch' || (state === 'after' && !fl && P))) {
+    const u = state === 'pitch' ? (t - relT) / P.T : 1.06;
+    const b = ballAt(P, u), [bx, by, k] = pj(b.X, b.Y, b.Z);
+    const [sx, sy] = pj(b.X, 1, b.Z);
+    g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(sx, sy, BRW * k, BRW * k * .35, 0, 0, 7); g.fill();
+    if (u >= 1 && !(swing && swing.applied && swing.res.kind !== 'miss')) { // キャッチャーミット
+      g.fillStyle = '#7A3E1C'; g.strokeStyle = '#3A1E0E'; g.lineWidth = 2.5; g.beginPath(); g.ellipse(bx + 3, by + 4, 21, 19, -.2, 0, 7); g.fill(); g.stroke();
+      g.fillStyle = '#9A5A2E'; g.beginPath(); g.ellipse(bx + 1, by + 1, 13, 12, -.2, 0, 7); g.fill();
+    }
+    drawBall(bx, by, BRW * k);
+  }
+  // 打ったボール
+  if (fl && (state === 'hit' || state === 'after')) {
+    const u = Math.min(1, (t - fl.t0) / fl.dur), p = flightPos(fl, u);
+    if (p.Z > .2) {
+      const [bx, by, k] = pj(p.X, p.Y, p.Z), [sx, sy] = pj(p.X, 1, p.Z);
+      if (!fl.tip) { g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(sx, sy, Math.max(1.5, BRW * k * 1.2), Math.max(.6, BRW * k * .4), 0, 0, 7); g.fill(); }
+      // 飛んでいくボールは小さくなるので、白い線のあとをつけて見やすくする
+      const pv = flightPos(fl, Math.max(0, u - .06)), [qx, qy] = pj(pv.X, pv.Y, Math.max(.2, pv.Z));
+      g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = Math.max(1.5, BRW * k * 1.2); g.beginPath(); g.moveTo(qx, qy); g.lineTo(bx, by); g.stroke();
+      if (!(fl.kind === 'hr' && u > .97)) drawBall(bx, by, Math.max(2.4, BRW * k));
+    }
+  }
+  // カーソル
+  if (state !== 'title' && state !== 'over') {
+    const a = state === 'pitch' || state === 'windup' ? 1 : .55;
+    g.globalAlpha = a;
+    g.fillStyle = 'rgba(255,214,60,.25)'; g.strokeStyle = '#FFD43B'; g.lineWidth = 2.5;
+    g.beginPath(); g.ellipse(cur.x, cur.y, CRW, CRH, 0, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = 'rgba(255,140,0,.55)'; g.beginPath(); g.ellipse(cur.x, cur.y, CRW * .25, CRH * .25, 0, 0, 7); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(cur.x - CRW, cur.y); g.lineTo(cur.x - CRW * .3, cur.y); g.moveTo(cur.x + CRW * .3, cur.y); g.lineTo(cur.x + CRW, cur.y); g.stroke();
+    g.globalAlpha = 1;
+  }
+  // 紙ふぶき・フラッシュ
+  if (flash > 0) { g.fillStyle = `rgba(255,236,150,${flash * .45})`; g.fillRect(0, 0, W, H); flash = Math.max(0, flash - .03); }
+  particles = particles.filter(p => t - p.t < 2.6);
+  particles.forEach(p => { const a = t - p.t; g.fillStyle = p.c; g.save(); g.translate(p.x + p.vx * a, p.y + p.vy * a); g.rotate(p.r + a * 6); g.fillRect(-3, -1.5, 6, 3); g.restore(); });
+  drawHud(t);
+}
+function outlineText(txt, x, y, size, fill, stroke, lw) {
+  g.font = `900 ${size}px "Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineJoin = 'round'; g.strokeStyle = stroke; g.lineWidth = lw; g.strokeText(txt, x, y); g.fillStyle = fill; g.fillText(txt, x, y);
+}
+const KCOL = { hr: '#FFD43B', xbh: '#FF922B', hit: '#69DB7C', foul: '#74C0FC', out: '#DEE2E6', miss: '#FF6B6B', take: '#FFFFFF' };
+function drawHud(t) {
+  if (state === 'title') return;
+  const D = DOGS[dogKey];
+  g.fillStyle = 'rgba(255,248,236,.94)'; g.strokeStyle = '#4A2A1A'; g.lineWidth = 2.5;
+  g.beginPath(); g.roundRect(52, 9, 300, 50, 12); g.fill(); g.stroke();
+  g.fillStyle = '#4A2A1A'; g.font = '900 13px "Zen Maru Gothic",sans-serif'; g.textAlign = 'left'; g.textBaseline = 'middle';
+  g.fillText(`${D.name}（${D.lv}）`, 62, 24);
+  g.textAlign = 'right'; g.fillText(`スコア ${score}`, 342, 24);
+  for (let i = 0; i < PITCHES; i++) {
+    const x = 70 + i * 26.5, y = 44, r = results[i];
+    g.beginPath(); g.arc(x, y, 7.5, 0, 7);
+    g.fillStyle = r ? KCOL[r.res.kind] : (i === results.length && state !== 'over' && state !== 'end' ? '#FFF3BF' : '#E9DCC8'); g.fill();
+    g.strokeStyle = '#4A2A1A'; g.lineWidth = i === results.length ? 2.5 : 1.5; g.stroke();
+  }
+  if (label) {
+    const a = t - label.t0, sc = a < .18 ? .6 + a / .18 * .5 : a < .3 ? 1.1 - (a - .18) / .12 * .1 : 1;
+    g.save(); g.translate(CX, 128); g.scale(sc, sc);
+    const big = label.kind === 'hr' ? 40 : 32;
+    outlineText(label.txt, 0, 0, big, KCOL[label.kind] || '#fff', '#4A2A1A', 7);
+    if (label.pts) outlineText(`+${label.pts}`, 0, big * .95, 22, '#fff', '#4A2A1A', 5);
+    g.restore();
+    outlineText(label.sub, CX, 188, 13, '#fff', 'rgba(40,25,15,.85)', 4);
+  } else if (state === 'ready' && !results.length) {
+    outlineText('かまえて…', CX, 128, 26, '#fff', '#4A2A1A', 6);
+  }
+}
+
+// ===== 操作 =====
+const swingBtn = document.getElementById('swingBtn'), padHint = document.getElementById('padHint');
+let hintTimer = 0;
+function hideHint() { if (!padHint.hidden) { padHint.classList.add('fade'); clearTimeout(hintTimer); hintTimer = setTimeout(() => { padHint.hidden = true; padHint.classList.remove('fade'); }, 450); } }
+function moveCur(dx, dy) {
+  cur.x = clamp(cur.x + dx, ZL - CRW * .5, ZR + CRW * .5);
+  cur.y = clamp(cur.y + dy, ZT - CRH * .5, ZB + CRH * .5);
+}
+let drag = null;
+stage.addEventListener('pointerdown', e => {
+  if (e.target !== cv) return;
+  if (state === 'title' || state === 'over') return;
+  drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; e.preventDefault();
+});
+stage.addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const k = W / stage.clientWidth * 1.15;
+  moveCur((e.clientX - drag.x) * k, (e.clientY - drag.y) * k);
+  drag.x = e.clientX; drag.y = e.clientY;
+  if (Math.abs(cur.x - CX) > 8 || Math.abs(cur.y - (ZT + ZB) / 2) > 8) hideHint();
+});
+const endDrag = e => { if (drag && e.pointerId === drag.id) drag = null; };
+stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
+swingBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); swingBtn.classList.add('on'); doSwing(); });
+['pointerup', 'pointercancel', 'pointerleave'].forEach(n => swingBtn.addEventListener(n, () => swingBtn.classList.remove('on')));
+swingBtn.addEventListener('click', e => e.preventDefault());
+const keys = new Set();
+window.addEventListener('keydown', e => {
+  if (state === 'title' || state === 'over') return;
+  if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if (!e.repeat) { swingBtn.classList.add('on'); doSwing(); } }
+  if (e.key.startsWith('Arrow')) { e.preventDefault(); keys.add(e.key); }
+});
+window.addEventListener('keyup', e => { keys.delete(e.key); if (e.key === ' ' || e.key === 'Enter') swingBtn.classList.remove('on'); });
+window.addEventListener('blur', () => keys.clear());
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.getElementById('backBtn').addEventListener('click', e => { e.stopPropagation(); if (ac) try { ac.close(); } catch (_) {} if (APP) APP.close(); else history.back(); });
+
+// ===== タイトル・結果 =====
+const titleOv = document.getElementById('titleOv'), resultOv = document.getElementById('resultOv');
+function showTitle() {
+  loadInfo(); calcStats();
+  state = 'title'; titleOv.hidden = false; resultOv.hidden = true; swingBtn.hidden = true; padHint.hidden = true;
+  const bar = (v, col) => `<span class="bar"><i style="width:${Math.round(eff(v) * 100)}%;background:${col}"></i></span>`;
+  document.getElementById('catCard').innerHTML = `<div class="ttl">${esc(CAT.name)}　Lv.${CAT.level}${APP ? '' : '<small style="font-weight:700">（アプリの外：ためし打ち）</small>'}</div>
+    <div class="st"><span>ちから</span><b>${CAT.pow}</b>${bar(CAT.pow, '#E0573F')}<span class="eff">飛距離（最大 ${Math.round(MAXD)}m）</span></div>
+    <div class="st"><span>すばやさ</span><b>${CAT.spd}</b>${bar(CAT.spd, '#3A7BD5')}<span class="eff">カーソルの大きさ</span></div>
+    <div class="st"><span>たいりょく</span><b>${CAT.sta}</b>${bar(CAT.sta, '#2BA37A')}<span class="eff">タイミングのゆるさ（±${Math.round(TW * 1000)}ミリ秒）</span></div>`;
+  const best = getBest();
+  const list = document.getElementById('dogList'); list.innerHTML = '';
+  Object.keys(DOGS).forEach(k => {
+    const D = DOGS[k], b = document.createElement('button'); b.className = 'dog'; b.type = 'button';
+    b.innerHTML = `<canvas width="180" height="180"></canvas><b>${D.name}</b><span class="lv" style="background:${D.lvc}">${D.lv}</span>
+      <span class="sm">${D.kmh[0]}〜${D.kmh[1]}km/h<br>${Object.keys(D.mix).map((p, i, a) => `<i>${PTYPE[p].name}${i < a.length - 1 ? '・' : ''}</i>`).join('')}</span>
+      <span class="sm">コイン×${D.coin}</span><span class="best">ベスト ${best[k] || 0}</span>`;
+    const pc = b.querySelector('canvas'), c2 = pc.getContext('2d'); drawDog(c2, k, 90, 168, 1.45, { w: 0, ball: true });
+    b.addEventListener('click', () => { audio(); se('start'); dogKey = k; startGame(); });
+    list.appendChild(b);
+  });
+  document.getElementById('maxC').textContent = INFO ? INFO.max : 50;
+  document.getElementById('leftMsg').textContent = !APP ? 'アプリの中で遊ぶとコインがもらえます' : INFO && INFO.left > 0 ? `今日の報酬つきプレイ　のこり ${INFO.left}回` : '今日の報酬はもう受けとりました（練習モード）';
+}
+function startGame() {
+  titleOv.hidden = true; resultOv.hidden = true; swingBtn.hidden = false;
+  results = []; score = 0; particles = []; label = null; fl = null;
+  cur.x = CX; cur.y = (ZT + ZB) / 2;
+  padHint.hidden = false; padHint.classList.remove('fade');
+  startPitchCycle(1.1);
+}
+function showResult() {
+  const D = DOGS[dogKey];
+  swingBtn.hidden = true;
+  const raw = Math.floor(score * D.coin / COIN_DIV);
+  let msg;
+  if (APP) { const r = APP.reward(raw); msg = r.ok ? r.msg : (raw <= 0 ? 'コインなし（0点）' : r.msg || 'コインなし'); }
+  else msg = `アプリの中なら +${Math.min(50, raw)}コイン`;
+  const best = getBest(), nb = score > (best[dogKey] || 0);
+  if (nb) { best[dogKey] = score; setBest(best); }
+  const cnt = k => results.filter(r => r.res.kind === k).length;
+  document.getElementById('resBody').innerHTML = `<div class="big"><small>${D.name}（${D.lv}）</small>${score}<small>点</small></div>
+    ${nb ? '<div class="nb">ベスト更新！</div>' : `<div class="nb" style="color:#8a7060">ベスト ${best[dogKey] || 0}</div>`}
+    <div style="text-align:center;font-weight:900;font-size:.85em;margin:.3em 0">ホームラン ${cnt('hr')}・長打 ${cnt('xbh')}・ヒット ${cnt('hit')}・ファウル ${cnt('foul')}</div>
+    <div class="log">${results.map((r, i) => `<span class="k">${i + 1}</span><span>${r.p.name} ${r.p.kmh}km/h</span><b style="color:${r.pts ? '#B5482B' : '#8a7060'}">${esc(r.res.label || (r.res.kind === 'miss' ? '空振り' : r.p.inZone ? '見逃し' : 'ボール'))}${r.pts ? ' +' + r.pts : ''}</b>`).join('')}</div>
+    <div class="coin" style="margin-top:.6em">${esc(msg)}</div>`;
+  resultOv.hidden = false; resultOv.scrollTop = 0;
+}
+document.getElementById('againBtn').addEventListener('click', () => { audio(); se('start'); loadInfo(); calcStats(); startGame(); });
+document.getElementById('pickBtn').addEventListener('click', () => { se('tap'); showTitle(); });
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+// 試しやすいように（開発用）：コンソールから window.__bb で中をのぞける
+window.__bb = { get state() { return state; }, get P() { return P; }, get score() { return score; }, get results() { return results; }, cur, judge, doSwing, get CRW() { return CRW; }, get TW() { return TW; }, get MAXD() { return MAXD; }, get relT() { return relT; }, ballAt, setCat(o) { Object.assign(CAT, o); calcStats(); } };
+
+window.addEventListener('resize', resize);
+resize(); showTitle();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { makeBg(); });
+requestAnimationFrame(step);
+</script>
+</body>
+</html>
