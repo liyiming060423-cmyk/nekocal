@@ -1,5 +1,5 @@
 // アプリの版。index.html の ?v= と sw.js の VERSION もこれにそろえる
-const APP_VER = '8.6';
+const APP_VER = '8.7';
 
 // にゃんカロ データ定義
 // アイテム・ショップ・トレーニング・ミッションなど「数字や名前」はここだけで管理する。
@@ -125,6 +125,26 @@ const RULE = {
   expPerMeal: 10
 };
 
+// さんぽモードの地図の「お宝」（walk.js）
+const TREASURE = {
+  onMap: 5,          // 地図に同時に出ている数
+  minR: 80,          // 自分から何mはなれた所に出すか（いちばん近く）
+  maxR: 250,         //   （いちばん遠く）
+  gap: 60,           // お宝どうしは何mはなす
+  pickR: 30,         // 何mまで近づいたら拾えるか（GPSの誤差があるので少し広め）
+  nearR: 60,         // 何mまで近づいたら「近い！」とブルッとするか
+  awayR: 400,        // 何mはなれたら消して、近くに出しなおすか
+  perDay: 10,        // 1日に拾える数
+  swapWait: 30,      // 「入れかえ」を押せる間かく（秒）
+  // 中身（w=出やすさ）。coin は [最小, 最大]
+  loot: [
+    { w: 70, coin: [10, 30] },
+    { w: 20, item: 'drink' },
+    { w: 8,  item: 'protein' },
+    { w: 2,  item: 'goldbag' }
+  ]
+};
+
 // ログインボーナス（7日で1周）
 const LOGIN_REWARDS = [50, 60, 70, 80, 90, 100, 300];
 
@@ -134,7 +154,8 @@ const MISSIONS = [
   { id: 'meal3',   name: '朝・昼・夜を記録する', goal: 3, reward: 50, check: d => new Set(d.meals.map(m => m.slot).filter(s => s !== 'snack')).size },
   { id: 'train1',  name: 'ジムでトレーニングする', goal: 1, reward: 30, check: d => d.trains || 0 },
   { id: 'mini1',   name: 'ミニゲームをあそぶ',   goal: 1, reward: 20, check: d => d.minis || 0 },
-  { id: 'steps5k', name: '5,000歩あるく',        goal: 5000, reward: 50, check: d => d.steps || 0 }
+  { id: 'steps2k', name: 'さんぽで2,000歩あるく', goal: 2000, reward: 50, check: d => d.steps || 0 },
+  { id: 'treasure3', name: 'さんぽでお宝を3つ拾う', goal: 3, reward: 50, check: d => d.treasures || 0 }
 ];
 
 // よく食べるもの（手入力用・カロリーは目安）
