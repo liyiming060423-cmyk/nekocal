@@ -120,7 +120,7 @@ function checkResult(result,bet){if(result[0]===result[1]&&result[1]===result[2]
  messageEl.textContent=`🎉 大当たり！ ${result[0]} ×${multipliers[result[0]]}　+${reward}コイン！${capTxt}`;messageEl.classList.add('win');playWinSound();burst()}else{messageEl.textContent='🐾 おしい！ もう一度チャレンジ！'}busy=false;updateUI()}
 </script>
 <!-- BGMはHTML内に内蔵。ページ表示中はループ再生 -->
-<audio id="backgroundMusic" loop preload="auto" playsinline><source src="slot-bgm.mp3?v=9.1" type="audio/mpeg"></audio>
+<audio id="backgroundMusic" loop preload="auto" playsinline><source src="slot-bgm.mp3?v=9.2" type="audio/mpeg"></audio>
 <script>
 (()=>{const bgm=document.getElementById('backgroundMusic');bgm.volume=.5;let on=!(APP&&!APP.info().sound);const sb=document.getElementById('sndBtn');sb.textContent=on?'🔊':'🔇';
 sb.addEventListener('click',e=>{e.stopPropagation();on=!on;sb.textContent=on?'🔊':'🔇';if(on)play();else bgm.pause()});

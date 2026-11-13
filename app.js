@@ -789,6 +789,15 @@ let cap = null; // { thumb, ai }
 function shrink(img, max, q) { const s = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', q); }
 function readPhoto(file) { return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => { const img = new Image(); img.onload = () => res({ thumb: shrink(img, 240, 0.7), ai: shrink(img, 768, 0.7) }); img.onerror = rej; img.src = fr.result; }; fr.onerror = rej; fr.readAsDataURL(file); }); }
 
+// AIの回数の上限（v9.2）に使う端末ID。このスマホのブラウザに1つ（バックアップには入れない）
+function aiDevId() {
+  const K = 'nyankalo-dev';
+  try {
+    let v = localStorage.getItem(K);
+    if (!/^[A-Za-z0-9-]{8,64}$/.test(v || '')) { v = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12)); localStorage.setItem(K, v); }
+    return v;
+  } catch (e) { return ''; }
+}
 function openCapture() {
   if (S.cat.dead) { toast('まず新しい猫を迎えてください'); return; }
   cap = null;
@@ -853,14 +862,14 @@ async function runAI(root) {
   btn.disabled = true;
   const t0 = Date.now(), tick = () => { btn.textContent = `しらべ中… ${Math.floor((Date.now() - t0) / 1000)}秒`; }; tick();
   const timer = setInterval(tick, 1000), ctrl = new AbortController(), to = setTimeout(() => ctrl.abort(), 60000);
-  const send = () => fetch(AI_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: cap.ai.split(',')[1], signal: ctrl.signal });
+  const send = () => fetch(AI_ENDPOINT + '?d=' + aiDevId(), { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: cap.ai.split(',')[1], signal: ctrl.signal });
   try {
     let r;
     try { r = await send(); if (r.status === 503 || r.status === 504) throw new TypeError('retry'); }
     catch (e) { if (e.name === 'AbortError') throw e; st.textContent = 'もう一度送っています'; r = await send(); }
     const d = await r.json().catch(() => null);
     if (!r.ok || !d) {
-      if (r.status === 429) throw new Error('AIの利用回数の上限です。少し待つか、手で入力してください');
+      if (r.status === 429) throw new Error(d && d.error ? d.error : 'AIの利用回数の上限です。少し待つか、手で入力してください');
       throw new Error(d && d.error ? 'AIでしらべられませんでした：' + d.error : 'AIでしらべられませんでした（' + r.status + '）');
     }
     const items = Array.isArray(d.items) ? d.items.filter(x => x && x.name && +x.kcal > 0) : [];
@@ -874,7 +883,7 @@ async function runAI(root) {
     const box = root.querySelector('#capResult');
     box.innerHTML = items.map(x => `<div class="r"><span>${esc(x.name)}${x.amount ? ` <small class="muted">${esc(x.amount)}</small>` : ''}${pfcTxt(x)}</span><b>${Math.round(+x.kcal)} kcal</b></div>`).join('') +
       `<div class="r t"><span>合計${pfcTxt({ carbs: sum('carbs'), protein: sum('protein'), fat: sum('fat') })}</span><span>${total} kcal</span></div>` + (d.note ? `<small class="muted">${esc(d.note)}</small>` : '');
-    box.hidden = false; st.textContent = `入力しました（${Math.round((Date.now() - t0) / 1000)}秒）。違っていたら直してね`; se('coin');
+    box.hidden = false; st.textContent = `入力しました（${Math.round((Date.now() - t0) / 1000)}秒）。違っていたら直してね${typeof d.left === 'number' ? `　今日のAIあと${d.left}回` : ''}`; se('coin');
   } catch (err) {
     st.textContent = err.name === 'AbortError' ? '時間がかかりすぎたので中止しました。もう一度押すか、手で入力してください' : (err instanceof TypeError ? '通信できませんでした。ネットを確認してください' : err.message);
   } finally { clearTimeout(to); clearInterval(timer); aiBusy = false; btn.textContent = 'AIでカロリーを調べる'; btn.disabled = !cap; }

@@ -16,10 +16,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <!-- ?v= はアプリの版。更新したら全部の ?v= と sw.js の VERSION、data.js の APP_VER を同じ数字に上げる（古いキャッシュと混ざらないように） -->
-<link rel="stylesheet" href="style.css?v=9.1">
-<link rel="stylesheet" href="petcat.css?v=9.1">
-<link rel="stylesheet" href="battle.css?v=9.1">
-<link rel="stylesheet" href="walk.css?v=9.1">
+<link rel="stylesheet" href="style.css?v=9.2">
+<link rel="stylesheet" href="petcat.css?v=9.2">
+<link rel="stylesheet" href="battle.css?v=9.2">
+<link rel="stylesheet" href="walk.css?v=9.2">
 </head>
 <body>
 <!-- ===== タイトル画面（毎回はじめに出る） ===== -->
@@ -130,12 +130,12 @@
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <input type="file" id="photoInput" accept="image/*" hidden>
 
-<script src="data.js?v=9.1"></script>
-<script src="cat.js?v=9.1"></script>
-<script src="petcat.js?v=9.1"></script>
-<script src="battle.js?v=9.1"></script>
-<script src="walk.js?v=9.1"></script>
-<script src="app.js?v=9.1"></script>
+<script src="data.js?v=9.2"></script>
+<script src="cat.js?v=9.2"></script>
+<script src="petcat.js?v=9.2"></script>
+<script src="battle.js?v=9.2"></script>
+<script src="walk.js?v=9.2"></script>
+<script src="app.js?v=9.2"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
