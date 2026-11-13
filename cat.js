@@ -185,3 +185,71 @@ function boomSVG() {
   s += `<rect x="128" y="404" width="44" height="14" rx="4" fill="#FFFFFF" stroke="#3B2A20" stroke-width="2"/>`;
   return `<svg viewBox="0 0 300 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="食べすぎて爆発した猫">${s}</svg>`;
 }
+
+// ===== コスチューム（data.js の WEAR で slot: 'suit'） =====
+// suitHead(id)：頭にかぶる部分。headGear と同じ座標（頭の中心 150,130・半径 97）で描く
+// フード系は「顔の穴」をあけた形（fill-rule evenodd）にして、猫の顔が見えるようにする
+const SUIT_HOLE = 'M70 140 a80 66 0 1 0 160 0 a80 66 0 1 0 -160 0 Z';
+const SUIT_HOOD = 'M36 214 C22 120 56 30 150 26 C244 30 278 120 264 214 Q150 236 36 214 Z';
+function suitHead(id) {
+  const L = C.line;
+  const hood = (col, extra = '') => `<path d="${SUIT_HOOD} ${SUIT_HOLE}" fill="${col}" fill-rule="evenodd" stroke="${L}" stroke-width="5" stroke-linejoin="round"/>${extra}`;
+  if (id === 'dino_hood') {
+    let sp = '';
+    [[62, 92], [92, 52], [150, 30], [208, 52], [238, 92]].forEach(([x, y], i) => {
+      const a = Math.atan2(y - 130, x - 150), nx = Math.cos(a), ny = Math.sin(a), s = i === 2 ? 30 : 24;
+      sp += `<path d="M${x - ny * 16} ${y + nx * 16} L${x + nx * s} ${y + ny * s} L${x + ny * 16} ${y - nx * 16} Z" fill="#F7A93B" stroke="${L}" stroke-width="4" stroke-linejoin="round"/>`;
+    });
+    let teeth = '';
+    for (let i = 0; i < 6; i++) { const x = 92 + i * 23; teeth += `<path d="M${x} ${84 - Math.sin((i + .5) / 6 * Math.PI) * 8} l10 18 l10 -18 Z" fill="#FFFFFF" stroke="${L}" stroke-width="3" stroke-linejoin="round"/>`; }
+    return sp + hood('#4FA35A', teeth + '<circle cx="78" cy="190" r="7" fill="#3E8A48"/><circle cx="222" cy="190" r="7" fill="#3E8A48"/><circle cx="64" cy="160" r="5" fill="#3E8A48"/><circle cx="236" cy="160" r="5" fill="#3E8A48"/>');
+  }
+  if (id === 'frog_coat') {
+    const eye = x => `<circle cx="${x}" cy="40" r="30" fill="#7CC24A" stroke="${L}" stroke-width="5"/><circle cx="${x}" cy="38" r="19" fill="#FFFFFF" stroke="${L}" stroke-width="3"/><circle cx="${x + 3}" cy="40" r="9" fill="${L}"/><circle cx="${x + 6}" cy="35" r="3" fill="#FFFFFF"/>`;
+    return eye(100) + eye(200) + hood('#7CC24A', '<ellipse cx="70" cy="196" rx="14" ry="8" fill="#F28CA0" fill-opacity=".7"/><ellipse cx="230" cy="196" rx="14" ry="8" fill="#F28CA0" fill-opacity=".7"/>');
+  }
+  if (id === 'bear_suit') {
+    const ear = x => `<circle cx="${x}" cy="52" r="30" fill="#8A5A36" stroke="${L}" stroke-width="5"/><circle cx="${x}" cy="54" r="15" fill="#E8B98A"/>`;
+    return ear(72) + ear(228) + hood('#8A5A36', '<path d="M118 30 q10 -10 18 0 M164 30 q10 -10 18 0" fill="none" stroke="#6B4428" stroke-width="5" stroke-linecap="round"/>');
+  }
+  if (id === 'chef') {
+    return `<path d="M98 86 Q94 50 110 46 Q96 14 132 14 Q150 -8 168 14 Q204 14 190 46 Q206 50 202 86 Z" fill="#FFFFFF" stroke="${L}" stroke-width="5" stroke-linejoin="round"/>` +
+      `<path d="M96 84 Q150 96 204 84 L206 104 Q150 116 94 104 Z" fill="#FFFFFF" stroke="${L}" stroke-width="5" stroke-linejoin="round"/>` +
+      `<path d="M132 46 Q138 30 150 28 M170 50 Q176 36 168 26" fill="none" stroke="#D8D2CA" stroke-width="4" stroke-linecap="round"/>` +
+      `<path d="M112 222 Q150 240 188 222 L176 258 L150 242 L124 258 Z" fill="#E0573F" stroke="${L}" stroke-width="4" stroke-linejoin="round"/>`;
+  }
+  if (id === 'wizard') {
+    return `<path d="M88 78 Q120 30 150 -10 Q168 -40 210 -58 Q196 -20 196 20 L214 80 Z" fill="#6E4AB8" stroke="${L}" stroke-width="5" stroke-linejoin="round"/>` +
+      `<path d="M92 66 Q150 84 212 68 L214 82 Q150 98 88 80 Z" fill="#E9B730" stroke="${L}" stroke-width="4" stroke-linejoin="round"/>` +
+      `<ellipse cx="150" cy="86" rx="118" ry="20" fill="#5A3A9A" stroke="${L}" stroke-width="5"/>` +
+      `<path d="M150 10 l5 11 12 1 -9 8 3 12 -11 -6 -11 6 3 -12 -9 -8 12 -1 Z" fill="#FFE066" stroke="${L}" stroke-width="2.5" stroke-linejoin="round"/>` +
+      `<circle cx="180" cy="40" r="5" fill="#FFE066"/><circle cx="128" cy="52" r="4" fill="#FFE066"/>`;
+  }
+  if (id === 'astronaut') {
+    return `<line x1="150" y1="-4" x2="150" y2="-38" stroke="${L}" stroke-width="5"/><circle cx="150" cy="-44" r="10" fill="#E0573F" stroke="${L}" stroke-width="4"/>` +
+      `<circle cx="150" cy="126" r="124" fill="#CFE8FF" fill-opacity=".28" stroke="#8FA9BF" stroke-width="9"/>` +
+      `<circle cx="150" cy="126" r="124" fill="none" stroke="${L}" stroke-width="3"/>` +
+      `<path d="M62 70 Q86 30 132 18" fill="none" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round" stroke-opacity=".8"/>` +
+      `<path d="M78 236 Q150 262 222 236 L214 254 Q150 280 86 254 Z" fill="#B9C6D2" stroke="${L}" stroke-width="5" stroke-linejoin="round"/>`;
+  }
+  return '';
+}
+// suitBack(id, cat)：体のうしろに出す部分（マント・リュック）。cat は data.js の CATS の1匹。絵の座標で描く
+function suitBack(id, c) {
+  const L = C.line, bz = (c.zones.find(z => z[0] === 'belly') || [0, 300, 410, 168, 97]), pz = (c.zones.find(z => z[0] === 'pants') || [0, 300, 600, 215, 85]);
+  const [, bx, by, brx, bry] = bz, [, px, py, prx, pry] = pz;
+  if (id === 'wizard') {
+    const top = by - bry * 1.5, bot = py + pry * 1.1;
+    return `<path d="M${bx - brx * 1.05} ${top} Q${bx} ${top - 30} ${bx + brx * 1.05} ${top} L${px + prx * 1.25} ${bot} Q${px} ${bot + 40} ${px - prx * 1.25} ${bot} Z" fill="#5A3A9A" stroke="${L}" stroke-width="6" stroke-linejoin="round"/>` +
+      `<path d="M${bx - brx * .8} ${top + 20} L${px - prx * 1.0} ${bot - 10} M${bx + brx * .8} ${top + 20} L${px + prx * 1.0} ${bot - 10}" stroke="#7E5CC8" stroke-width="10" stroke-linecap="round"/>`;
+  }
+  if (id === 'astronaut') {
+    const top = by - bry * 1.4;
+    return `<rect x="${bx - brx * 1.25}" y="${top}" width="${brx * 2.5}" height="${bry * 2.4}" rx="40" fill="#C9D3DC" stroke="${L}" stroke-width="6"/>` +
+      `<rect x="${bx - brx * 1.15}" y="${top + bry * .3}" width="40" height="${bry * 1.6}" rx="14" fill="#E0573F" stroke="${L}" stroke-width="4"/>`;
+  }
+  if (id === 'dino_hood') {   // しっぽ
+    return `<path d="M${px + prx * .5} ${py - pry * .2} Q${px + prx * 1.6} ${py + pry * .2} ${px + prx * 1.8} ${py + pry * 1.4} Q${px + prx * 1.2} ${py + pry * .9} ${px + prx * .4} ${py + pry * .8} Z" fill="#4FA35A" stroke="${L}" stroke-width="6" stroke-linejoin="round"/>`;
+  }
+  return '';
+}

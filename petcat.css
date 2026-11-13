@@ -79,3 +79,12 @@
   .pc-idle, .pc-tail, .pc.petting .pc-idle, .pc.mood-tired .pc-idle { animation: none; }
   .pc-act[class*="a-"] { animation-duration: .01s; }
 }
+
+/* コスチュームの服の色（もとの服はオレンジ） */
+.wear-suit-frog_coat { filter: hue-rotate(34deg) saturate(1.6) brightness(1.35); }
+.wear-suit-bear_suit { filter: saturate(.55) brightness(.62); }
+.wear-suit-dino_hood { filter: hue-rotate(85deg) saturate(.75) brightness(.92); }
+.wear-suit-chef { filter: grayscale(1) brightness(2.3) contrast(.8); }
+.wear-suit-wizard { filter: hue-rotate(240deg) saturate(.7) brightness(.85); }
+.wear-suit-astronaut { filter: grayscale(1) brightness(2.05) contrast(.85); }
+.pc-back { z-index: 0; }

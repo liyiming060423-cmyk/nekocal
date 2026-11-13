@@ -1,5 +1,5 @@
 // アプリの版。index.html の ?v= と sw.js の VERSION もこれにそろえる
-const APP_VER = '8.7';
+const APP_VER = '8.8';
 
 // にゃんカロ データ定義
 // アイテム・ショップ・トレーニング・ミッションなど「数字や名前」はここだけで管理する。
@@ -24,9 +24,18 @@ const WEAR = {
   gloves_brown:{ slot: 'hand', name: '茶色グローブ',       rar: 'N',  color: '#7A4A2A' },
   gloves_red:  { slot: 'hand', name: '赤グローブ',         rar: 'N',  color: '#D33A3A' },
   dumbbell:    { slot: 'hand', name: 'ダンベル',           rar: 'R',  bonus: { pow: 4 } },
-  gloves_gold: { slot: 'hand', name: '金のグローブ',       rar: 'SR', color: '#E9B730', bonus: { pow: 10 } }
+  gloves_gold: { slot: 'hand', name: '金のグローブ',       rar: 'SR', color: '#E9B730', bonus: { pow: 10 } },
+  // コスチューム（全身の着ぐるみ・コスプレ。着ている間は 頭・服 の見た目をかくす。body=服の色）
+  // 絵は cat.js の suitHead（頭）と suitBack（体のうしろ）、服の色は petcat.css の .wear-suit-○○
+  suit_none:   { slot: 'suit', name: 'なし',                 rar: 'N' },
+  frog_coat:   { slot: 'suit', name: 'カエルのレインコート', rar: 'N',  color: '#7CC24A', body: '#F2C94C', bonus: { sta: 2 } },
+  bear_suit:   { slot: 'suit', name: 'くまの着ぐるみ',       rar: 'N',  color: '#8A5A36', body: '#8A5A36', bonus: { sta: 3 } },
+  dino_hood:   { slot: 'suit', name: '恐竜パーカー',         rar: 'R',  color: '#4FA35A', body: '#4FA35A', bonus: { pow: 4 } },
+  chef:        { slot: 'suit', name: 'コックさん',           rar: 'R',  color: '#FFFFFF', body: '#FFFFFF', bonus: { sta: 4 } },
+  wizard:      { slot: 'suit', name: '魔法使い',             rar: 'SR', color: '#6E4AB8', body: '#6E4AB8', bonus: { pow: 6, spd: 6 } },
+  astronaut:   { slot: 'suit', name: '宇宙飛行士',           rar: 'SR', color: '#E8EEF4', body: '#E8EEF4', bonus: { spd: 8, sta: 6 } }
 };
-const SLOT_NAME = { head: '頭', top: '服', hand: '手' };
+const SLOT_NAME = { suit: 'コスチューム', head: '頭', top: '服', hand: '手' };
 
 // 猫の種類（はじめに選ぶ・せっていで変えられる）
 // 絵は ○○-body.png / -tail.png / -shirt.png / -gloves.png（高さ813の透過PNG、4枚とも同じ大きさ）

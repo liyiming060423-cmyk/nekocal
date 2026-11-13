@@ -63,6 +63,10 @@ function wearIcon(id) {
     if (id === 'cap_red') return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 30 Q10 10 28 10 Q40 10 40 30 Z" fill="#D33A3A" stroke="${L}" stroke-width="2.5"/><path d="M4 30 h36" stroke="${L}" stroke-width="4" stroke-linecap="round"/></svg>`;
     return `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="18" width="36" height="12" rx="5" fill="${w.color}" stroke="${L}" stroke-width="2.5"/></svg>`;
   }
+  if (w.slot === 'suit') {
+    if (id === 'suit_none') return `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="14" fill="none" stroke="#B9A48E" stroke-width="3" stroke-dasharray="4 4"/></svg>`;
+    return `<svg viewBox="-20 -70 340 300" aria-hidden="true"><ellipse cx="150" cy="140" rx="84" ry="66" fill="#FBE3C6" stroke="${L}" stroke-width="5"/><circle cx="120" cy="135" r="7" fill="${L}"/><circle cx="180" cy="135" r="7" fill="${L}"/>${suitHead(id)}</svg>`;
+  }
   if (w.slot === 'top') return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 6 L8 12 L4 22 L11 24 L12 42 H36 L37 24 L44 22 L40 12 L32 6 Q24 12 16 6 Z" fill="${w.color}" stroke="${L}" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
   if (id === 'dumbbell') return I.barbell;
   return `<svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="24" cy="22" rx="14" ry="15" fill="${w.color}" stroke="${L}" stroke-width="2.5"/><rect x="13" y="34" width="22" height="9" rx="3" fill="#FFFFFF" stroke="${L}" stroke-width="2.5"/></svg>`;
@@ -76,10 +80,10 @@ function defaultState() {
   return {
     v: 1,
     user: { name: 'プレイヤー', sex: 'male', age: 20, height: 170, weight: 60, goal: 'keep', delta: 300 },
-    cat: { name: 'もち', breed: 'tabby', idx: 0, dead: null, level: 1, exp: 0, stats: { pow: 20, spd: 20, sta: 20 }, equip: { head: 'band_none', top: 'tee_orange', hand: 'gloves_brown' } },
+    cat: { name: 'もち', breed: 'tabby', idx: 0, dead: null, level: 1, exp: 0, stats: { pow: 20, spd: 20, sta: 20 }, equip: { head: 'band_none', top: 'tee_orange', hand: 'gloves_brown', suit: 'suit_none' } },
     stamina: 65, coins: 850, stones: 0,
     items: { drink: 0, protein: 0, goldbag: 0 }, protein: false, goldbag: 0, mood: RULE.moodStart,
-    owned: ['band_none', 'tee_orange', 'gloves_brown'],
+    owned: ['band_none', 'tee_orange', 'gloves_brown', 'suit_none'],
     start: t, last: t, days: {}, history: [],
     login: { last: '', streak: 0 },
     claimed: { date: t, ids: [] },
@@ -92,10 +96,14 @@ function load() {
     const raw = localStorage.getItem(KEY);
     if (!raw) return defaultState();
     const s = JSON.parse(raw), d = defaultState();
-    return Object.assign(d, s, {
+    const st = Object.assign(d, s, {
       user: Object.assign(d.user, s.user), cat: Object.assign(d.cat, s.cat),
       items: Object.assign(d.items, s.items), settings: Object.assign(d.settings, s.settings)
     });
+    // v8.8：コスチューム（suit）の欄を追加
+    if (!st.owned.includes('suit_none')) st.owned.push('suit_none');
+    if (!st.cat.equip.suit) st.cat.equip.suit = 'suit_none';
+    return st;
   } catch (e) { return defaultState(); }
 }
 let S = load();
@@ -133,7 +141,7 @@ function bodyState(idx) {
   if (idx <= 70) return ['でぶ猫', '#F0943F']; if (idx < 100) return ['破裂寸前', '#E0573F']; return ['爆発', '#E0573F'];
 }
 const expNeed = lv => 50 + lv * 50;
-const statWithBonus = k => S.cat.stats[k] + ['head', 'top', 'hand'].reduce((a, sl) => a + (((WEAR[S.cat.equip[sl]] || {}).bonus || {})[k] || 0), 0);
+const statWithBonus = k => S.cat.stats[k] + ['head', 'top', 'hand', 'suit'].reduce((a, sl) => a + (((WEAR[S.cat.equip[sl]] || {}).bonus || {})[k] || 0), 0);
 function mealSlotNow() { const h = new Date().getHours() + new Date().getMinutes() / 60; return h < 10.5 ? 'morning' : h < 15.5 ? 'noon' : 'night'; }
 
 // 日付が変わっていたら、前の日を自動で締める
@@ -735,7 +743,7 @@ function pullGacha() {
   if (S.coins < GACHA_COST) { toast(`コインが ${fmt(GACHA_COST - S.coins)} 足りません`); se('bad'); return; }
   S.coins -= GACHA_COST;
   const r = Math.random() * 100, rar = r < GACHA_RATE.SR ? 'SR' : r < GACHA_RATE.SR + GACHA_RATE.R ? 'R' : 'N';
-  const wears = Object.keys(WEAR).filter(k => WEAR[k].rar === rar && k !== 'band_none').map(k => ({ wear: k }));
+  const wears = Object.keys(WEAR).filter(k => WEAR[k].rar === rar && k !== 'band_none' && k !== 'suit_none').map(k => ({ wear: k }));
   const pool = wears.concat((GACHA_ITEMS[rar] || []).map(x => ({ item: x.id, n: x.n })));
   const got = pool[Math.floor(Math.random() * pool.length)];
   let body;
@@ -791,7 +799,7 @@ function renderTrain() {
     const eq = S.cat.equip;
     $('trainBody').innerHTML = `<div class="locker"><div class="card preview">${petCatHTML({ breed: S.cat.breed, idx: S.cat.idx, equip: eq, dead: S.cat.dead })}</div>
       <div class="card stats"><div style="font-weight:900">${esc(S.cat.name)}　Lv.${S.cat.level}</div>${statRows()}</div></div>
-      ${['head', 'top', 'hand'].map(sl => `<div class="section-title">${SLOT_NAME[sl]}</div><div class="wear-grid">${S.owned.filter(k => WEAR[k] && WEAR[k].slot === sl).map(k => `<button class="wear" data-wear="${k}" aria-pressed="${eq[sl] === k}">${wearIcon(k)}<span>${esc(WEAR[k].name)}</span><span class="rar ${WEAR[k].rar}">${WEAR[k].rar}</span></button>`).join('')}</div>`).join('')}
+      ${['suit', 'head', 'top', 'hand'].map(sl => `<div class="section-title">${SLOT_NAME[sl]}</div>${sl === 'suit' ? '<p class="hint" style="margin:-4px 0 8px;text-align:center">着ている間は 頭・服 が見えません（能力のボーナスはそのまま）</p>' : ''}<div class="wear-grid">${S.owned.filter(k => WEAR[k] && WEAR[k].slot === sl).map(k => `<button class="wear" data-wear="${k}" aria-pressed="${eq[sl] === k}">${wearIcon(k)}<span>${esc(WEAR[k].name)}</span><span class="rar ${WEAR[k].rar}">${WEAR[k].rar}</span></button>`).join('')}</div>`).join('')}
       <p class="hint" style="margin-top:10px">ガチャで新しいきせかえが手に入ります。</p>`;
   }
 }
@@ -854,7 +862,8 @@ function miniCatInfo() {
   return {
     name: S.cat.name, breed: S.cat.breed, level: S.cat.level,
     pow: statWithBonus('pow'), spd: statWithBonus('spd'), sta: statWithBonus('sta'),
-    head: eq.head || null, top: eq.top || null, hand: eq.hand || null,
+    head: eq.head || null, top: eq.top || null, hand: eq.hand || null, suit: eq.suit && eq.suit !== 'suit_none' ? eq.suit : null,
+    suitColor: (WEAR[eq.suit] || {}).color || null, suitBody: (WEAR[eq.suit] || {}).body || null,
     shirt: (WEAR[eq.top] || {}).color || null, gloves: (WEAR[eq.hand] || {}).color || null
   };
 }

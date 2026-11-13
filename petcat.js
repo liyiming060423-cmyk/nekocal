@@ -43,6 +43,7 @@ function petCatHTML(o) {
   const art = `left:${(c.x / PC_BOX_W * 100).toFixed(2)}%;width:${(c.w / PC_BOX_W * 100).toFixed(2)}%`;
   return `<div class="${cls.join(' ')}" data-breed="${b}" style="--sx:${s.sx.toFixed(3)};--sy:${s.sy.toFixed(3)};--tx:${(c.pivot[0] / c.w * 100).toFixed(1)}%;--ty:${(c.pivot[1] / c.h * 100).toFixed(1)}%">
     <div class="pc-shape"><div class="pc-act"><div class="pc-idle"><div class="pc-art" style="${art}">
+      ${petCatBack(b, o.equip || {})}
       <img class="pc-tail" src="${pcImg(b, 'tail')}" alt="" draggable="false">
       <img class="pc-body" src="${pcImg(b, 'body')}" alt="${c.name}" draggable="false">
       ${petCatWear(b, o.equip || {})}
@@ -54,13 +55,26 @@ function petCatHTML(o) {
 
 // 着せかえ（服・手袋は色フィルター、頭とダンベルは絵を重ねる）
 const PC_GEAR_DY = { cap_red: 36, crown: 24, band_pink: 16, band_blue: 16 };
+// コスチューム（全身）を着ているか
+const pcSuit = eq => eq && eq.suit && eq.suit !== 'suit_none' && typeof WEAR !== 'undefined' && WEAR[eq.suit] ? eq.suit : null;
+// 体のうしろ（マント・リュックなど）
+function petCatBack(b, eq) {
+  const su = pcSuit(eq), c = pcCat(b);
+  if (!su || typeof suitBack !== 'function') return '';
+  const g = suitBack(su, c);
+  return g ? `<svg class="pc-gear pc-back" viewBox="0 0 ${c.w} ${c.h}" aria-hidden="true">${g}</svg>` : '';
+}
 function petCatWear(b, eq) {
-  const c = pcCat(b);
+  const c = pcCat(b), su = pcSuit(eq);
   let s = '';
-  if (eq.top && eq.top !== 'tee_orange') s += `<img class="pc-shirt wear-${eq.top}" src="${pcImg(b, 'shirt')}" alt="" draggable="false">`;
+  if (su) s += `<img class="pc-shirt wear-suit-${su}" src="${pcImg(b, 'shirt')}" alt="" draggable="false">`;
+  else if (eq.top && eq.top !== 'tee_orange') s += `<img class="pc-shirt wear-${eq.top}" src="${pcImg(b, 'shirt')}" alt="" draggable="false">`;
   if (eq.hand && eq.hand !== 'gloves_brown' && eq.hand !== 'dumbbell') s += `<img class="pc-gloves wear-${eq.hand}" src="${pcImg(b, 'gloves')}" alt="" draggable="false">`;
   let g = '';
-  if (eq.head && eq.head !== 'band_none' && typeof headGear === 'function') {
+  if (su && typeof suitHead === 'function') {
+    const [hx, hy, hr] = c.head, k = hr / 97;
+    g += `<g transform="translate(${(hx - 150 * k).toFixed(1)} ${(hy - 130 * k).toFixed(1)}) scale(${k.toFixed(3)})">${suitHead(su)}</g>`;
+  } else if (eq.head && eq.head !== 'band_none' && typeof headGear === 'function') {
     const [hx, hy, hr] = c.head, k = hr / 97, dy = PC_GEAR_DY[eq.head] || 0;
     g += `<g transform="translate(${(hx - 150 * k).toFixed(1)} ${(hy - (130 - dy) * k).toFixed(1)}) scale(${k.toFixed(3)})">${headGear(eq.head, 97)}</g>`;
   }

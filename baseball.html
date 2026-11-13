@@ -320,7 +320,7 @@ function fluffEllipse(c, x, y, rx, ry, n, bump) {
 }
 // bat: { ang（バットの向き・ラジアン）, len（長さの倍率）, hx, hy（手の位置・ローカル） }
 function drawCat(c, x, y, s, bat, time) {
-  const fr = FUR[CAT.breed] || FUR.tabby, ol = fr.ol, shirt = CAT.shirt || '#F08A3C', glove = CAT.gloves || '#F4F4F4';
+  const fr = FUR[CAT.breed] || FUR.tabby, ol = fr.ol, su = CAT.suit, shirt = (su && CAT.suitBody) || CAT.shirt || '#F08A3C', glove = CAT.gloves || '#F4F4F4';
   c.save(); c.translate(x, y); c.scale(s, s); c.lineJoin = 'round'; c.lineCap = 'round';
   const E = (ex, ey, rx, ry, col, st = true, rot = 0) => { c.fillStyle = col; c.beginPath(); c.ellipse(ex, ey, rx, ry, rot, 0, 7); c.fill(); if (st) { c.strokeStyle = ol; c.lineWidth = 3; c.stroke(); } };
   const bob = Math.sin(time * 2.2) * 1.5;
@@ -330,6 +330,8 @@ function drawCat(c, x, y, s, bat, time) {
   const sw = Math.sin(time * 2.6) * 10 + (bat.swing ? Math.sin(bat.swing * 9) * 14 : 0);
   c.strokeStyle = ol; c.lineWidth = fr.fluffy ? 24 : 16; c.beginPath(); c.moveTo(18, -74); c.bezierCurveTo(62, -66, 84 + sw * .3, -52, 82 + sw, -96); c.stroke();
   c.strokeStyle = fr.base; c.lineWidth = fr.fluffy ? 19 : 11; c.stroke();
+  if (su === 'wizard') { c.fillStyle = '#5A3A9A'; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.moveTo(-40, -166); c.lineTo(40, -166); c.lineTo(56 + sw * .2, -40); c.quadraticCurveTo(0, -28, -56, -40); c.closePath(); c.fill(); c.stroke(); }
+  if (su === 'dino_hood') { c.fillStyle = '#4FA35A'; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.moveTo(-14, -70); c.quadraticCurveTo(-40, -30, -70 - sw * .2, -14); c.quadraticCurveTo(-30, -36, 6, -62); c.closePath(); c.fill(); c.stroke(); }
   if (CAT.breed === 'tabby') { c.strokeStyle = fr.dark; c.lineWidth = 4; [[48, -66], [70, -62], [80 + sw * .7, -82]].forEach(([tx, ty], i) => { c.beginPath(); c.moveTo(tx - (i < 2 ? 1 : 7), ty - 7); c.lineTo(tx + (i < 2 ? 1 : 7), ty + 7); c.stroke(); }); }
   // 足
   [[-1], [1]].forEach(([d]) => {
@@ -361,8 +363,11 @@ function drawCat(c, x, y, s, bat, time) {
   if (fr.fluffy) fluffEllipse(c, 0, HY, 44, 39, 18, 6); else { c.beginPath(); c.ellipse(0, HY, 45, 40, 0, 0, 7); }
   c.fill(); c.stroke();
   if (CAT.breed === 'tabby') { c.strokeStyle = fr.dark; c.lineWidth = 5; [[-14, -32], [0, -36], [14, -32]].forEach(([tx, ty]) => { c.beginPath(); c.moveTo(tx, HY + ty); c.lineTo(tx * 1.2, HY + ty + 18); c.stroke(); }); c.beginPath(); c.moveTo(-30, HY + 10); c.quadraticCurveTo(0, HY + 22, 30, HY + 10); c.stroke(); }
+  // コスチューム（うしろ姿）。着ているときは頭の着せかえは出さない
+  if (su === 'astronaut') { c.fillStyle = '#C9D3DC'; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.roundRect(-30, -158, 60, 56, 12); c.fill(); c.stroke(); c.fillStyle = '#E0573F'; c.fillRect(-22, -148, 10, 36); }
+  if (su) drawSuitBack(c, su, HY, ol);
   // 頭の着せかえ
-  const hd = CAT.head;
+  const hd = su ? null : CAT.head;
   if (hd === 'cap_red') { // バッティングヘルメット
     c.fillStyle = '#D33A3A'; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.ellipse(0, HY - 6, 46, 36, 0, Math.PI, 0); c.lineTo(46, HY + 2); c.lineTo(-46, HY + 2); c.closePath(); c.fill(); c.stroke();
     c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.ellipse(-16, HY - 26, 12, 6, -.4, 0, 7); c.fill();
@@ -385,6 +390,29 @@ function drawCat(c, x, y, s, bat, time) {
   c.restore();
   E(hx - 4, hy + 3, 11, 10, glove); E(hx + 6, hy - 2, 10, 9, glove);
   c.restore();
+}
+
+// コスチュームの頭（うしろから見た形）
+function drawSuitBack(c, su, HY, ol) {
+  const E = (ex, ey, rx, ry, col) => { c.fillStyle = col; c.beginPath(); c.ellipse(ex, ey, rx, ry, 0, 0, 7); c.fill(); c.strokeStyle = ol; c.lineWidth = 3; c.stroke(); };
+  const hood = col => { c.fillStyle = col; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.moveTo(-46, HY + 34); c.bezierCurveTo(-64, HY - 40, -36, HY - 66, 0, HY - 66); c.bezierCurveTo(36, HY - 66, 64, HY - 40, 46, HY + 34); c.quadraticCurveTo(0, HY + 48, -46, HY + 34); c.closePath(); c.fill(); c.stroke(); };
+  if (su === 'frog_coat') { E(-24, HY - 56, 16, 15, '#7CC24A'); E(24, HY - 56, 16, 15, '#7CC24A'); hood('#7CC24A'); }
+  else if (su === 'bear_suit') { E(-38, HY - 48, 15, 15, '#8A5A36'); E(38, HY - 48, 15, 15, '#8A5A36'); hood('#8A5A36'); }
+  else if (su === 'dino_hood') {
+    hood('#4FA35A');
+    c.fillStyle = '#F7A93B'; c.strokeStyle = ol; c.lineWidth = 2.5;
+    [[-58, 14], [-34, 12], [-10, 11], [14, 10]].forEach(([y, s]) => { c.beginPath(); c.moveTo(-s, HY + y + s); c.lineTo(0, HY + y - s); c.lineTo(s, HY + y + s); c.closePath(); c.fill(); c.stroke(); });
+  } else if (su === 'chef') {
+    c.fillStyle = '#FFFFFF'; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.moveTo(-26, HY - 30); c.quadraticCurveTo(-46, HY - 64, -22, HY - 72); c.quadraticCurveTo(0, HY - 92, 22, HY - 72); c.quadraticCurveTo(46, HY - 64, 26, HY - 30); c.closePath(); c.fill(); c.stroke();
+    c.beginPath(); c.roundRect(-30, HY - 36, 60, 14, 5); c.fill(); c.stroke();
+  } else if (su === 'wizard') {
+    c.fillStyle = '#6E4AB8'; c.strokeStyle = ol; c.lineWidth = 3; c.beginPath(); c.moveTo(-28, HY - 30); c.lineTo(10, HY - 104); c.lineTo(28, HY - 30); c.closePath(); c.fill(); c.stroke();
+    E(0, HY - 28, 54, 10, '#5A3A9A');
+    c.fillStyle = '#FFE066'; c.beginPath(); c.arc(4, HY - 62, 4, 0, 7); c.fill();
+  } else if (su === 'astronaut') {
+    c.fillStyle = 'rgba(207,232,255,.3)'; c.strokeStyle = '#8FA9BF'; c.lineWidth = 6; c.beginPath(); c.arc(0, HY - 4, 64, 0, 7); c.fill(); c.stroke();
+    c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 6; c.beginPath(); c.arc(0, HY - 4, 52, Math.PI * 1.1, Math.PI * 1.4); c.stroke();
+  }
 }
 
 // ===== 効果音（WebAudio） =====
