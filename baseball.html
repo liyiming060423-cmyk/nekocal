@@ -50,6 +50,15 @@ body{background:#1E4A2E;display:flex;align-items:center;justify-content:center;o
 .res .nb{text-align:center;font-weight:900;color:#D9772B}
 .log{display:grid;grid-template-columns:1.6em 1fr auto;gap:.15em .5em;font-size:.82em;font-weight:700;margin:.5em 0 0}
 .log .k{font-weight:900;text-align:right}
+.how .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:.4em;text-align:center}
+.how .steps i{display:block;font-style:normal;font-size:1.6em;line-height:1.2}
+.how .steps b{display:block;color:var(--ink);font-size:.95em}
+.how .steps small{display:block;font-size:.85em;opacity:.8}
+.how details{margin-top:.5em;border-top:2px dashed rgba(74,42,26,.3);padding-top:.4em}
+.how summary{font-weight:900;cursor:pointer;color:#B5482B}
+.stars{font-size:1em;letter-spacing:.05em;color:#D8C8B0;font-weight:900}
+.stars b{color:#F5B300;font-weight:900}
+.res .stars{font-size:2em;text-align:center;display:block;line-height:1.1}
 .coin{font-weight:900;text-align:center;font-size:1.05em;padding:.45em;border-radius:.8em;background:#FFE7A8;border:2px solid var(--ink)}
 .btns{display:flex;gap:.6em;width:100%}
 .btn{flex:1;border:3px solid var(--ink);background:var(--orange);color:var(--ink);font:900 1em var(--font);border-radius:1em;padding:.7em .4em;box-shadow:0 4px 0 var(--ink);cursor:pointer;touch-action:manipulation}
@@ -70,9 +79,15 @@ body{background:#1E4A2E;display:flex;align-items:center;justify-content:center;o
     <div class="dogs" id="dogList"></div>
     <div class="left" id="leftMsg"></div>
     <div class="card how">
-      <b>あそびかた</b>　画面のどこでも<b>おしたまま</b>動かすと黄色い<b>カーソル</b>が動く。ボールがカーソルに重なったときに<b>指をはなすとスイング</b>！（ピッチャーが投げる前にはなしても振らない。PCは矢印キー＋スペース）<br>
+      <div class="steps"><div><i>👆</i><b>おしたまま動かす</b><small>カーソルを合わせる</small></div><div><i>✋</i><b>はなす</b><small>スイング！</small></div><div><i>⚾</i><b>真ん中で打つ</b><small>遠くへ飛ぶ</small></div></div>
+      <details><summary>くわしいルール</summary>
+      画面のどこでも<b>おしたまま</b>動かすと黄色い<b>カーソル</b>が動く。ボールがカーソルに重なったときに<b>指をはなすとスイング</b>！（ピッチャーが投げる前にはなしても振らない。PCは矢印キー＋スペース）<br>
       カーソルの真ん中（オレンジ）で打つと遠くへ飛ぶ。ボールの<b>下</b>を打つとフライ、<b>上</b>を打つとゴロ。早く振ると左へ、おそいと右へ。<br>
-      ホームラン100・長打50・ヒット30・ファウル5点。合計点でコインがもらえる（最大<span id="maxC">50</span>）。
+      ホームラン100・長打50・ヒット30・ファウル5点。<b>ボール球を見逃す</b>と+10点（ボール球を振ると当たりが弱くなる）。<br>
+      <b>連続ヒット</b>は2本目×1.2・3本目から×1.5。10球のうち1球は<b>金のボール</b>（打つと×2）。<br>
+      点数で <span id="starPts"></span>。合計点でコインがもらえる（最大<span id="maxC">50</span>）。
+      <button class="btn white" id="practiceBtn" type="button" style="margin-top:.5em;width:100%">練習2球からはじめる（柴犬）</button>
+      </details>
     </div>
   </div>
 
@@ -92,8 +107,15 @@ body{background:#1E4A2E;display:flex;align-items:center;justify-content:center;o
 
 // ===== バランス（ここの数字で調整できる） =====
 const PITCHES = 10;                                 // 1回の球数
-const PTS = { hr: 100, xbh: 50, hit: 30, foul: 5 }; // 点数（ホームラン／長打／ヒット／ファウル）
-const COIN_DIV = 8;                                 // コイン = 合計点 × 投手のコイン倍率 ÷ これ（上限はアプリの miniRewardMax）
+const PTS = { hr: 100, xbh: 50, hit: 30, foul: 5, eye: 10 }; // 点数（ホームラン／長打／ヒット／ファウル／ボール球を見逃す＝ナイス選球）
+const COIN_DIV = 10;                                // コイン = 合計点 × 投手のコイン倍率 ÷ これ（上限はアプリの miniRewardMax）　v9.6：8→10（連打・金のボールで点がふえたぶん）
+// v9.6 追加
+const BALL_SWING_Q = .8;                            // ボール球を振ったときの打球の質（×）
+const COMBO = [1, 1, 1.2, 1.5];                     // 連続ヒットの倍率（2連続 ×1.2、3連続より上 ×1.5）
+const GOLD_MUL = 2;                                 // 金のボール（10球に1球）の得点倍率
+const STARS = [150, 350, 550];                      // ★1・★2・★3 の点数（どの投手も同じ。速い投手ほどむずかしい）
+const PRACTICE = 2;                                 // はじめての人の練習球の数（点にならない）
+const HIT_STOP = .08;                               // 打った瞬間に止める時間（秒）
 const eff = v => v / (v + 60);                      // 能力の効き目（0〜1。数値が上がるほどゆるやかに増える）
 // 投手（犬）。kmh=ストレートの球速、T=ストレートがとどく時間（秒・ゲーム用にゆっくり）、out=ボール球の割合、brk=変化の大きさ、mix=球種の割合
 const DOGS = {
@@ -492,13 +514,23 @@ function se(k, q = 1) {
 // ===== ゲームの状態 =====
 let dogKey = 'shiba', state = 'title', P = null, phaseT = 0, relT = 0, swing = null, fl = null, caught = false;
 let results = [], score = 0, label = null, particles = [], flash = 0, lastRes = null;
+let combo = 0, goldIdx = -1, practiceLeft = 0, pop = null, spark = null, hintKey = '';   // v9.6
 const cur = { x: CX, y: (ZT + ZB) / 2 };
-const now = () => performance.now() / 1000;
+// 時計。ヒットストップ（打った瞬間に少し止める）のあいだは now() が止まる
+const realNow = () => performance.now() / 1000;
+let stopAt = 0, stopUntil = 0, pauseAcc = 0;
+function now() { const r = realNow(); if (stopUntil && r >= stopUntil) { pauseAcc += stopUntil - stopAt; stopUntil = 0; } return (stopUntil ? stopAt : r) - pauseAcc; }
+function hitStop(d) { if (stopUntil) return; stopAt = realNow(); stopUntil = stopAt + d; }
 const HAND0 = { x: 38, y: -150 }, HAND1 = { x: 56, y: -118 };   // 手の位置（かまえ／ふったとき）ローカル
 const A0 = -1.84;                                                 // かまえのバットの向き
 
 function makePitch() {
-  const D = DOGS[dogKey], type = pickMix(D.mix), pt = PTYPE[type];
+  const D = DOGS[dogKey];
+  if (practiceLeft > 0) {   // 練習球：まっすぐ・ゾーンの真ん中ふきん・ゆっくり
+    return { type: 'st', name: 'ストレート', tx: rnd(-.35, .35) * ZHW, ty: ZCY + rnd(-.35, .35) * ZHH, bx: 0, by: 0, k: 2, inZone: true,
+      kmh: Math.round(DOGS.shiba.kmh[0] * .8), T: Math.max(D.T, DOGS.shiba.T) * 1.35, practice: true };
+  }
+  const type = pickMix(D.mix), pt = PTYPE[type];
   const inZone = R() > D.out;
   let tx, ty;
   if (inZone) {
@@ -513,7 +545,7 @@ function makePitch() {
   }
   const kmhSt = rnd(D.kmh[0], D.kmh[1]);
   return { type, name: pt.name, tx, ty, bx: pt.bx * D.brk, by: pt.by * D.brk, k: pt.k, inZone: Math.abs(tx) <= ZHW + BRW && Math.abs(ty - ZCY) <= ZHH + BRW,
-    kmh: Math.round(kmhSt * pt.spd), T: D.T * ((D.kmh[0] + D.kmh[1]) / 2 / kmhSt) / pt.spd };
+    kmh: Math.round(kmhSt * pt.spd), T: D.T * ((D.kmh[0] + D.kmh[1]) / 2 / kmhSt) / pt.spd, gold: results.length === goldIdx };
 }
 function ballAt(p, t) {
   const u = Math.min(t, 1), bk = Math.pow(u, p.k);
@@ -526,14 +558,14 @@ function ballAt(p, t) {
 }
 
 // 当たり判定。e=タイミングのずれ（秒、＋はおそい）、(bx,by)=ボールの画面の位置
-function judge(e, bx, by) {
+function judge(e, bx, by, qMul = 1) {
   const te = Math.abs(e) / TW;
   const br = BRW * F * .5;
   const dx = (bx - cur.x) / (CRW + br), dy = (by - cur.y) / (CRH + br), d = Math.hypot(dx, dy);
   if (te > 1 || d > 1) return { kind: 'miss' };
   const posQ = d < .25 ? 1 : 1 - (d - .25) / .75 * .6;
   const timQ = te < .2 ? 1 : 1 - Math.pow((te - .2) / .8, 1.5) * .55;
-  const q = posQ * timQ;
+  const q = posQ * timQ * qMul;   // qMul：ボール球を振ると下がる
   const dir = (e / TW) * 50 + dx * 8 + rnd(-4, 4);             // −＝左（引っぱり）／＋＝右（流し）
   const ang = 18 - dy * 40 + rnd(-4, 4);                       // 打ち上げる角度（ボールの下を打つと大きい）
   const base = { dir, ang, q, posQ, timQ };
@@ -562,9 +594,10 @@ function doSwing() {
   if (state !== 'pitch' || swing) return;
   const t = now(), ts = t - relT, tc = ts + LAG, e = tc - P.T;
   const fp = ballAt(P, 1), bx = CX + fp.X * F / fp.Z, by = CY + fp.Y * F / fp.Z;
-  const res = Math.abs(e) > TW ? { kind: 'miss' } : judge(e, bx, by);
-  swing = { t0: t, res, tcAbs: relT + tc, ang: Math.atan2(cur.y - (CATY + HAND1.y * CATS), cur.x - (CATX + HAND1.x * CATS)), applied: false };
-  se('swing'); hideHint();
+  const br = BRW * F * .5, dx = (bx - cur.x) / (CRW + br), dy = (by - cur.y) / (CRH + br);   // ＋＝ボールがカーソルより右／下
+  const res = Math.abs(e) > TW ? { kind: 'miss' } : judge(e, bx, by, P.inZone ? 1 : BALL_SWING_Q);
+  swing = { t0: t, res, e, dx, dy, tcAbs: relT + tc, ang: Math.atan2(cur.y - (CATY + HAND1.y * CATS), cur.x - (CATX + HAND1.x * CATS)), applied: false };
+  se('swing'); if (!practiceLeft) hideHint();
 }
 function startFlight(res) {
   const u = Math.min(1, (swing.tcAbs - relT) / P.T), bp = ballAt(P, u);
@@ -575,7 +608,9 @@ function startFlight(res) {
   const hmax = res.hmax || (res.ground ? 0 : Math.min(45, Math.max(3, dist * Math.tan(angR) / 4)));
   const dur = res.tip ? .6 : res.ground ? .9 : clamp(.8 + dist / 110 * 1.3, .9, 2.4);
   fl = Object.assign({}, res, { X0, Y0, h0, dirR, hmax, dist, dur, t0: now(), shown: false });
-  const kind = res.kind;
+  const kind = res.kind, [sx, sy] = pj(bp.X, bp.Y, bp.Z), big = kind === 'hr' || res.q > .85;
+  spark = { x: sx, y: sy, t0: now(), big, tip: !!res.tip };
+  hitStop(res.tip ? HIT_STOP * .5 : big ? HIT_STOP * 1.6 : HIT_STOP);
   if (kind === 'foul') { se('foul'); buzz(20); }
   else { se('hit', res.q); buzz(kind === 'hr' ? [40, 40, 90] : 35); }
 }
@@ -588,15 +623,61 @@ function flightPos(f, u) {
   return { X: f.X0 + Math.sin(f.dirR) * d * M, Y: 1 - h * M, Z: 1 + Math.cos(f.dirR) * d * M, h };
 }
 function finish(res) {
-  const pts = PTS[res.kind] || 0;
-  score += pts;
-  results.push({ p: P, res, pts });
+  if (res.kind === 'take' && !P.inZone) res = Object.assign({}, res, { kind: 'eye', label: 'ナイス選球' });   // ボール球を見逃した
+  const kind = res.kind, base = PTS[kind] || 0, notes = [];
+  let mul = 1;
+  if (!P.practice) {
+    if (kind === 'hr' || kind === 'xbh' || kind === 'hit') {   // 連続ヒット（ファウル・ナイス選球ではとぎれない）
+      combo++; const cm = COMBO[Math.min(combo, COMBO.length - 1)];
+      if (cm > 1) { mul *= cm; notes.push(`${combo}連続 ×${cm}`); }
+    } else if (kind !== 'foul' && kind !== 'eye') combo = 0;
+    if (P.gold && base) { mul *= GOLD_MUL; notes.push(`金のボール ×${GOLD_MUL}`); }
+  }
+  const pts = P.practice ? 0 : Math.round(base * mul);
+  if (P.practice) {
+    practiceLeft--;
+    if (!practiceLeft) { const b = getBest(); if (!b.tut) { b.tut = 1; setBest(b); } }
+  } else { score += pts; results.push({ p: P, res, pts, notes }); }
   let txt = res.label;
   if (!txt) txt = res.kind === 'miss' ? '空振り' : (P.inZone ? '見逃し' : 'ボール');
-  label = { txt, pts, sub: `${P.name}　${P.kmh}km/h${res.show || res.kind === 'hr' ? `　飛距離 ${Math.round(res.dist)}m` : ''}`, kind: res.kind, t0: now() };
+  label = { txt, pts, note: notes.join('　'), practice: !!P.practice, sub: `${P.practice ? '練習　' : ''}${P.name}　${P.kmh}km/h${res.show || res.kind === 'hr' ? `　飛距離 ${Math.round(res.dist)}m` : ''}`, kind, t0: now() };
   if (res.kind === 'hr') { se('cheer'); flash = 1; for (let i = 0; i < 70; i++) particles.push({ x: rnd(0, W), y: rnd(-60, 0), vx: rnd(-30, 30), vy: rnd(60, 160), r: rnd(0, 6), c: ['#FFD43B', '#FF6B6B', '#4DABF7', '#69DB7C', '#fff'][i % 5], t: now() }); }
   else if (res.kind === 'miss') se('bad');
+  else if (res.kind === 'eye') se('start');
   state = 'after'; phaseT = now() + (res.kind === 'hr' ? 2.2 : 1.5);
+}
+
+// v9.6：振った直後の評価（ジャスト！など）と、次に直すところ（はやい・もっと下 など）
+function swingTip(sw) {
+  const a = [], k = sw.e / TW;
+  if (k < -.3) a.push('はやい'); else if (k > .3) a.push('おそい');
+  if (sw.dy > .35) a.push('もっと下'); else if (sw.dy < -.35) a.push('もっと上');
+  if (Math.abs(sw.dx) > .45) a.push(sw.dx > 0 ? 'もっと右' : 'もっと左');
+  return a.join('・');
+}
+function showPop(sw) {
+  const r = sw.res, tip = swingTip(sw);
+  let txt, col;
+  if (r.kind === 'miss') { if (!tip) return; txt = tip + '！'; col = '#FF8787'; }   // 「空振り」は大きい文字で出るので、直すところだけ
+  else if (r.tip) { txt = 'おしい！'; col = '#74C0FC'; }
+  else if (r.q >= .85) { txt = 'ジャスト！'; col = '#FFD43B'; }
+  else if (r.q >= .6) { txt = 'ナイス！'; col = '#69DB7C'; }
+  else { txt = 'あたりそこね'; col = '#DEE2E6'; }
+  const pre = P && !P.inZone ? 'ボール球　' : '';
+  pop = { txt, col, tip: r.kind === 'miss' ? (pre ? 'ボール球' : '') : pre + (tip || 'ばっちり！'), x: clamp(cur.x, 90, 270), y: clamp(cur.y - CRH - 30, 230, 420), t0: now() };
+}
+// はじめての練習のときの吹き出し（padHint を使う）
+function updateHint() {
+  let key = '', html = '';
+  if (practiceLeft > 0 && state !== 'title' && state !== 'over') {
+    if (state === 'pitch' && !swing) { key = 'p2'; html = '② ボールが<b>点線の○</b>に来たら<br><b>指をはなす</b>とスイング！'; }
+    else if (state === 'ready' || state === 'windup') { key = 'p1'; html = `れんしゅう ${PRACTICE - practiceLeft + 1}/${PRACTICE}　① 画面を<b>おしたまま</b>動かして<br>黄色いカーソルを<b>点線の○</b>に合わせよう`; }
+    else key = hintKey;
+  } else if ((hintKey === 'p1' || hintKey === 'p2') && state !== 'title' && state !== 'over') { key = 'go'; html = 'ここから<b>本番10球</b>！<br><b>ボール球は見逃す</b>と +10点'; setTimeout(() => { if (hintKey === 'go') { hintKey = ''; hideHint(); } }, 3200); }
+  else return;
+  if (key === hintKey) return;
+  hintKey = key;
+  if (html) { padHint.innerHTML = html; padHint.hidden = false; padHint.classList.remove('fade'); }
 }
 
 // ===== 毎フレーム =====
@@ -605,6 +686,7 @@ function step() {
   const t = now(), dt = Math.min(.05, t - lastT); lastT = t;
   // キーボード
   if (keys.size) { const v = 230 * dt; if (keys.has('ArrowLeft')) moveCur(-v, 0); if (keys.has('ArrowRight')) moveCur(v, 0); if (keys.has('ArrowUp')) moveCur(0, -v); if (keys.has('ArrowDown')) moveCur(0, v); }
+  updateHint();
   if (state === 'ready' && t >= phaseT) {
     if (results.length >= PITCHES) { state = 'end'; phaseT = t + .6; }
     else { P = makePitch(); state = 'windup'; phaseT = t + .8; }
@@ -614,6 +696,7 @@ function step() {
     if (swing && !swing.applied && t >= swing.tcAbs) {
       swing.applied = true;
       if (swing.res.kind !== 'miss') { startFlight(swing.res); state = 'hit'; }
+      showPop(swing);
     }
     if (state === 'pitch') {
       if (u >= 1 && !caught) { caught = true; se('mitt'); }
@@ -641,9 +724,10 @@ function batPose(t) {
   return st;
 }
 
-function drawBall(x, y, r) {
+function drawBall(x, y, r, gold) {
   r = Math.max(1.4, r);
-  g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+  if (gold) { g.shadowColor = '#FFD43B'; g.shadowBlur = Math.max(6, r * 1.6); }
+  g.fillStyle = gold ? '#FFD43B' : '#fff'; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.shadowBlur = 0;
   g.strokeStyle = 'rgba(80,70,60,.6)'; g.lineWidth = Math.max(.6, r * .1); g.stroke();
   if (r > 5) { g.strokeStyle = '#D9443A'; g.lineWidth = r * .12; g.beginPath(); g.arc(x - r * 1.2, y, r * .85, -.7, .7); g.stroke(); g.beginPath(); g.arc(x + r * 1.2, y, r * .85, Math.PI - .7, Math.PI + .7); g.stroke(); }
 }
@@ -666,6 +750,18 @@ function draw(t) {
   // 猫
   drawCat(g, CATX, CATY, CATS, batPose(t), t);
   // 投げたボール
+  // 練習球：とどく場所に点線の○
+  if (P && P.practice && (state === 'windup' || state === 'pitch')) {
+    const fp = ballAt(P, 1), [tx, ty, tk] = pj(fp.X, fp.Y, fp.Z), rr = BRW * tk + 6 + Math.sin(t * 6) * 2;
+    g.setLineDash([5, 4]); g.strokeStyle = '#FFFFFF'; g.lineWidth = 3; g.beginPath(); g.arc(tx, ty, rr, 0, 7); g.stroke(); g.setLineDash([]);
+  }
+  // 見逃し・空振りのあと：ボールの通り道を薄く残す（カーソルとのずれがわかる）
+  if (P && state === 'after' && !fl) {
+    for (let i = 0; i < 6; i++) {
+      const u = .55 + i * .09, b = ballAt(P, u), [bx, by, k] = pj(b.X, b.Y, b.Z);
+      g.globalAlpha = .12 + i * .07; drawBall(bx, by, BRW * k, P.gold); g.globalAlpha = 1;
+    }
+  }
   if (P && (state === 'pitch' || (state === 'after' && !fl && P))) {
     const u = state === 'pitch' ? (t - relT) / P.T : 1.06;
     const b = ballAt(P, u), [bx, by, k] = pj(b.X, b.Y, b.Z);
@@ -675,7 +771,7 @@ function draw(t) {
       g.fillStyle = '#7A3E1C'; g.strokeStyle = '#3A1E0E'; g.lineWidth = 2.5; g.beginPath(); g.ellipse(bx + 3, by + 4, 21, 19, -.2, 0, 7); g.fill(); g.stroke();
       g.fillStyle = '#9A5A2E'; g.beginPath(); g.ellipse(bx + 1, by + 1, 13, 12, -.2, 0, 7); g.fill();
     }
-    drawBall(bx, by, BRW * k);
+    drawBall(bx, by, BRW * k, P.gold);
   }
   // 打ったボール
   if (fl && (state === 'hit' || state === 'after')) {
@@ -686,7 +782,7 @@ function draw(t) {
       // 飛んでいくボールは小さくなるので、白い線のあとをつけて見やすくする
       const pv = flightPos(fl, Math.max(0, u - .06)), [qx, qy] = pj(pv.X, pv.Y, Math.max(.2, pv.Z));
       g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = Math.max(1.5, BRW * k * 1.2); g.beginPath(); g.moveTo(qx, qy); g.lineTo(bx, by); g.stroke();
-      if (!(fl.kind === 'hr' && u > .97)) drawBall(bx, by, Math.max(2.4, BRW * k));
+      if (!(fl.kind === 'hr' && u > .97)) drawBall(bx, by, Math.max(2.4, BRW * k), P && P.gold);
     }
   }
   // カーソル
@@ -701,17 +797,51 @@ function draw(t) {
     g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(cur.x - CRW, cur.y); g.lineTo(cur.x - CRW * .3, cur.y); g.moveTo(cur.x + CRW * .3, cur.y); g.lineTo(cur.x + CRW, cur.y); g.stroke();
     g.globalAlpha = 1;
   }
+  // 打った瞬間の火花
+  if (spark) {
+    const a = t - spark.t0, D = spark.tip ? .2 : .32;
+    if (a > D) spark = null;
+    else {
+      const v = a / D, R1 = (spark.big ? 16 : 10) + v * (spark.big ? 46 : 30);
+      g.globalAlpha = 1 - v; g.strokeStyle = '#FFF3B0'; g.lineWidth = spark.big ? 5 : 3.5;
+      g.beginPath(); g.arc(spark.x, spark.y, R1 * .6, 0, 7); g.stroke();
+      g.strokeStyle = '#FFFFFF'; g.lineWidth = spark.big ? 4 : 3; g.beginPath();
+      for (let i = 0; i < 10; i++) { const an = i / 10 * Math.PI * 2 + .3; g.moveTo(spark.x + Math.cos(an) * R1 * .7, spark.y + Math.sin(an) * R1 * .7); g.lineTo(spark.x + Math.cos(an) * R1, spark.y + Math.sin(an) * R1); }
+      g.stroke(); g.globalAlpha = 1;
+    }
+  }
+  if (fl && !fl.tip && (state === 'hit' || state === 'after')) drawMap(t);
   // 紙ふぶき・フラッシュ
   if (flash > 0) { g.fillStyle = `rgba(255,236,150,${flash * .45})`; g.fillRect(0, 0, W, H); flash = Math.max(0, flash - .03); }
   particles = particles.filter(p => t - p.t < 2.6);
   particles.forEach(p => { const a = t - p.t; g.fillStyle = p.c; g.save(); g.translate(p.x + p.vx * a, p.y + p.vy * a); g.rotate(p.r + a * 6); g.fillRect(-3, -1.5, 6, 3); g.restore(); });
   drawHud(t);
 }
+// v9.6 右上の小さな地図（上から見た球場）：打球がどこまで飛んでいるか
+const MAP = { x: 276, y: 64, w: 78, h: 56, hx: 315, hy: 114, s: .38 };   // 枠・ホームの位置・1mの大きさ
+function drawMap(t) {
+  const m = MAP, pt = (dirDeg, d) => { const r = dirDeg * Math.PI / 180; return [m.hx + Math.sin(r) * d * m.s, m.hy - Math.cos(r) * d * m.s]; };
+  g.fillStyle = 'rgba(255,248,236,.9)'; g.strokeStyle = '#4A2A1A'; g.lineWidth = 2; g.beginPath(); g.roundRect(m.x, m.y, m.w, m.h + 6, 9); g.fill(); g.stroke();
+  // 外野（フェンスまで）
+  g.fillStyle = '#48AC53'; g.beginPath(); g.moveTo(m.hx, m.hy);
+  for (let a = -45; a <= 45; a += 5) g.lineTo(...pt(a, fence(a)));
+  g.closePath(); g.fill(); g.strokeStyle = '#2E6B36'; g.lineWidth = 1.5; g.stroke();
+  // 内野
+  g.fillStyle = '#C98A4F'; g.beginPath(); g.moveTo(m.hx, m.hy); g.lineTo(...pt(-45, 27.4)); g.lineTo(...pt(0, 38.8)); g.lineTo(...pt(45, 27.4)); g.closePath(); g.fill();
+  // 打球
+  const u = Math.min(1, (t - fl.t0) / fl.dur), d = fl.dist * (1 - Math.pow(1 - u, 1.6)), deg = fl.dirR * 180 / Math.PI;
+  const [bx, by] = pt(deg, d);
+  g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(m.hx, m.hy); g.lineTo(bx, by); g.stroke();
+  if (u >= 1) { g.strokeStyle = fl.kind === 'hr' ? '#FFD43B' : '#E0573F'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(bx - 4, by - 4); g.lineTo(bx + 4, by + 4); g.moveTo(bx + 4, by - 4); g.lineTo(bx - 4, by + 4); g.stroke(); }
+  else { g.fillStyle = '#fff'; g.strokeStyle = '#4A2A1A'; g.lineWidth = 1.2; g.beginPath(); g.arc(bx, by, 3, 0, 7); g.fill(); g.stroke(); }
+  g.fillStyle = '#4A2A1A'; g.font = '900 10px "Zen Maru Gothic",sans-serif'; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  g.fillText(`${Math.round(d)}m`, m.x + 4, m.y + m.h + 2);
+}
 function outlineText(txt, x, y, size, fill, stroke, lw) {
   g.font = `900 ${size}px "Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.lineJoin = 'round'; g.strokeStyle = stroke; g.lineWidth = lw; g.strokeText(txt, x, y); g.fillStyle = fill; g.fillText(txt, x, y);
 }
-const KCOL = { hr: '#FFD43B', xbh: '#FF922B', hit: '#69DB7C', foul: '#74C0FC', out: '#DEE2E6', miss: '#FF6B6B', take: '#FFFFFF' };
+const KCOL = { hr: '#FFD43B', xbh: '#FF922B', hit: '#69DB7C', foul: '#74C0FC', out: '#DEE2E6', miss: '#FF6B6B', take: '#FFFFFF', eye: '#B197FC' };
 function drawHud(t) {
   if (state === 'title') return;
   const D = DOGS[dogKey];
@@ -719,23 +849,42 @@ function drawHud(t) {
   g.beginPath(); g.roundRect(52, 9, 300, 50, 12); g.fill(); g.stroke();
   g.fillStyle = '#4A2A1A'; g.font = '900 13px "Zen Maru Gothic",sans-serif'; g.textAlign = 'left'; g.textBaseline = 'middle';
   g.fillText(`${D.name}（${D.lv}）`, 62, 24);
-  g.textAlign = 'right'; g.fillText(`スコア ${score}`, 342, 24);
+  g.textAlign = 'right'; g.fillText(practiceLeft > 0 || (label && label.practice) ? `れんしゅう ${PRACTICE - practiceLeft + (label && label.practice ? 0 : 1)}/${PRACTICE}` : combo >= 2 ? `${combo}連続！ スコア ${score}` : `スコア ${score}`, 342, 24);
   for (let i = 0; i < PITCHES; i++) {
-    const x = 70 + i * 26.5, y = 44, r = results[i];
+    const x = 70 + i * 26.5, y = 44, r = results[i], cur0 = i === results.length && !practiceLeft && state !== 'over' && state !== 'end';
     g.beginPath(); g.arc(x, y, 7.5, 0, 7);
-    g.fillStyle = r ? KCOL[r.res.kind] : (i === results.length && state !== 'over' && state !== 'end' ? '#FFF3BF' : '#E9DCC8'); g.fill();
-    g.strokeStyle = '#4A2A1A'; g.lineWidth = i === results.length ? 2.5 : 1.5; g.stroke();
+    g.fillStyle = r ? KCOL[r.res.kind] : i === goldIdx ? '#FFE8A3' : (cur0 ? '#FFF3BF' : '#E9DCC8'); g.fill();
+    g.strokeStyle = !r && i === goldIdx ? '#E0A800' : '#4A2A1A'; g.lineWidth = cur0 || (!r && i === goldIdx) ? 2.5 : 1.5; g.stroke();
+    if (!r && i === goldIdx) { g.fillStyle = '#B07800'; g.font = '900 8px sans-serif'; g.textAlign = 'center'; g.fillText('×2', x, y + .5); }
   }
   if (label) {
     const a = t - label.t0, sc = a < .18 ? .6 + a / .18 * .5 : a < .3 ? 1.1 - (a - .18) / .12 * .1 : 1;
-    g.save(); g.translate(CX, 128); g.scale(sc, sc);
-    const big = label.kind === 'hr' ? 40 : 32;
+    // 右上の地図が出ているときは少し左へ、倍率のメモがあるときは少し上へ（重ならないように）
+    const mapOn = fl && !fl.tip, lx = mapOn ? 158 : CX, ly = label.note ? 110 : 128;
+    g.save(); g.translate(lx, ly); g.scale(sc, sc);
+    const big = label.kind === 'hr' ? (mapOn ? 36 : 40) : 32;
     outlineText(label.txt, 0, 0, big, KCOL[label.kind] || '#fff', '#4A2A1A', 7);
     if (label.pts) outlineText(`+${label.pts}`, 0, big * .95, 22, '#fff', '#4A2A1A', 5);
+    if (label.note) outlineText(label.note, 0, big * .95 + 21, 13, '#FFE066', '#4A2A1A', 4);
     g.restore();
     outlineText(label.sub, CX, 188, 13, '#fff', 'rgba(40,25,15,.85)', 4);
+  } else if ((state === 'ready' || state === 'windup') && !practiceLeft && results.length === goldIdx) {
+    outlineText('金のボール！', CX, 120, 30, '#FFD43B', '#4A2A1A', 7);
+    outlineText(`打てば得点 ×${GOLD_MUL}`, CX, 152, 15, '#fff', '#4A2A1A', 4);
   } else if (state === 'ready' && !results.length) {
-    outlineText('かまえて…', CX, 128, 26, '#fff', '#4A2A1A', 6);
+    outlineText(practiceLeft ? 'れんしゅう' : 'かまえて…', CX, 128, 26, '#fff', '#4A2A1A', 6);
+  }
+  // 振った直後の評価（カーソルの上）
+  if (pop) {
+    const a = t - pop.t0;
+    if (a > 1.3) pop = null;
+    else {
+      g.globalAlpha = a > 1 ? 1 - (a - 1) / .3 : 1;
+      const sc = a < .12 ? .7 + a / .12 * .4 : a < .22 ? 1.1 - (a - .12) : 1, y = pop.y - Math.min(a, .4) * 20;
+      g.save(); g.translate(pop.x, y); g.scale(sc, sc); outlineText(pop.txt, 0, 0, 22, pop.col, '#4A2A1A', 5); g.restore();
+      if (pop.tip) outlineText(pop.tip, pop.x, y + 22, 13, '#fff', '#4A2A1A', 4);
+      g.globalAlpha = 1;
+    }
   }
 }
 
@@ -778,9 +927,11 @@ document.getElementById('backBtn').addEventListener('click', e => { e.stopPropag
 
 // ===== タイトル・結果 =====
 const titleOv = document.getElementById('titleOv'), resultOv = document.getElementById('resultOv');
+const starsOf = sc => STARS.filter(s => sc >= s).length;
+const starHTML = n => `<span class="stars"><b>${'★'.repeat(n)}</b>${'★'.repeat(3 - n)}</span>`;
 function showTitle() {
   loadInfo(); calcStats();
-  state = 'title'; titleOv.hidden = false; resultOv.hidden = true; padHint.hidden = true; drag = null;
+  state = 'title'; titleOv.hidden = false; resultOv.hidden = true; padHint.hidden = true; drag = null; hintKey = ''; practiceLeft = 0;
   const bar = (v, col) => `<span class="bar"><i style="width:${Math.round(eff(v) * 100)}%;background:${col}"></i></span>`;
   document.getElementById('catCard').innerHTML = `<div class="ttl">${esc(CAT.name)}　Lv.${CAT.level}${APP ? '' : '<small style="font-weight:700">（アプリの外：ためし打ち）</small>'}</div>
     <div class="st"><span>ちから</span><b>${CAT.pow}</b>${bar(CAT.pow, '#E0573F')}<span class="eff">飛距離（最大 ${Math.round(MAXD)}m）</span></div>
@@ -792,34 +943,45 @@ function showTitle() {
     const D = DOGS[k], b = document.createElement('button'); b.className = 'dog'; b.type = 'button';
     b.innerHTML = `<canvas width="180" height="180"></canvas><b>${D.name}</b><span class="lv" style="background:${D.lvc}">${D.lv}</span>
       <span class="sm">${D.kmh[0]}〜${D.kmh[1]}km/h<br>${Object.keys(D.mix).map((p, i, a) => `<i>${PTYPE[p].name}${i < a.length - 1 ? '・' : ''}</i>`).join('')}</span>
-      <span class="sm">コイン×${D.coin}</span><span class="best">ベスト ${best[k] || 0}</span>`;
+      <span class="sm">コイン×${D.coin}</span>${starHTML(starsOf(best[k] || 0))}<span class="best">ベスト ${best[k] || 0}</span>`;
     const pc = b.querySelector('canvas'), c2 = pc.getContext('2d'); drawDog(c2, k, 90, 168, 1.45, { w: 0, ball: true });
     b.addEventListener('click', () => { audio(); se('start'); dogKey = k; startGame(); });
     list.appendChild(b);
   });
   document.getElementById('maxC').textContent = INFO ? INFO.max : 50;
+  document.getElementById('starPts').textContent = STARS.map((s, i) => `★${i + 1}（${s}点）`).join('');
   document.getElementById('leftMsg').textContent = !APP ? 'アプリの中で遊ぶとコインがもらえます' : INFO && INFO.left > 0 ? `今日の報酬つきプレイ　のこり ${INFO.left}回` : '今日の報酬はもう受けとりました（練習モード）';
 }
-function startGame() {
+// withPractice：練習球つき（はじめての人は自動でつく）
+function startGame(withPractice) {
   titleOv.hidden = true; resultOv.hidden = true; drag = null;
-  results = []; score = 0; particles = []; label = null; fl = null;
+  results = []; score = 0; particles = []; label = null; fl = null; pop = null; spark = null; combo = 0; hintKey = '';
+  goldIdx = 2 + Math.floor(R() * (PITCHES - 2));   // 3球目〜10球目のどれか
+  const b = getBest(), played = Object.keys(DOGS).some(k => (b[k] || 0) > 0);   // 前から遊んでいる人には練習を出さない
+  practiceLeft = withPractice || (!b.tut && !played) ? PRACTICE : 0;
   cur.x = CX; cur.y = (ZT + ZB) / 2;
+  padHint.innerHTML = '画面を<b>おしたまま</b>動かしてカーソルを合わせ、<br><b>指をはなすとスイング！</b>';
   padHint.hidden = false; padHint.classList.remove('fade');
   startPitchCycle(1.1);
 }
+document.getElementById('practiceBtn').addEventListener('click', () => { audio(); se('start'); dogKey = 'shiba'; startGame(true); });
 function showResult() {
   const D = DOGS[dogKey];
   const raw = Math.floor(score * D.coin / COIN_DIV);
   let msg;
   if (APP) { const r = APP.reward(raw); msg = r.ok ? r.msg : (raw <= 0 ? 'コインなし（0点）' : r.msg || 'コインなし'); }
   else msg = `アプリの中なら +${Math.min(50, raw)}コイン`;
-  const best = getBest(), nb = score > (best[dogKey] || 0);
+  const best = getBest(), prevStars = starsOf(best[dogKey] || 0), nb = score > (best[dogKey] || 0);
   if (nb) { best[dogKey] = score; setBest(best); }
+  const st = starsOf(score), next = STARS[st];
   const cnt = k => results.filter(r => r.res.kind === k).length;
+  const maxCombo = results.reduce((a, r) => { const h = ['hr', 'xbh', 'hit'].includes(r.res.kind); a.c = h ? a.c + 1 : (r.res.kind === 'foul' || r.res.kind === 'eye' ? a.c : 0); a.m = Math.max(a.m, a.c); return a; }, { c: 0, m: 0 }).m;
   document.getElementById('resBody').innerHTML = `<div class="big"><small>${D.name}（${D.lv}）</small>${score}<small>点</small></div>
+    ${starHTML(st)}
+    <div class="nb" style="font-size:.85em">${st > prevStars ? `★${st} はじめてとった！` : next ? `★${st + 1} まで あと ${next - score}点` : '★3 達成！'}</div>
     ${nb ? '<div class="nb">ベスト更新！</div>' : `<div class="nb" style="color:#8a7060">ベスト ${best[dogKey] || 0}</div>`}
-    <div style="text-align:center;font-weight:900;font-size:.85em;margin:.3em 0">ホームラン ${cnt('hr')}・長打 ${cnt('xbh')}・ヒット ${cnt('hit')}・ファウル ${cnt('foul')}</div>
-    <div class="log">${results.map((r, i) => `<span class="k">${i + 1}</span><span>${r.p.name} ${r.p.kmh}km/h</span><b style="color:${r.pts ? '#B5482B' : '#8a7060'}">${esc(r.res.label || (r.res.kind === 'miss' ? '空振り' : r.p.inZone ? '見逃し' : 'ボール'))}${r.pts ? ' +' + r.pts : ''}</b>`).join('')}</div>
+    <div style="text-align:center;font-weight:900;font-size:.85em;margin:.3em 0">ホームラン ${cnt('hr')}・長打 ${cnt('xbh')}・ヒット ${cnt('hit')}・ファウル ${cnt('foul')}<br>ナイス選球 ${cnt('eye')}・最大 ${maxCombo}連続</div>
+    <div class="log">${results.map((r, i) => `<span class="k">${i + 1}</span><span>${r.p.gold ? '<b style="color:#C98A00">金</b> ' : ''}${r.p.name} ${r.p.kmh}km/h</span><b style="color:${r.pts ? '#B5482B' : '#8a7060'}">${esc(r.res.label || (r.res.kind === 'miss' ? '空振り' : r.p.inZone ? '見逃し' : 'ボール'))}${r.pts ? ' +' + r.pts : ''}${r.notes && r.notes.length ? `<small style="display:block;font-size:.8em;color:#C98A00">${esc(r.notes.join('・'))}</small>` : ''}</b>`).join('')}</div>
     <div class="coin" style="margin-top:.6em">${esc(msg)}</div>`;
   resultOv.hidden = false; resultOv.scrollTop = 0;
 }
@@ -828,7 +990,7 @@ document.getElementById('pickBtn').addEventListener('click', () => { se('tap'); 
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 // 試しやすいように（開発用）：コンソールから window.__bb で中をのぞける
-window.__bb = { get state() { return state; }, get P() { return P; }, get score() { return score; }, get results() { return results; }, cur, judge, doSwing, get CRW() { return CRW; }, get TW() { return TW; }, get MAXD() { return MAXD; }, get relT() { return relT; }, ballAt, setCat(o) { Object.assign(CAT, o); calcStats(); } };
+window.__bb = { get state() { return state; }, get P() { return P; }, get score() { return score; }, get results() { return results; }, cur, judge, doSwing, get CRW() { return CRW; }, get TW() { return TW; }, get MAXD() { return MAXD; }, get relT() { return relT; }, get practiceLeft() { return practiceLeft; }, get combo() { return combo; }, get goldIdx() { return goldIdx; }, ballAt, setCat(o) { Object.assign(CAT, o); calcStats(); } };
 
 window.addEventListener('resize', resize);
 resize(); showTitle();
