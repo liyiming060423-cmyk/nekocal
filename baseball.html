@@ -18,14 +18,7 @@ body{background:#1E4A2E;display:flex;align-items:center;justify-content:center;o
 #stage{position:relative;width:min(100vw,calc(100vh*9/16));width:min(100vw,calc(100dvh*9/16));aspect-ratio:9/16;max-height:100vh;max-height:100dvh;overflow:hidden;font-size:14px;background:#7EC8F2}
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
 #backBtn{position:absolute;top:.6em;left:.6em;z-index:8;width:2.7em;height:2.7em;border-radius:50%;border:3px solid var(--ink);background:#fff;color:var(--ink);font:900 1.3em/1 var(--font);box-shadow:0 3px 0 var(--ink);cursor:pointer;padding:0}
-#swingBtn{position:absolute;right:4%;bottom:3.2%;z-index:4;width:30%;aspect-ratio:1;border-radius:50%;border:4px solid var(--ink);
-  background:radial-gradient(circle at 35% 30%,#FF8A6B,#E0573F 55%,#B83A26);color:#fff;font:900 1.3em/1 var(--font);letter-spacing:.04em;
-  text-shadow:0 2px 0 rgba(0,0,0,.35);box-shadow:0 .4em 0 var(--ink);cursor:pointer;touch-action:none;padding:0}
-#swingBtn small{display:block;font-size:.55em;margin-top:.35em;opacity:.9;letter-spacing:0}
-#swingBtn.on{transform:translateY(.3em);box-shadow:0 .1em 0 var(--ink)}
-#swingBtn[hidden]{display:none}
-@media (pointer:coarse){#swingBtn small{display:none}}
-#padHint{position:absolute;left:4%;bottom:5%;z-index:3;width:56%;padding:.55em .7em;border-radius:1em;background:rgba(255,255,255,.82);border:2px dashed rgba(74,42,26,.55);
+#padHint{position:absolute;left:8%;bottom:4%;z-index:3;width:84%;padding:.55em .7em;border-radius:1em;background:rgba(255,255,255,.82);border:2px dashed rgba(74,42,26,.55);
   font-weight:900;font-size:.86em;line-height:1.35;text-align:center;pointer-events:none;transition:opacity .4s}
 #padHint.fade{opacity:0}
 .ov{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;gap:.6em;padding:3.6em .9em 1.1em;overflow-y:auto;
@@ -69,8 +62,7 @@ body{background:#1E4A2E;display:flex;align-items:center;justify-content:center;o
 <div id="stage">
   <canvas id="cv" width="360" height="640" aria-label="バッティングの画面（キャッチャーの後ろから見た球場）"></canvas>
   <button id="backBtn" aria-label="にゃんカロにもどる">×</button>
-  <div id="padHint" hidden>画面をドラッグして<br>カーソルを動かす</div>
-  <button id="swingBtn" hidden aria-label="スイング">スイング<small>（スペースキー）</small></button>
+  <div id="padHint" hidden>画面を<b>おしたまま</b>動かしてカーソルを合わせ、<br><b>指をはなすとスイング！</b></div>
 
   <div class="ov" id="titleOv">
     <h1>にゃんこバッティング<span>犬のピッチャーの10球を打ちかえせ！</span></h1>
@@ -78,7 +70,7 @@ body{background:#1E4A2E;display:flex;align-items:center;justify-content:center;o
     <div class="dogs" id="dogList"></div>
     <div class="left" id="leftMsg"></div>
     <div class="card how">
-      <b>あそびかた</b>　画面のどこでもドラッグすると黄色い<b>カーソル</b>が動く。ボールがカーソルに重なったときに<b>スイング</b>！<br>
+      <b>あそびかた</b>　画面のどこでも<b>おしたまま</b>動かすと黄色い<b>カーソル</b>が動く。ボールがカーソルに重なったときに<b>指をはなすとスイング</b>！（ピッチャーが投げる前にはなしても振らない。PCは矢印キー＋スペース）<br>
       カーソルの真ん中（オレンジ）で打つと遠くへ飛ぶ。ボールの<b>下</b>を打つとフライ、<b>上</b>を打つとゴロ。早く振ると左へ、おそいと右へ。<br>
       ホームラン100・長打50・ヒット30・ファウル5点。合計点でコインがもらえる（最大<span id="maxC">50</span>）。
     </div>
@@ -119,7 +111,7 @@ const PTYPE = {
   sl: { name: 'スライダー', spd: .9,   bx: .24, by: .05, k: 2.4 },
   fk: { name: 'フォーク',   spd: .92,  bx: 0,   by: .30, k: 3.6 }
 };
-const LAG = .07;   // スイングボタンを押してからバットがボールの位置にくるまで（秒）
+const LAG = .07;   // 指をはなしてからバットがボールの位置にくるまで（秒）
 
 // ===== アプリとのつなぎ =====
 const APP = (() => { try { return window.parent !== window && window.parent.nyankaloMini ? window.parent.nyankaloMini : null; } catch (e) { return null; } })();
@@ -618,8 +610,10 @@ function draw(t) {
   if (state !== 'title' && state !== 'over') {
     const a = state === 'pitch' || state === 'windup' ? 1 : .55;
     g.globalAlpha = a;
-    g.fillStyle = 'rgba(255,214,60,.25)'; g.strokeStyle = '#FFD43B'; g.lineWidth = 2.5;
-    g.beginPath(); g.ellipse(cur.x, cur.y, CRW, CRH, 0, 0, 7); g.fill(); g.stroke();
+    // 指でおしている間は太く光らせる（はなすとスイング）
+    g.fillStyle = drag ? 'rgba(255,214,60,.38)' : 'rgba(255,214,60,.22)'; g.strokeStyle = drag ? '#FFE066' : '#FFD43B'; g.lineWidth = drag ? 4 : 2.5;
+    if (drag) { g.shadowColor = '#FFD43B'; g.shadowBlur = 10; }
+    g.beginPath(); g.ellipse(cur.x, cur.y, CRW, CRH, 0, 0, 7); g.fill(); g.stroke(); g.shadowBlur = 0;
     g.fillStyle = 'rgba(255,140,0,.55)'; g.beginPath(); g.ellipse(cur.x, cur.y, CRW * .25, CRH * .25, 0, 0, 7); g.fill();
     g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(cur.x - CRW, cur.y); g.lineTo(cur.x - CRW * .3, cur.y); g.moveTo(cur.x + CRW * .3, cur.y); g.lineTo(cur.x + CRW, cur.y); g.stroke();
     g.globalAlpha = 1;
@@ -663,7 +657,7 @@ function drawHud(t) {
 }
 
 // ===== 操作 =====
-const swingBtn = document.getElementById('swingBtn'), padHint = document.getElementById('padHint');
+const padHint = document.getElementById('padHint');
 let hintTimer = 0;
 function hideHint() { if (!padHint.hidden) { padHint.classList.add('fade'); clearTimeout(hintTimer); hintTimer = setTimeout(() => { padHint.hidden = true; padHint.classList.remove('fade'); }, 450); } }
 function moveCur(dx, dy) {
@@ -674,27 +668,27 @@ let drag = null;
 stage.addEventListener('pointerdown', e => {
   if (e.target !== cv) return;
   if (state === 'title' || state === 'over') return;
+  if (drag) return;   // 2本目の指は使わない
   drag = { id: e.pointerId, x: e.clientX, y: e.clientY }; e.preventDefault();
+  try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+  audio();
 });
 stage.addEventListener('pointermove', e => {
   if (!drag || e.pointerId !== drag.id) return;
   const k = W / stage.clientWidth * 1.15;
   moveCur((e.clientX - drag.x) * k, (e.clientY - drag.y) * k);
   drag.x = e.clientX; drag.y = e.clientY;
-  if (Math.abs(cur.x - CX) > 8 || Math.abs(cur.y - (ZT + ZB) / 2) > 8) hideHint();
 });
-const endDrag = e => { if (drag && e.pointerId === drag.id) drag = null; };
-stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
-swingBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); swingBtn.classList.add('on'); doSwing(); });
-['pointerup', 'pointercancel', 'pointerleave'].forEach(n => swingBtn.addEventListener(n, () => swingBtn.classList.remove('on')));
-swingBtn.addEventListener('click', e => e.preventDefault());
+// 長おし → はなすとスイング（投げる前にはなしたときは振らない）
+stage.addEventListener('pointerup', e => { if (drag && e.pointerId === drag.id) { drag = null; doSwing(); } });
+stage.addEventListener('pointercancel', e => { if (drag && e.pointerId === drag.id) drag = null; });
 const keys = new Set();
 window.addEventListener('keydown', e => {
   if (state === 'title' || state === 'over') return;
-  if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if (!e.repeat) { swingBtn.classList.add('on'); doSwing(); } }
+  if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if (!e.repeat) doSwing(); }
   if (e.key.startsWith('Arrow')) { e.preventDefault(); keys.add(e.key); }
 });
-window.addEventListener('keyup', e => { keys.delete(e.key); if (e.key === ' ' || e.key === 'Enter') swingBtn.classList.remove('on'); });
+window.addEventListener('keyup', e => keys.delete(e.key));
 window.addEventListener('blur', () => keys.clear());
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.getElementById('backBtn').addEventListener('click', e => { e.stopPropagation(); if (ac) try { ac.close(); } catch (_) {} if (APP) APP.close(); else history.back(); });
@@ -703,7 +697,7 @@ document.getElementById('backBtn').addEventListener('click', e => { e.stopPropag
 const titleOv = document.getElementById('titleOv'), resultOv = document.getElementById('resultOv');
 function showTitle() {
   loadInfo(); calcStats();
-  state = 'title'; titleOv.hidden = false; resultOv.hidden = true; swingBtn.hidden = true; padHint.hidden = true;
+  state = 'title'; titleOv.hidden = false; resultOv.hidden = true; padHint.hidden = true; drag = null;
   const bar = (v, col) => `<span class="bar"><i style="width:${Math.round(eff(v) * 100)}%;background:${col}"></i></span>`;
   document.getElementById('catCard').innerHTML = `<div class="ttl">${esc(CAT.name)}　Lv.${CAT.level}${APP ? '' : '<small style="font-weight:700">（アプリの外：ためし打ち）</small>'}</div>
     <div class="st"><span>ちから</span><b>${CAT.pow}</b>${bar(CAT.pow, '#E0573F')}<span class="eff">飛距離（最大 ${Math.round(MAXD)}m）</span></div>
@@ -724,7 +718,7 @@ function showTitle() {
   document.getElementById('leftMsg').textContent = !APP ? 'アプリの中で遊ぶとコインがもらえます' : INFO && INFO.left > 0 ? `今日の報酬つきプレイ　のこり ${INFO.left}回` : '今日の報酬はもう受けとりました（練習モード）';
 }
 function startGame() {
-  titleOv.hidden = true; resultOv.hidden = true; swingBtn.hidden = false;
+  titleOv.hidden = true; resultOv.hidden = true; drag = null;
   results = []; score = 0; particles = []; label = null; fl = null;
   cur.x = CX; cur.y = (ZT + ZB) / 2;
   padHint.hidden = false; padHint.classList.remove('fade');
@@ -732,7 +726,6 @@ function startGame() {
 }
 function showResult() {
   const D = DOGS[dogKey];
-  swingBtn.hidden = true;
   const raw = Math.floor(score * D.coin / COIN_DIV);
   let msg;
   if (APP) { const r = APP.reward(raw); msg = r.ok ? r.msg : (raw <= 0 ? 'コインなし（0点）' : r.msg || 'コインなし'); }
