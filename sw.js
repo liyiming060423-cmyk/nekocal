@@ -1,19 +1,22 @@
 // にゃんカロ service worker
 // アプリ本体はキャッシュしてオフラインでも起動できるようにする。
 // 更新したら VERSION の数字を上げると、利用者のスマホに新しい版が届く。
-const VERSION = 'v8';
-const CACHE = 'nekocal-' + VERSION;
+const VERSION = '8.1';   // index.html などの ?v= と同じ数字にする
+const CACHE = 'nekocal-v' + VERSION;
+const V = '?v=' + VERSION;
 const APP_FILES = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './style.css',
-  './data.js',
-  './cat.js',
-  './petcat.js',
-  './petcat.css',
+  './style.css' + V,
+  './data.js' + V,
+  './cat.js' + V,
+  './petcat.js' + V,
+  './petcat.css' + V,
   './sagase.html',
-  './sagase.css',
+  './dash.html',
+  './slot.html',
+  './sagase.css' + V,
   './home-bg.jpg',
   './cats/tabby-body.png',
   './cats/tabby-tail.png',
@@ -33,12 +36,14 @@ const APP_FILES = [
   './cats/grey-gloves.png',
   './gym-bg.jpg',
   './shop-bg.jpg',
-  './app.js',
+  './app.js' + V,
   './icon-192.png',
   './icon-512.png',
   './icon-maskable-512.png',
   './apple-touch-icon.png'
 ];
+
+const GAME_PAGES = ['sagase.html', 'dash.html', 'slot.html'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(APP_FILES)).then(() => self.skipWaiting()));
@@ -58,10 +63,10 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
 
   // 画面（HTML）：ネット優先、つながらなければキャッシュ
-  // （ミニゲームの sagase.html も画面なので、ページごとに別々に保存する）
+  // （ミニゲームのページも画面なので、ページごとに別々に保存する）
   if (req.mode === 'navigate') {
-    const isGame = url.pathname.endsWith('/sagase.html');
-    const key = isGame ? './sagase.html' : './index.html';
+    const page = url.pathname.split('/').pop();
+    const key = GAME_PAGES.includes(page) ? './' + page : './index.html';
     e.respondWith(
       fetch(req)
         .then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(key, copy)); } return res; })
@@ -80,6 +85,12 @@ self.addEventListener('fetch', (e) => {
         })
       )
     );
+    return;
+  }
+
+  // スロットのBGM（1.3MB）は最初に聞いたときに保存する（インストール時には落とさない）
+  if (url.origin === location.origin && url.pathname.endsWith('/slot-bgm.mp3')) {
+    e.respondWith(caches.open(CACHE).then((c) => c.match(req).then((hit) => hit || fetch(req).then((res) => { if (res.ok && res.status === 200) c.put(req, res.clone()); return res; }))));
     return;
   }
 

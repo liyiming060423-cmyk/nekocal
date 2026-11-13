@@ -451,3 +451,15 @@ body.mini-open { overflow: hidden; }
 .pfc-tag { justify-self: end; font-size: 11px; font-weight: 900; padding: 2px 8px; border-radius: 999px; background: #FFE3D6; color: #B4462A; }
 .pfc-tag.ok { background: #E1F3E3; color: #2F7D3A; }
 .w-nav { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+
+/* 猫のSOS：画面のふちが赤く光る */
+body.sos::after { content: ""; position: fixed; inset: 0; z-index: 80; pointer-events: none; box-shadow: inset 0 0 0 0 rgba(224, 87, 63, 0); animation: sosFlash 1.6s ease-out 2; }
+@keyframes sosFlash { 30% { box-shadow: inset 0 0 60px 18px rgba(224, 87, 63, .75); } 100% { box-shadow: inset 0 0 0 0 rgba(224, 87, 63, 0); } }
+/* 間食をふくめて4つ並べる */
+.meals3 { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.meals3 .meal-card { padding: 16px 4px 8px; min-height: 128px; }
+.meals3 .meal-card .slot { font-size: 18px; top: -13px; padding: 0 5px; white-space: nowrap; }
+.meals3 .meal-card .mname { font-size: 12px; }
+.meals3 .meal-card img, .meals3 .meal-card .ph { width: 54px; height: 44px; }
+.meals3 .meal-card .kc { font-size: 13px; }
+.meals3 .meal-card .hint { font-size: 11px; }

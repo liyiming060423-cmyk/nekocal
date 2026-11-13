@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>にゃんこダッシュ</title>
+<style>
+:root{--bg:#eef1f6;--bd:#c9d0de;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10131b;--bd:#333b52}}
+:root[data-theme="dark"]{--bg:#10131b;--bd:#333b52}
+html,body{height:100%;margin:0}
+body{background:var(--bg);display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;-webkit-user-select:none}
+#backBtn{position:fixed;top:max(8px,env(safe-area-inset-top));left:8px;z-index:5;width:38px;height:38px;border-radius:50%;border:1px solid var(--bd);background:rgba(255,255,255,.92);color:#3b2a20;font:900 20px/1 system-ui,sans-serif;box-shadow:0 2px 6px rgba(0,0,0,.2);cursor:pointer}
+canvas{width:min(96vw,calc(94vh*.6),432px);aspect-ratio:3/5;height:auto;border-radius:14px;border:1px solid var(--bd);display:block}
+</style>
+</head>
+<body>
+<!-- 組員作のミニゲーム。にゃんカロの中で開くと、拾ったコインがアプリにたまる（1回の上限あり） -->
+<button id="backBtn" aria-label="にゃんカロにもどる">×</button>
+<canvas id="cv" width="360" height="600"></canvas>
+<script>
+const cv=document.getElementById('cv'),g=cv.getContext('2d');
+const W=360,H=600,LW=W/3,PY=H-110,R=Math.random;
+const canVib=typeof navigator.vibrate==='function';
+let set={vib:true,snd:true};
+try{Object.assign(set,JSON.parse(localStorage.getItem('nd_set')||'{}'))}catch(e){}
+// にゃんカロとのつなぎ（同じサイトの中で iframe として開かれたときだけ使える）
+const APP=(()=>{try{return window.parent!==window&&window.parent.nyankaloMini?window.parent.nyankaloMini:null}catch(e){return null}})();
+if(APP&&!APP.info().sound)set.snd=false;
+let rewardMsg='',rewardGiven=0;
+let best=0;try{best=APP?((APP.getRec('dash')||{}).best||0):(+localStorage.getItem('nd_best')||0)}catch(e){}
+document.getElementById('backBtn').addEventListener('click',e=>{e.stopPropagation();state='start';if(ac)try{ac.close()}catch(_){}if(APP)APP.close();else history.back()});
+const save=()=>{try{localStorage.setItem('nd_set',JSON.stringify(set))}catch(e){}};
+let state='start',lane=1,px=LW*1.5,items=[],speed=250,trav=0,coins=0,t=0,off=0,shake=0,newBest=false;
+let obsTimer=0,coinTimer=0,safe=[1,1,1],lastG=0.5,notice='',noticeT=0,ac=null,bgmStep=0,nextT=0,sx=0,sy=0,sw=false,pz=0,pv=0,magT=0,shield=false,inv=0,magNext=60,barNext=30,st=0,dbgOn=false,dbgSpeed=1,dbgGhost=false,drag=false,vibTaps=[];
+const touchUI=matchMedia('(pointer:coarse)').matches;
+const cx=l=>LW*l+LW/2;
+const fmt=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
+const dist=()=>Math.floor(trav/20),score=()=>dist()+coins*10;
+
+function reset(){items=[];speed=250;trav=0;coins=0;t=0;lane=1;px=cx(1);off=0;shake=0;newBest=false;obsTimer=1.4;coinTimer=.6;safe=[1,1,1];lastG=.5;pz=0;pv=0;magT=0;shield=false;inv=0;magNext=60;barNext=30;st=0}
+
+// 障害物: 前の列から到達可能なレーンが必ず1つ残るように配置（階段状でも回避可能）
+function spawnObs(){
+  const g_=lastG,step=.28;
+  const reach=[0,1,2].map(l=>safe.some((s,j)=>s&&Math.abs(l-j)*step<=g_));
+  for(let k=0;k<20;k++){
+    const n=R()<.4?2:1,bl=[0,1,2].sort(()=>R()-.5).slice(0,n);
+    if(bl.some(l=>items.some(c=>(c.t==='m'||c.t==='b')&&c.l===l&&Math.abs(c.y+60)<70)))continue;
+    const ns=[0,1,2].map(l=>reach[l]&&!bl.includes(l));
+    if(ns.some(x=>x)){
+      safe=ns;
+      bl.forEach(l=>{
+        items=items.filter(c=>!(c.t==='c'&&c.l===l&&Math.abs(c.y+60)<50));
+        const k=R()<.5?0:1;
+        items.push({l,y:-60,t:'o',k});
+        if(k===0&&R()<.2)[46,-46,-88].forEach(d=>items.push({l,y:-60+d,t:'c'}));
+      });
+      return;
+    }
+  }
+  safe=reach.map(x=>x?1:0);
+}
+function spawnCoin(){
+  const l=Math.floor(R()*3),n=1+Math.floor(R()*4);
+  if(items.some(o=>o.l===l&&o.t!=='c'&&o.y<0))return;
+  for(let i=0;i<n;i++)items.push({l,y:-40-i*42,t:'c'});
+}
+// 地面湧きアイテム（m=マグネット / b=バリア）
+function spawnItem(k){
+  for(const l of [0,1,2].sort(()=>R()-.5)){
+    if(items.some(o=>o.l===l&&o.t==='o'&&o.y<60))continue;
+    items=items.filter(c=>!(c.t==='c'&&c.l===l&&Math.abs(c.y+40)<60));
+    items.push({l,y:-40,t:k});return;
+  }
+}
+function drawItem(k,x,y){
+  y+=Math.sin(trav/40)*3;
+  g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(x,y+24,14,5,0,0,7);g.fill();
+  g.beginPath();g.arc(x,y,20,0,7);g.fillStyle=k==='m'?'#fff':'#e8f4ff';g.fill();
+  g.lineWidth=3;g.strokeStyle=k==='m'?'#e5484d':'#3b82f6';g.stroke();
+  if(k==='m'){
+    g.lineWidth=6;g.lineCap='butt';g.strokeStyle='#e5484d';g.beginPath();g.arc(x,y+2,8,Math.PI,0,false);g.stroke();
+    g.fillStyle='#bbb';g.fillRect(x-11,y+2,6,8);g.fillRect(x+5,y+2,6,8);
+  }else{
+    g.fillStyle='#3b82f6';g.beginPath();g.moveTo(x-10,y-10);g.lineTo(x+10,y-10);g.lineTo(x+10,y+2);
+    g.quadraticCurveTo(x+10,y+11,x,y+14);g.quadraticCurveTo(x-10,y+11,x-10,y+2);g.closePath();g.fill();
+    g.strokeStyle='#fff';g.lineWidth=2.5;g.lineCap='round';g.beginPath();g.moveTo(x-5,y);g.lineTo(x-1,y+5);g.lineTo(x+6,y-5);g.stroke();
+  }
+}
+
+function move(d){if(state==='play'&&pz===0)lane=Math.max(0,Math.min(2,lane+d))}
+function jump(){if(state==='play'&&pz===0)pv=400}
+function setSpeedFromX(x){const f=Math.max(0,Math.min(1,(x-16)/190));dbgSpeed=Math.round((.25+2.75*f)*20)/20}
+function dbgDo(i){
+  if(state!=='play'){notice='プレイ中のみ使えます';noticeT=2;return}
+  if(i<2){const n=i?60:30;t+=n;st+=n;notice='+'+n+'秒ジャンプ'}
+  else if(i===2){magT=15;notice='マグネット付与'}
+  else{shield=true;notice='バリア付与'}
+  noticeT=1.8;
+}
+function start(){
+  initAudio();reset();state='play';if(ac)nextT=ac.currentTime+.05;bgmStep=0;
+}
+function gameOver(){
+  state='over';shake=20;
+  se('hit');
+  if(set.vib&&canVib&&!navigator.vibrate([300,100,200])){notice='この環境では振動が使えません';noticeT=3}
+  if(!dbgOn&&score()>best){best=score();newBest=true;try{if(APP)APP.setRec('dash',{best});else localStorage.setItem('nd_best',best)}catch(e){}}
+  // アプリへ：拾ったコイン（デバッグ中は0）。1回の上限あり・報酬つきプレイを1回使う
+  rewardMsg='';rewardGiven=0;
+  if(APP){const r=APP.reward(dbgOn?0:coins);rewardGiven=r.given;rewardMsg=dbgOn?'デバッグ中はコインなし':(r.msg||(coins?'':'コインを拾うとアプリにたまるよ'))}
+}
+
+// サウンド（WebAudioで生成）
+function initAudio(){
+  if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}
+  if(ac&&ac.state==='suspended')ac.resume();
+}
+function tone(f,t0,d,type,vol){
+  const o=ac.createOscillator(),gn=ac.createGain();
+  o.type=type;o.frequency.value=f;
+  gn.gain.setValueAtTime(vol,t0);gn.gain.exponentialRampToValueAtTime(.0001,t0+d);
+  o.connect(gn);gn.connect(ac.destination);o.start(t0);o.stop(t0+d+.02);
+}
+function se(kind){
+  if(!ac||!set.snd)return;
+  const n=ac.currentTime;
+  if(kind==='coin'){tone(988,n,.08,'square',.07);tone(1319,n+.07,.16,'square',.07)}
+  else if(kind==='item'){tone(660,n,.08,'square',.07);tone(880,n+.07,.08,'square',.07);tone(1175,n+.14,.18,'square',.07)}
+  else if(kind==='break'){tone(200,n,.15,'sawtooth',.12);tone(500,n,.08,'square',.06)}
+  else{
+    const o=ac.createOscillator(),gn=ac.createGain();
+    o.type='sawtooth';o.frequency.setValueAtTime(320,n);o.frequency.exponentialRampToValueAtTime(40,n+.5);
+    gn.gain.setValueAtTime(.2,n);gn.gain.exponentialRampToValueAtTime(.0001,n+.55);
+    o.connect(gn);gn.connect(ac.destination);o.start(n);o.stop(n+.6);
+    tone(90,n,.3,'square',.15);
+  }
+}
+const MEL=[523,659,784,659,880,784,659,587,523,659,784,1047,880,784,659,587];
+const BAS=[131,131,196,196,175,175,196,196];
+function bgm(){
+  if(!ac||!set.snd||state!=='play')return;
+  const bt=60/(130+Math.min(st*.4,70))/2;
+  if(nextT<ac.currentTime-.5)nextT=ac.currentTime;
+  while(nextT<ac.currentTime+.3){
+    const i=bgmStep%16;
+    tone(MEL[i],nextT,bt*.9,'square',.035);
+    if(i%2===0)tone(BAS[i>>1],nextT,bt*1.8,'triangle',.07);
+    bgmStep++;nextT+=bt;
+  }
+}
+
+function btns(){
+  const a=[];
+  a.push({id:'snd',l:'音',on:set.snd});
+  a.push({id:'vib',l:'振動',on:set.vib});
+  a.forEach((b,i)=>{b.x=W-96;b.y=10+i*36;b.w=86;b.h=28});
+  return a;
+}
+
+addEventListener('keydown',e=>{
+  if(['ArrowLeft','a','A'].includes(e.key))move(-1);
+  else if(['ArrowRight','d','D'].includes(e.key))move(1);
+  else if(['ArrowUp','w','W'].includes(e.key)){e.preventDefault();jump()}
+  else if((e.key===' '||e.key==='Enter')&&state!=='play')start();
+});
+cv.addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;
+  if(dbgOn&&y>=496){
+    if(y>=556&&y<=584){const i=Math.floor((x-12)/86);if(i>=0&&i<4&&x-12-i*86<=78)dbgDo(i)}
+    else if(x>=232&&x<=346&&y>=518&&y<=546)dbgGhost=!dbgGhost;
+    else if(x>=10&&x<=212&&y>=520&&y<=548){drag=true;setSpeedFromX(x)}
+    return;
+  }
+  for(const b of btns()){
+    if(x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h){
+      set[b.id]=!set[b.id];
+      if(b.id==='snd'){initAudio();if(set.snd&&ac)nextT=ac.currentTime+.05}
+      if(b.id==='vib'){
+        const now=performance.now();vibTaps=vibTaps.filter(v=>now-v<3000);vibTaps.push(now);
+        if(vibTaps.length>=5){
+          vibTaps=[];set.vib=!set.vib;dbgOn=!dbgOn;
+          if(!dbgOn){dbgSpeed=1;dbgGhost=false}
+          notice='デバッグモード '+(dbgOn?'ON':'OFF');noticeT=2.5;
+        }else if(set.vib&&canVib&&!navigator.vibrate(60)){notice='この環境では振動が使えません';noticeT=3}
+      }
+      save();return;
+    }
+  }
+  if(state!=='play'){start();return}
+  if(e.pointerType==='mouse'){move(x<W/2?-1:1);return}
+  sx=e.clientX;sy=e.clientY;sw=true;
+});
+cv.addEventListener('pointermove',e=>{
+  if(drag){const r=cv.getBoundingClientRect();setSpeedFromX((e.clientX-r.left)*W/r.width);return}
+  if(!sw||e.pointerType==='mouse')return;
+  const dx=e.clientX-sx,dy=e.clientY-sy;
+  if(Math.abs(dx)<30&&Math.abs(dy)<30)return;
+  if(Math.abs(dx)>Math.abs(dy))move(dx<0?-1:1);else if(dy<0)jump();
+  sw=false;
+});
+addEventListener('pointerup',()=>{sw=false;drag=false});
+addEventListener('pointercancel',()=>{sw=false;drag=false});
+
+cv.addEventListener('click',initAudio);
+function update(dt){
+  noticeT-=dt;
+  if(state!=='play')return;
+  t+=dt;
+  bgm();
+  inv-=dt;magT=Math.max(0,magT-dt);
+  if(t>=magNext){spawnItem('m');magNext=t+30+R()*20}
+  if(t>=barNext){spawnItem('b');barNext=t+35+R()*20}
+  if(magT<=0)st+=dt;
+  speed=(250+Math.min(st*7,1500))*(magT>0?.75:1)*dbgSpeed;
+  const dy=speed*dt;trav+=dy;off=(off+dy)%80;
+  obsTimer-=dt;coinTimer-=dt;
+  if(obsTimer<=0){
+    spawnObs();
+    lastG=Math.max(.45,(1.1-t*.005))*(.6+R()*.8);
+    lastG=Math.max(.45,lastG);
+    obsTimer=lastG;
+  }
+  if(coinTimer<=0){spawnCoin();coinTimer=(.6+R()*1.2)/(magT>0?2:1)}
+  px+=(cx(lane)-px)*Math.min(1,dt*16);
+  if(pz>0||pv>0){pv-=1333*dt;pz+=pv*dt;if(pz<=0){pz=0;pv=0}}
+  for(const it of items){
+    it.y+=dy;
+    if(it.done)continue;
+    if(it.t==='o'){
+      if(!dbgGhost&&inv<=0&&Math.abs(it.y-PY)<34&&Math.abs(cx(it.l)-px)<34&&!(it.k===0&&pz>14)){
+        if(shield){shield=false;inv=.7;it.done=true;shake=12;se('break');if(set.vib&&canVib)navigator.vibrate(80)}
+        else gameOver();
+      }
+      continue;
+    }
+    const ix=it.x??cx(it.l);
+    if(it.t==='c'&&magT>0){
+      const ddx=px-ix,ddy=PY-it.y,dd=Math.hypot(ddx,ddy);
+      if(dd<170&&dd>1){const sp=Math.min(dd,(500+speed*.5)*dt);it.x=ix+ddx/dd*sp;it.y+=ddy/dd*sp}
+    }
+    const hx=it.x??cx(it.l);
+    if(Math.abs(it.y-PY)<28&&Math.abs(hx-px)<30){
+      it.done=true;
+      if(it.t==='c'){coins++;se('coin');if(set.vib&&canVib)navigator.vibrate(30)}
+      else{if(it.t==='m')magT=15;else shield=true;se('item');if(set.vib&&canVib)navigator.vibrate(50)}
+    }
+  }
+  items=items.filter(i=>!i.done&&i.y<H+60);
+}
+
+function txt(s,x,y,size,col,al,w){
+  g.font=(w||700)+' '+size+'px system-ui,sans-serif';g.textAlign=al||'left';
+  g.fillStyle=col||'#fff';g.fillText(s,x,y);
+}
+function draw(){
+  g.save();
+  if(shake>.5){g.translate((R()-.5)*shake,(R()-.5)*shake);shake*=.88}else shake=0;
+  // 砂場の地面
+  for(let i=-1;i<8;i++){
+    const k=Math.floor(trav/80)-i,y=i*80+off;
+    g.fillStyle=(k&1)?'#e8d3a0':'#e2cb94';g.fillRect(0,y,W,80);
+    for(let j=0;j<6;j++){
+      const h=Math.abs(Math.sin(k*12.9898+j*78.233)*43758.5453)%1;
+      const fx=h*W,fy=y+((h*977)%1)*74+3;
+      g.fillStyle=j<4?'#c9ae74':'#f5e6bf';
+      g.beginPath();g.arc(fx,fy,j===5?3.5:1.8,0,7);g.fill();
+    }
+  }
+  g.fillStyle='rgba(140,105,50,.35)';
+  for(let l=1;l<3;l++)for(let y=-80+off;y<H;y+=80)g.fillRect(l*LW-2,y,4,40);
+  // アイテム
+  for(const it of items){
+    const x=it.x??cx(it.l);
+    if(it.t==='o'){
+      g.fillStyle='rgba(0,0,0,.22)';g.fillRect(x-30,it.y+14,60,12);
+      if(it.k===0){
+        g.fillStyle='#444';g.fillRect(x-27,it.y+4,6,20);g.fillRect(x+21,it.y+4,6,20);
+        g.fillStyle='#8b5a2b';g.fillRect(x-30,it.y-24,60,30);
+        g.fillStyle='#6b4220';g.fillRect(x-30,it.y-14,60,3);g.fillRect(x-30,it.y-4,60,3);
+        g.fillStyle='#a8713a';g.fillRect(x-30,it.y-24,60,5);
+      }else{
+        g.fillStyle='#2f7d32';
+        [[-15,2,17],[15,2,17],[0,-8,19],[0,8,16]].forEach(c=>{g.beginPath();g.arc(x+c[0],it.y+c[1],c[2],0,7);g.fill()});
+        g.fillStyle='#43a047';
+        g.beginPath();g.arc(x-4,it.y-12,8,0,7);g.fill();g.beginPath();g.arc(x+14,it.y-2,6,0,7);g.fill();
+      }
+    }else if(it.t==='m'||it.t==='b'){drawItem(it.t,x,it.y)}else{
+      g.beginPath();g.arc(x,it.y,13,0,7);g.fillStyle='#ffc933';g.fill();
+      g.lineWidth=3;g.strokeStyle='#e8a100';g.stroke();
+      g.fillStyle='#fff3b0';g.fillRect(x-2,it.y-7,4,14);
+    }
+  }
+  // 猫
+  const w=Math.sin(trav/16),y=PY-pz;
+  g.fillStyle='rgba(0,0,0,.25)';g.beginPath();g.ellipse(px,PY+30,22-pz/6,8-pz/20,0,0,7);g.fill();
+  g.strokeStyle='#e08a2e';g.lineWidth=7;g.lineCap='round';
+  g.beginPath();g.moveTo(px,y+24);g.quadraticCurveTo(px+w*18,y+40,px+w*10,y+54);g.stroke();
+  g.fillStyle='#fff3e0';
+  [[-15,-12-w*7],[15,-12+w*7],[-15,20+w*7],[15,20-w*7]].forEach(p=>{g.beginPath();g.ellipse(px+p[0],y+p[1],6,9,0,0,7);g.fill()});
+  g.fillStyle='#f4a340';g.beginPath();g.ellipse(px,y+4,19,28,0,0,7);g.fill();
+  g.strokeStyle='#c97a1e';g.lineWidth=3;
+  [-4,6,16].forEach(d=>{g.beginPath();g.moveTo(px-13,y+d);g.lineTo(px-4,y+d);g.moveTo(px+4,y+d);g.lineTo(px+13,y+d);g.stroke()});
+  g.fillStyle='#f4a340';g.beginPath();g.arc(px,y-27,15,0,7);g.fill();
+  g.beginPath();g.moveTo(px-14,y-31);g.lineTo(px-12,y-49);g.lineTo(px-2,y-40);g.fill();
+  g.beginPath();g.moveTo(px+14,y-31);g.lineTo(px+12,y-49);g.lineTo(px+2,y-40);g.fill();
+  g.fillStyle='#f7b8c4';
+  g.beginPath();g.moveTo(px-11,y-34);g.lineTo(px-10,y-44);g.lineTo(px-5,y-39);g.fill();
+  g.beginPath();g.moveTo(px+11,y-34);g.lineTo(px+10,y-44);g.lineTo(px+5,y-39);g.fill();
+  if(shield){g.beginPath();g.arc(px,y,46,0,7);g.fillStyle='rgba(80,160,255,.22)';g.fill();g.lineWidth=3;g.strokeStyle='rgba(80,160,255,.9)';g.stroke()}
+  if(magT>0){g.beginPath();g.arc(px,y,170,0,7);g.lineWidth=2;g.setLineDash([8,8]);g.strokeStyle='rgba(229,72,77,.3)';g.stroke();g.setLineDash([])}
+  g.restore();
+
+  // HUD（ゲーム画面内）
+  if(state==='play'){
+    g.fillStyle='rgba(15,20,35,.6)';g.beginPath();g.roundRect(10,10,150,78,10);g.fill();
+    txt('距離  '+dist()+' m',20,32,15);
+    txt('コイン  '+coins,20,53,15,'#ffd44d');
+    txt('時間  '+fmt(t),20,74,15,'#cfe3ff');
+    let py=96;
+    if(magT>0){g.fillStyle='rgba(229,72,77,.85)';g.beginPath();g.roundRect(10,py,150,22,8);g.fill();txt('マグネット '+Math.ceil(magT)+'s',20,py+16,13);py+=28}
+    if(shield){g.fillStyle='rgba(59,130,246,.85)';g.beginPath();g.roundRect(10,py,150,22,8);g.fill();txt('バリア',20,py+16,13)}
+  }
+  // オーバーレイ
+  if(state!=='play'){
+    g.fillStyle='rgba(8,12,22,.74)';g.fillRect(0,0,W,H);
+    const o=state==='over';
+    txt(o?'ゲームオーバー':'にゃんこダッシュ',W/2,200,o?32:36,'#fff','center');
+    if(o){
+      if(newBest)txt('NEW RECORD!',W/2,232,16,'#ffd44d','center');
+      txt('距離 '+dist()+' m　コイン '+coins+' 枚（×10）',W/2,272,15,'#fff','center',500);
+      txt('時間 '+fmt(t),W/2,296,15,'#fff','center',500);
+      txt('スコア '+score(),W/2,340,28,'#ffc933','center');
+      txt('ベスト '+best,W/2,368,15,'#cfd6e6','center',500);
+      if(rewardMsg)txt(rewardMsg,W/2,396,14,rewardGiven?'#7cffb2':'#cfd6e6','center');
+    }else{
+      txt('ベンチや茂みをよけて、コインを集めよう',W/2,250,14,'#fff','center',500);
+      txt(touchUI?'スワイプで移動（上スワイプでジャンプ）':'← → / A D で移動、W / ↑ でジャンプ',W/2,276,14,'#cfd6e6','center',500);
+      txt('茶色のベンチはジャンプでよけられるよ',W/2,300,14,'#cfd6e6','center',500);
+      txt('だんだん速くなるよ！',W/2,324,14,'#cfd6e6','center',500);
+      if(best)txt('ベスト '+best,W/2,364,15,'#ffc933','center');
+      if(APP){const i=APP.info();txt(i.left>0?'今日アプリにコインがもらえるのは あと'+i.left+'回（最大'+i.max+'枚）':'今日のコイン報酬はおわり（あそべます）',W/2,392,12,'#ffd44d','center',500)}
+    }
+    txt(o?'タップでリトライ':'タップでスタート',W/2,430,19,'#fff','center');
+  }
+  if(dbgOn){
+    g.fillStyle='rgba(15,20,35,.9)';g.beginPath();g.roundRect(6,496,W-12,98,10);g.fill();
+    g.strokeStyle='#ff9f43';g.lineWidth=1.5;g.stroke();
+    txt('DEBUG  速度 ×'+dbgSpeed.toFixed(2)+'　t='+Math.floor(t)+'s',16,514,12,'#ff9f43');
+    g.fillStyle='#4a5578';g.fillRect(16,532,190,4);
+    g.fillStyle='#ff9f43';g.beginPath();g.arc(16+190*(dbgSpeed-.25)/2.75,534,8,0,7);g.fill();
+    g.fillStyle=dbgGhost?'rgba(124,255,178,.25)':'rgba(255,255,255,.08)';g.beginPath();g.roundRect(232,518,114,28,8);g.fill();
+    g.strokeStyle=dbgGhost?'#7cffb2':'#7a8399';g.lineWidth=1.5;g.stroke();
+    txt('障害物無視 '+(dbgGhost?'ON':'OFF'),289,536,12,dbgGhost?'#7cffb2':'#b5bccd','center');
+    ['+30秒','+60秒','マグネット','バリア'].forEach((l,i)=>{
+      g.fillStyle='rgba(255,159,67,.18)';g.beginPath();g.roundRect(12+i*86,556,78,28,8);g.fill();
+      g.strokeStyle='#ff9f43';g.stroke();
+      txt(l,51+i*86,574,12,'#ffd9a8','center');
+    });
+  }
+  if(noticeT>0){
+    g.fillStyle='rgba(15,20,35,.85)';g.beginPath();g.roundRect(20,400,W-40,36,10);g.fill();
+    txt(notice,W/2,423,13,'#ffd44d','center');
+  }
+  // 設定ボタン
+  for(const b of btns()){
+    g.fillStyle='rgba(15,20,35,.72)';g.beginPath();g.roundRect(b.x,b.y,b.w,b.h,8);g.fill();
+    g.strokeStyle=b.on?'#7cffb2':'#7a8399';g.lineWidth=1.5;g.stroke();
+    txt(b.l+' '+(b.on?'ON':'OFF'),b.x+b.w/2,b.y+19,12,b.on?'#7cffb2':'#b5bccd','center');
+  }
+}
+let last=performance.now();
+function loop(n){
+  const dt=Math.min(.05,(n-last)/1000);last=n;
+  update(dt);draw();requestAnimationFrame(loop);
+}
+reset();requestAnimationFrame(loop);
+</script>
+</body>
+</html>

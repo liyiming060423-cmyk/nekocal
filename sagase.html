@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>本物の猫を探せ！</title>
+  <title>お題の猫を探せ！</title>
   <!-- 組員作のミニゲーム。にゃんカロ用に、Tailwind をオフライン用の sagase.css にし、コインをアプリのコインにつないだ -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
-  <link rel="stylesheet" href="sagase.css">
+  <link rel="stylesheet" href="sagase.css?v=8.1">
   <style>
     
     * {
@@ -28,7 +28,7 @@
       background-color: #f3efe6;
     }
 
-    /* Screen Shake Animation on Error */
+    /* ミス時の画面シェイクアニメーション */
     @keyframes shake {
       0%, 100% { transform: translate(0, 0); }
       20% { transform: translate(-8px, 4px); }
@@ -40,7 +40,7 @@
       animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both;
     }
 
-    /* Red Flash on Miss */
+    /* ミス時の赤フラッシュ枠演出 */
     @keyframes red-flash {
       0% { box-shadow: inset 0 0 0 0px rgba(239, 68, 68, 0); }
       30% { box-shadow: inset 0 0 0 16px rgba(239, 68, 68, 0.65); }
@@ -50,7 +50,31 @@
       animation: red-flash 0.35s ease-out;
     }
 
-    /* Floating HUD Card Shadow */
+    /* 残り時間ピンチ時の赤い緊迫ビネット鼓動アニメーション */
+    @keyframes danger-pulse {
+      0%, 100% { transform: scale(1); filter: brightness(1); }
+      50% { transform: scale(1.015); filter: brightness(1.15); }
+    }
+    .danger-vignette-active {
+      animation: danger-pulse 0.75s ease-in-out infinite;
+    }
+
+    /* リアルタイム自己ベスト更新バッジのポップイン＆ゴールド発光アニメーション */
+    @keyframes badge-pop {
+      0% { transform: scale(0.3) rotate(-6deg); opacity: 0; }
+      65% { transform: scale(1.15) rotate(2deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    @keyframes badge-glow {
+      0%, 100% { box-shadow: 0 0 6px rgba(245, 158, 11, 0.55), 0 0 12px rgba(251, 191, 36, 0.35); }
+      50% { box-shadow: 0 0 14px rgba(245, 158, 11, 0.95), 0 0 22px rgba(251, 191, 36, 0.7); }
+    }
+    .live-best-badge-active {
+      display: inline-flex !important;
+      animation: badge-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, badge-glow 1.4s ease-in-out 0.45s infinite;
+    }
+
+    /* フローティングHUDカードの影 */
     .hud-card-shadow {
       box-shadow: 0 8px 24px -4px rgba(120, 95, 75, 0.18), 0 3px 6px -2px rgba(120, 95, 75, 0.08);
     }
@@ -58,33 +82,44 @@
 </head>
 <body class="w-full h-full flex flex-col items-center justify-center p-0 sm:p-4 text-stone-800">
 
-  <!-- Main Game Outer Container -->
+  <!-- メインゲーム外枠コンテナ -->
   <div id="gameFrame" class="relative w-full h-full max-w-4xl sm:h-auto sm:aspect-[16/10] bg-[#FAF6EE] sm:border-4 border-stone-300/80 sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col">
 
-    <!-- TOP FLOATING HUD CARD -->
-    <div class="absolute top-2 sm:top-3 left-1/2 -translate-x-1/2 z-10 w-[calc(100%-6.5rem)] max-w-xl">
-      <div class="hud-card-shadow bg-white/95 backdrop-blur-md border border-stone-200/90 rounded-2xl sm:rounded-3xl px-3 py-2 sm:px-4 sm:py-2.5 flex items-center justify-between">
+    <!-- 残り時間ピンチ時の赤い緊迫ビネットオーバーレイ -->
+    <div id="dangerVignette" class="pointer-events-none absolute inset-0 z-10 opacity-0 transition-opacity duration-300" style="background: radial-gradient(circle, rgba(239,68,68,0) 58%, rgba(220,38,38,0.42) 100%); box-shadow: inset 0 0 36px rgba(220, 38, 38, 0.45);"></div>
+
+    <!-- トップ・フローティングHUDバー（モバイルでもサウンドボタンと重ならないレスポンシブ配置） -->
+    <!-- にゃんカロにもどるボタン -->
+    <button id="backBtn" aria-label="にゃんカロにもどる" class="absolute top-2.5 left-2 sm:top-4 sm:left-4 z-40 bg-white/90 hover:bg-white text-stone-700 border border-stone-300/80 rounded-full shadow-md transition active:scale-95 font-black flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 text-lg cursor-pointer">×</button>
+
+    <div class="absolute top-2 sm:top-3 left-0 right-0 z-10 pl-12 pr-2.5 sm:pl-16 sm:pr-4 flex items-center justify-center gap-2 pointer-events-none">
+      <div class="hud-card-shadow pointer-events-auto flex-1 max-w-xl bg-white/95 backdrop-blur-md border border-stone-200/90 rounded-2xl sm:rounded-3xl px-2.5 py-1.5 sm:px-4 sm:py-2.5 flex items-center justify-between">
         
-        <!-- Target Preview Icon & Text -->
-        <div class="flex items-center gap-2 sm:gap-3">
-          <!-- Preview Thumbnail Canvas -->
-          <div class="w-11 h-11 sm:w-14 sm:h-14 rounded-full border-2 border-amber-500/80 bg-[#FAF6EE] flex items-center justify-center shadow-inner overflow-hidden flex-shrink-0">
+        <!-- お題の猫プレビューアイコン＆テキスト -->
+        <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+          <!-- プレビューサムネイル用Canvas -->
+          <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-full border-2 border-amber-500/80 bg-[#FAF6EE] flex items-center justify-center shadow-inner overflow-hidden flex-shrink-0">
             <canvas id="targetIconCanvas" class="w-full h-full object-contain"></canvas>
           </div>
           
-          <!-- Target Title -->
-          <div class="flex flex-col">
-            <span id="diffBadge" class="text-[9px] sm:text-[10px] font-black text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full w-max leading-none mb-0.5">初級</span>
-            <h2 id="targetTitle" class="text-xs sm:text-base font-black text-stone-800 tracking-wide leading-tight">
+          <!-- お題タイトルとバッジ -->
+          <div class="flex flex-col min-w-0">
+            <div class="flex items-center gap-1 mb-0.5 flex-wrap">
+              <span id="diffBadge" class="text-[9px] sm:text-[10px] font-black text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full w-max leading-none">初級</span>
+              <span id="liveHighScoreBadge" class="hidden items-center gap-0.5 text-[9px] sm:text-[10px] font-black text-stone-900 bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 border border-amber-500 px-1.5 py-0.5 rounded-full leading-none tracking-tight">
+                👑 BEST更新!
+              </span>
+            </div>
+            <h2 id="targetTitle" class="text-xs sm:text-base font-black text-stone-800 tracking-wide leading-tight truncate">
               トラ猫を探せ！
             </h2>
           </div>
         </div>
 
-        <!-- Stage, Score, Coins & Time Stats -->
-        <div class="text-right flex flex-col justify-center pl-1 sm:pl-2">
+        <!-- 見つけた匹数・獲得コイン・残り時間ステータス -->
+        <div class="text-right flex flex-col justify-center pl-1.5 sm:pl-2 flex-shrink-0">
           <div class="text-[10px] sm:text-xs font-bold text-stone-500 tracking-wider">
-            <span id="catCountDisplay" class="font-black text-stone-800">0/8匹</span>
+            <span id="catCountDisplay" class="font-black text-stone-800">0匹</span>
             <span class="mx-0.5 sm:mx-1 text-stone-300">|</span>
             <span class="text-amber-500">🪙</span> <span id="coinDisplay" class="font-extrabold text-amber-600">0</span>
           </div>
@@ -94,92 +129,100 @@
         </div>
 
       </div>
+
+      <!-- サウンドON/OFF切り替えボタン -->
+      <button id="soundBtn" aria-label="Toggle Sound" class="pointer-events-auto sm:absolute sm:top-1 sm:right-4 z-20 bg-white/90 hover:bg-white text-stone-700 border border-stone-300/80 rounded-full p-2 shadow-md transition active:scale-95 text-xs font-bold flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 cursor-pointer">
+        <span id="soundIcon" class="text-base sm:text-lg">🔊</span>
+      </button>
     </div>
 
-    <!-- にゃんカロにもどるボタン -->
-    <button id="backBtn" aria-label="にゃんカロにもどる" class="absolute top-3 left-3 sm:top-4 sm:left-4 z-40 bg-white/85 hover:bg-white text-stone-700 border border-stone-300/80 rounded-full shadow-md transition active:scale-95 font-black flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 text-lg">×</button>
-
-    <!-- Sound Toggle Button -->
-    <button id="soundBtn" aria-label="Toggle Sound" class="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 bg-white/85 hover:bg-white text-stone-700 border border-stone-300/80 rounded-full p-2 shadow-md transition active:scale-95 text-xs font-bold flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10">
-      <span id="soundIcon" class="text-base sm:text-lg">🔊</span>
-    </button>
-
-    <!-- Canvas Game Area -->
+    <!-- メインゲーム描画Canvas -->
     <canvas id="gameCanvas" class="w-full h-full block cursor-pointer"></canvas>
 
-    <!-- DIFFICULTY SELECTION & START OVERLAY SCREEN -->
-    <div id="startOverlay" class="absolute inset-0 bg-[#FAF6EE]/95 backdrop-blur-md z-30 flex flex-col items-center justify-center p-4 sm:p-6 text-center overflow-y-auto">
-      <div class="text-5xl sm:text-6xl mb-2 animate-bounce">🐱</div>
-      <h1 class="text-2xl sm:text-3xl font-black text-stone-800 mb-1 tracking-tight">本物の猫を探せ！</h1>
-      <p class="text-stone-600 text-xs sm:text-sm max-w-sm mb-3 font-bold leading-relaxed">
-        お題とおなじ猫をすばやくタップ！<br>目標匹数を達成してコインをGETしよう！
+    <!-- 難易度選択＆スタート画面オーバーレイ -->
+    <div id="startOverlay" class="absolute inset-0 bg-[#FAF6EE]/95 backdrop-blur-md z-30 flex flex-col items-center justify-center px-3 py-3 sm:p-6 text-center overflow-y-auto">
+      <div class="text-4xl sm:text-6xl mb-1 sm:mb-2 animate-bounce">🐱</div>
+      <h1 class="text-xl sm:text-3xl font-black text-stone-800 mb-0.5 sm:mb-1 tracking-tight">お題の猫を探せ！</h1>
+      <p class="text-stone-600 text-[11px] sm:text-sm max-w-sm mb-2 sm:mb-3 font-bold leading-snug sm:leading-relaxed">
+        お題とおなじ猫をすばやくタップ！<br>制限時間内にたくさん見つけてコインをGET！
       </p>
 
-      <!-- Total Saved Coins Display -->
-      <div class="bg-amber-100/80 border border-amber-300 text-amber-800 font-extrabold text-xs sm:text-sm px-4 py-1.5 rounded-full mb-4 flex items-center gap-1.5 shadow-sm">
+      <!-- 累計所持コイン表示 -->
+      <div class="bg-amber-100/80 border border-amber-300 text-amber-800 font-extrabold text-xs sm:text-sm px-3.5 py-1 sm:px-4 sm:py-1.5 rounded-full mb-2.5 sm:mb-4 flex items-center gap-1.5 shadow-sm">
         <span>所持コイン:</span>
-        <span class="text-base">🪙</span>
+        <span class="text-sm sm:text-base">🪙</span>
         <span id="totalCoinsMenu" class="text-amber-900 font-black text-sm sm:text-base">0</span>
       </div>
-      <p id="rewardLeft" class="text-stone-600 text-[11px] sm:text-xs font-bold -mt-2 mb-3"></p>
+      <p id="rewardLeft" class="text-stone-600 text-[10px] sm:text-xs font-bold -mt-1 mb-2 sm:mb-3 leading-snug"></p>
 
-      <!-- Difficulty Selection Buttons -->
-      <div class="w-full max-w-sm space-y-2.5 mb-2">
-        <!-- Beginner Button -->
-        <button data-diff="easy" class="diffBtn w-full bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-white border-b-4 border-emerald-700 rounded-2xl p-3 shadow-md flex items-center justify-between text-left transition-all cursor-pointer">
-          <div class="flex items-center gap-3">
-            <span class="text-3xl">🐣</span>
-            <div>
-              <div class="font-black text-base sm:text-lg leading-tight">初級（ゆったり）</div>
-              <div class="text-[11px] text-emerald-100 font-bold">目標 8匹クリアで <span class="text-yellow-200 font-extrabold">10🪙</span> / 制限時間 30秒</div>
+      <!-- 難易度選択ボタンリスト -->
+      <div class="w-full max-w-sm space-y-2 sm:space-y-2.5 mb-1">
+        <!-- 初級ボタン -->
+        <button data-diff="easy" class="diffBtn w-full bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-white border-b-4 border-emerald-700 rounded-2xl p-2.5 sm:p-3 shadow-md flex items-center justify-between text-left transition-all cursor-pointer">
+          <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <span class="text-2xl sm:text-3xl flex-shrink-0">🐣</span>
+            <div class="min-w-0">
+              <div class="font-black text-sm sm:text-lg leading-tight">初級（ゆったり）</div>
+              <div class="text-[10px] sm:text-[11px] text-emerald-100 font-bold truncate">制限時間 30秒 / 1匹ごとに <span class="text-yellow-200 font-extrabold">+5🪙</span></div>
+              <div id="bestMenu-easy" class="text-[10px] sm:text-[11px] text-emerald-50 bg-emerald-700/45 px-2 py-0.5 rounded-md w-max mt-0.5 sm:mt-1 font-extrabold">🏆 最高記録: 未挑戦</div>
             </div>
           </div>
-          <span class="text-xs bg-emerald-700/60 font-black px-2.5 py-1 rounded-full">スタート</span>
+          <span class="text-[11px] sm:text-xs bg-emerald-700/60 font-black px-2 sm:px-2.5 py-1 rounded-full flex-shrink-0 ml-1.5">スタート</span>
         </button>
 
-        <!-- Normal Button -->
-        <button data-diff="normal" class="diffBtn w-full bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-white border-b-4 border-amber-700 rounded-2xl p-3 shadow-md flex items-center justify-between text-left transition-all cursor-pointer">
-          <div class="flex items-center gap-3">
-            <span class="text-3xl">🐾</span>
-            <div>
-              <div class="font-black text-base sm:text-lg leading-tight">中級（スピード）</div>
-              <div class="text-[11px] text-amber-100 font-bold">目標 10匹クリアで <span class="text-yellow-200 font-extrabold">30🪙</span> / 制限時間 20秒</div>
+        <!-- 中級ボタン -->
+        <button data-diff="normal" class="diffBtn w-full bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-white border-b-4 border-amber-700 rounded-2xl p-2.5 sm:p-3 shadow-md flex items-center justify-between text-left transition-all cursor-pointer">
+          <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <span class="text-2xl sm:text-3xl flex-shrink-0">🐾</span>
+            <div class="min-w-0">
+              <div class="font-black text-sm sm:text-lg leading-tight">中級（スピード）</div>
+              <div class="text-[10px] sm:text-[11px] text-amber-100 font-bold truncate">制限時間 30秒 / 1匹ごとに <span class="text-yellow-200 font-extrabold">+10🪙</span></div>
+              <div id="bestMenu-normal" class="text-[10px] sm:text-[11px] text-amber-50 bg-amber-700/45 px-2 py-0.5 rounded-md w-max mt-0.5 sm:mt-1 font-extrabold">🏆 最高記録: 未挑戦</div>
             </div>
           </div>
-          <span class="text-xs bg-amber-700/60 font-black px-2.5 py-1 rounded-full">スタート</span>
+          <span class="text-[11px] sm:text-xs bg-amber-700/60 font-black px-2 sm:px-2.5 py-1 rounded-full flex-shrink-0 ml-1.5">スタート</span>
         </button>
 
-        <!-- Hard Button -->
-        <button data-diff="hard" class="diffBtn w-full bg-rose-500 hover:bg-rose-400 active:scale-[0.98] text-white border-b-4 border-rose-700 rounded-2xl p-3 shadow-md flex items-center justify-between text-left transition-all cursor-pointer">
-          <div class="flex items-center gap-3">
-            <span class="text-3xl">⚡</span>
-            <div>
-              <div class="font-black text-base sm:text-lg leading-tight">上級（爆速サバイバル）</div>
-              <div class="text-[11px] text-rose-100 font-bold">目標 15匹クリアで <span class="text-yellow-200 font-extrabold">50🪙</span> / 初期12秒 (+2.0秒)</div>
+        <!-- 上級ボタン -->
+        <button data-diff="hard" class="diffBtn w-full bg-rose-500 hover:bg-rose-400 active:scale-[0.98] text-white border-b-4 border-rose-700 rounded-2xl p-2.5 sm:p-3 shadow-md flex items-center justify-between text-left transition-all cursor-pointer">
+          <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <span class="text-2xl sm:text-3xl flex-shrink-0">⚡</span>
+            <div class="min-w-0">
+              <div class="font-black text-sm sm:text-lg leading-tight">上級（爆速サバイバル）</div>
+              <div class="text-[10px] sm:text-[11px] text-rose-100 font-bold truncate">初期20秒(+2.0秒) / 1匹ごとに <span class="text-yellow-200 font-extrabold">+20🪙</span></div>
+              <div id="bestMenu-hard" class="text-[10px] sm:text-[11px] text-rose-50 bg-rose-700/45 px-2 py-0.5 rounded-md w-max mt-0.5 sm:mt-1 font-extrabold">🏆 最高記録: 未挑戦</div>
             </div>
           </div>
-          <span class="text-xs bg-rose-700/60 font-black px-2.5 py-1 rounded-full">スタート</span>
+          <span class="text-[11px] sm:text-xs bg-rose-700/60 font-black px-2 sm:px-2.5 py-1 rounded-full flex-shrink-0 ml-1.5">スタート</span>
         </button>
       </div>
 
     </div>
 
-    <!-- GAME OVER / CLEAR OVERLAY SCREEN -->
-    <div id="gameOverOverlay" class="hidden absolute inset-0 bg-stone-900/85 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center text-white">
-      <div id="resultEmoji" class="text-6xl mb-2 animate-bounce">🎉</div>
-      <h2 id="resultHeader" class="text-3xl sm:text-4xl font-black text-emerald-400 mb-1">CLEAR!</h2>
-      <p id="resultSub" class="text-stone-200 text-xs sm:text-sm font-bold mb-4">目標 8匹を見事達成！</p>
+    <!-- リザルト（タイムアップ）画面オーバーレイ -->
+    <div id="gameOverOverlay" class="hidden absolute inset-0 bg-stone-900/85 backdrop-blur-md z-30 flex flex-col items-center justify-center p-5 sm:p-6 text-center text-white">
+      <div id="resultEmoji" class="text-5xl sm:text-6xl mb-1.5 sm:mb-2 animate-bounce">⏰</div>
+      <h2 id="resultHeader" class="text-3xl sm:text-4xl font-black text-amber-400 mb-1">TIME UP!</h2>
+      <p id="resultSub" class="text-stone-200 text-xs sm:text-sm font-bold mb-3">おつかれさま！今回の結果はこちら</p>
 
-      <div class="bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-4 w-full max-w-xs mb-5 space-y-2">
-        <div class="flex justify-between text-sm"><span class="text-stone-300 font-bold">難易度:</span><span id="finalDiff" class="font-black text-amber-300">初級</span></div>
-        <div class="flex justify-between text-sm"><span class="text-stone-300 font-bold">見つけた猫:</span><span id="finalCats" class="font-black text-white text-base">8匹 / 目標 8匹</span></div>
-        <div class="flex justify-between text-sm"><span class="text-stone-300 font-bold">獲得コイン:</span><span id="finalCoins" class="font-black text-yellow-300 text-base">🪙 +10</span></div>
-        <div id="finalNote" class="text-[11px] text-stone-300 font-bold text-right -mt-1"></div>
-        <div class="flex justify-between text-sm"><span class="text-stone-300 font-bold">最終スコア:</span><span id="finalScore" class="font-black text-emerald-400 text-lg">0</span></div>
-        <div class="flex justify-between text-sm border-t border-white/15 pt-1.5"><span class="text-stone-300 font-bold">最高記録:</span><span id="finalBest" class="font-black text-emerald-300 text-lg">0</span></div>
+      <!-- 新記録達成バッジ -->
+      <div id="newRecordBadge" class="hidden mb-3 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-stone-900 font-black text-xs sm:text-sm px-4 py-1 rounded-full shadow-lg animate-bounce border-2 border-white">
+        ✨ NEW RECORD! 自己ベスト更新！ ✨
       </div>
 
-      <!-- DUAL BUTTONS: RETRY SAME DIFFICULTY & BACK TO MENU -->
+      <div class="bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-4 w-full max-w-xs mb-4 sm:mb-5 space-y-2">
+        <div class="flex justify-between text-sm"><span class="text-stone-300 font-bold">難易度:</span><span id="finalDiff" class="font-black text-amber-300">初級</span></div>
+        <div class="flex justify-between text-sm"><span class="text-stone-300 font-bold">見つけた猫:</span><span id="finalCats" class="font-black text-white text-base">0匹</span></div>
+        <div class="flex justify-between text-sm"><span class="text-stone-300 font-bold">獲得コイン:</span><span id="finalCoins" class="font-black text-yellow-300 text-base">🪙 +0</span></div>
+        <div id="finalNote" class="text-[11px] text-stone-300 font-bold text-right -mt-1"></div>
+        <div class="flex justify-between text-sm"><span class="text-stone-300 font-bold">最終スコア:</span><span id="finalScore" class="font-black text-emerald-400 text-lg">0点</span></div>
+        <div class="flex justify-between items-center text-sm border-t border-white/15 pt-1.5">
+          <span id="finalBestLabel" class="text-stone-300 font-bold">最高記録 (初級):</span>
+          <span id="finalBest" class="font-black text-emerald-300 text-base sm:text-lg">0点 (0匹)</span>
+        </div>
+      </div>
+
+      <!-- もう一度遊ぶ / 難易度を選ぶ ボタン -->
       <div class="flex flex-col sm:flex-row gap-2.5 w-full max-w-xs">
         <button id="retryBtn" class="flex-1 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-white font-black text-sm sm:text-base py-3 rounded-full shadow-lg border-2 border-emerald-300 transition-all cursor-pointer">
           もう一度遊ぶ
@@ -193,20 +236,61 @@
   </div>
 
   <script>
-    // Prevent iOS Safari bounce scroll
+    // iOS Safariのバウンススクロール防止
     document.addEventListener('touchmove', (e) => {
-      if (e.target.tagName !== 'BUTTON') {
+      if (!e.target.closest('button')) {
         e.preventDefault();
       }
     }, { passive: false });
 
     /* ===================================================================
-       1. WEB AUDIO API SYNTHESIS ENGINE (Meows, Coin Chimes, Fanfare)
+       1. WEB AUDIO API サウンドエンジン（8小節ループBGM + 各種効果音）
        =================================================================== */
     class AudioEngine {
       constructor() {
         this.ctx = null;
         this.muted = false;
+        this.bgmPlaying = false;
+        this.bgmFastMode = false;
+        this.bgmTimer = null;
+        this.bgmStep = 0;
+
+        // ほのぼの＆リズミカルな8小節ループBGM（32ステップ = 1ループ）
+        // 主旋律（Hz、0は休符）
+        this.melodyNotes = [
+          523.25, 0,      659.25, 783.99,  // ド  ・  ミ  ソ
+          659.25, 0,      587.33, 0,       // ミ  ・  レ  ・
+          698.46, 0,      880.00, 783.99,  // ファ・  ラ  ソ
+          659.25, 0,      587.33, 0,       // ミ  ・  レ  ・
+          523.25, 0,      659.25, 783.99,  // ド  ・  ミ  ソ
+          1046.50,0,      880.00, 783.99,  // ド(高) ラ  ソ
+          698.46, 659.25, 587.33, 493.88,  // ファ ミ  レ  シ
+          523.25, 0,      0,      0        // ド  ・  ・  ・
+        ];
+
+        // ベースライン（Hz）
+        this.bassNotes = [
+          261.63, 0,      196.00, 0,       // C4  ・  G3  ・
+          261.63, 0,      196.00, 0,       // C4  ・  G3  ・
+          174.61, 0,      220.00, 0,       // F3  ・  A3  ・
+          196.00, 0,      246.94, 0,       // G3  ・  B3  ・
+          261.63, 0,      196.00, 0,       // C4  ・  G3  ・
+          220.00, 0,      174.61, 0,       // A3  ・  F3  ・
+          174.61, 0,      196.00, 0,       // F3  ・  G3  ・
+          261.63, 196.00, 261.63, 0        // C4  G3  C4  ・
+        ];
+
+        // 軽快な裏打ち伴奏コード（Hz）
+        this.chordNotes = [
+          0,      329.63, 0,      392.00,
+          0,      329.63, 0,      392.00,
+          0,      349.23, 0,      440.00,
+          0,      392.00, 0,      493.88,
+          0,      329.63, 0,      392.00,
+          0,      440.00, 0,      349.23,
+          0,      349.23, 0,      392.00,
+          0,      329.63, 0,      0
+        ];
       }
 
       init() {
@@ -221,6 +305,99 @@
         }
       }
 
+      // 1ステップ分のBGM音をWeb Audioで合成
+      playBgmStep() {
+        if (!this.bgmPlaying) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const stepIdx = this.bgmStep % this.melodyNotes.length;
+        const stepDurationSec = this.bgmFastMode ? 0.145 : 0.19; // 残り5秒以下で1.3倍速テンポアップ
+
+        if (!this.muted && this.ctx.state === 'running') {
+          const now = this.ctx.currentTime;
+
+          // 1. 主旋律（柔らかく丸みのある三角波）
+          const mFreq = this.melodyNotes[stepIdx];
+          if (mFreq > 0) {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(mFreq, now);
+
+            gain.gain.setValueAtTime(0.001, now);
+            gain.gain.linearRampToValueAtTime(0.075, now + 0.015);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + stepDurationSec * 1.15);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + stepDurationSec * 1.2);
+          }
+
+          // 2. ベースライン（温かみのあるサイン波）
+          const bFreq = this.bassNotes[stepIdx];
+          if (bFreq > 0) {
+            const bOsc = this.ctx.createOscillator();
+            const bGain = this.ctx.createGain();
+            bOsc.type = 'sine';
+            bOsc.frequency.setValueAtTime(bFreq, now);
+
+            bGain.gain.setValueAtTime(0.001, now);
+            bGain.gain.linearRampToValueAtTime(0.09, now + 0.015);
+            bGain.gain.exponentialRampToValueAtTime(0.001, now + stepDurationSec * 1.3);
+
+            bOsc.connect(bGain);
+            bGain.connect(this.ctx.destination);
+            bOsc.start(now);
+            bOsc.stop(now + stepDurationSec * 1.35);
+          }
+
+          // 3. 裏打ち伴奏（軽やかなスタッカート）
+          const cFreq = this.chordNotes[stepIdx];
+          if (cFreq > 0) {
+            const cOsc = this.ctx.createOscillator();
+            const cGain = this.ctx.createGain();
+            cOsc.type = 'sine';
+            cOsc.frequency.setValueAtTime(cFreq, now);
+
+            cGain.gain.setValueAtTime(0.001, now);
+            cGain.gain.linearRampToValueAtTime(0.035, now + 0.01);
+            cGain.gain.exponentialRampToValueAtTime(0.001, now + stepDurationSec * 0.75);
+
+            cOsc.connect(cGain);
+            cGain.connect(this.ctx.destination);
+            cOsc.start(now);
+            cOsc.stop(now + stepDurationSec * 0.8);
+          }
+        }
+
+        this.bgmStep++;
+        this.bgmTimer = setTimeout(() => this.playBgmStep(), stepDurationSec * 1000);
+      }
+
+      startBgm() {
+        this.stopBgm();
+        this.init();
+        this.bgmPlaying = true;
+        this.bgmFastMode = false;
+        this.bgmStep = 0;
+        this.playBgmStep();
+      }
+
+      setBgmFast(isFast) {
+        this.bgmFastMode = isFast;
+      }
+
+      stopBgm() {
+        this.bgmPlaying = false;
+        if (this.bgmTimer) {
+          clearTimeout(this.bgmTimer);
+          this.bgmTimer = null;
+        }
+      }
+
+      // 猫の鳴き声（ニャー）効果音
       playMeow() {
         if (this.muted) return;
         this.init();
@@ -236,7 +413,7 @@
         osc.frequency.exponentialRampToValueAtTime(620, now + 0.28);
 
         gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.3, now + 0.04);
+        gain.gain.linearRampToValueAtTime(0.28, now + 0.04);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
 
         osc.connect(gain);
@@ -245,6 +422,7 @@
         osc.stop(now + 0.3);
       }
 
+      // コイン獲得チャイム効果音
       playCoin() {
         if (this.muted) return;
         this.init();
@@ -261,7 +439,7 @@
         osc2.frequency.setValueAtTime(1318.51, now + 0.08); // E6
 
         gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.25, now + 0.02);
+        gain.gain.linearRampToValueAtTime(0.24, now + 0.02);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
 
         osc1.connect(gain);
@@ -274,6 +452,7 @@
         osc2.stop(now + 0.45);
       }
 
+      // 新記録達成ファンファーレ効果音
       playClearFanfare() {
         if (this.muted) return;
         this.init();
@@ -287,7 +466,7 @@
           osc.type = 'triangle';
           osc.frequency.setValueAtTime(freq, now);
           gain.gain.setValueAtTime(0, now);
-          gain.gain.linearRampToValueAtTime(0.25, now + 0.02);
+          gain.gain.linearRampToValueAtTime(0.24, now + 0.02);
           gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
           osc.connect(gain);
           gain.connect(this.ctx.destination);
@@ -296,6 +475,7 @@
         });
       }
 
+      // ミス（不正解）ブザー効果音
       playWrong() {
         if (this.muted) return;
         this.init();
@@ -311,7 +491,7 @@
         osc1.frequency.setValueAtTime(140, now);
         osc2.frequency.setValueAtTime(180, now);
 
-        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
 
         osc1.connect(gain);
@@ -322,23 +502,24 @@
         osc1.stop(now + 0.25); osc2.stop(now + 0.25);
       }
 
-      playGameOver() {
+      // タイムアップ効果音
+      playTimeUp() {
         if (this.muted) return;
         this.init();
         if (!this.ctx) return;
 
-        [400, 340, 280, 220].forEach((freq, idx) => {
-          const now = this.ctx.currentTime + idx * 0.12;
+        [523.25, 440, 392, 349.23].forEach((freq, idx) => {
+          const now = this.ctx.currentTime + idx * 0.11;
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
           osc.type = 'sine';
           osc.frequency.setValueAtTime(freq, now);
-          gain.gain.setValueAtTime(0.2, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          gain.gain.setValueAtTime(0.22, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
           osc.connect(gain);
           gain.connect(this.ctx.destination);
           osc.start(now);
-          osc.stop(now + 0.3);
+          osc.stop(now + 0.32);
         });
       }
     }
@@ -354,7 +535,7 @@
     window.addEventListener('pointerdown', unlockMobileAudio, { once: true });
 
     /* ===================================================================
-       2. REALISTIC CANVAS CAT VECTOR GRAPHICS ENGINE
+       2. 6種類の猫ベクターグラフィックス描画エンジン（Canvas）
        =================================================================== */
 
     const BREEDS = {
@@ -432,7 +613,7 @@
 
     const BREED_KEYS = Object.keys(BREEDS);
 
-    // Render detailed realistic cat head
+    // 詳細な猫の顔イラストをCanvasに描画
     function drawCat(ctx, centerX, centerY, radius, breedData) {
       ctx.save();
       ctx.translate(centerX, centerY);
@@ -440,12 +621,11 @@
       const strokeColor = '#2b231f';
       const strokeWidth = radius * 0.08;
 
-      // 1. EARS WITH FUR SHADING
+      // 1. 両耳の描画
       function drawEar(isLeft) {
         const sign = isLeft ? -1 : 1;
         ctx.save();
 
-        // Outer Ear Shadow & Shape
         ctx.beginPath();
         ctx.moveTo(sign * radius * 0.45, -radius * 0.55);
         ctx.quadraticCurveTo(sign * radius * 0.95, -radius * 1.15, sign * radius * 0.82, -radius * 1.18);
@@ -458,7 +638,6 @@
         ctx.strokeStyle = strokeColor;
         ctx.stroke();
 
-        // Inner Ear Fluff / Depth
         ctx.beginPath();
         ctx.moveTo(sign * radius * 0.48, -radius * 0.62);
         ctx.lineTo(sign * radius * 0.76, -radius * 1.05);
@@ -473,7 +652,7 @@
       drawEar(true);
       drawEar(false);
 
-      // 2. HEAD SHAPE WITH RADIAL LIGHTING
+      // 2. グラデーション付きの輪郭（頭部）
       const headGrad = ctx.createRadialGradient(
         -radius * 0.2, -radius * 0.2, radius * 0.1,
         0, 0, radius
@@ -490,9 +669,8 @@
       ctx.strokeStyle = strokeColor;
       ctx.stroke();
 
-      // 3. COAT PATTERNS
+      // 3. 猫種ごとの毛柄パターン（トラ・ぶち・三毛）
       if (breedData.id === 'tabby') {
-        // Tabby Forehead M-Mark
         ctx.fillStyle = breedData.stripes;
         ctx.beginPath();
         ctx.moveTo(-radius * 0.08, -radius * 0.88);
@@ -512,13 +690,11 @@
         ctx.lineTo(radius * 0.26, -radius * 0.84);
         ctx.fill();
       } else if (breedData.id === 'patch') {
-        // Eye Patch
         ctx.beginPath();
         ctx.ellipse(-radius * 0.34, -radius * 0.08, radius * 0.44, radius * 0.48, 0.2, 0, Math.PI * 2);
         ctx.fillStyle = breedData.patchColor;
         ctx.fill();
       } else if (breedData.id === 'calico') {
-        // Calico Patches
         ctx.beginPath();
         ctx.ellipse(-radius * 0.42, -radius * 0.42, radius * 0.42, radius * 0.38, -0.3, 0, Math.PI * 2);
         ctx.fillStyle = breedData.calicoOrange;
@@ -530,7 +706,7 @@
         ctx.fill();
       }
 
-      // 4. REALISTIC MUZZLE (WHISKER PADS)
+      // 4. 口元（ひげ袋・マズル）
       const muzzleY = radius * 0.22;
       ctx.beginPath();
       ctx.ellipse(-radius * 0.18, muzzleY, radius * 0.24, radius * 0.18, -0.15, 0, Math.PI * 2);
@@ -538,7 +714,7 @@
       ctx.fillStyle = breedData.id === 'black' ? '#3f3f46' : 'rgba(255, 255, 255, 0.85)';
       ctx.fill();
 
-      // 5. DETAILED ALMOND CAT EYES
+      // 5. アーモンド型の瞳とハイライト
       const eyeOffsetX = radius * 0.36;
       const eyeOffsetY = -radius * 0.12;
       const eyeRx = radius * 0.24;
@@ -549,13 +725,11 @@
         ctx.save();
         ctx.translate(ex, eyeOffsetY);
 
-        // Eye Contour / Eyeliner Base
         ctx.beginPath();
         ctx.ellipse(0, 0, eyeRx, eyeRy, 0, 0, Math.PI * 2);
         ctx.fillStyle = '#1c1917';
         ctx.fill();
 
-        // Iris Radial Gradient
         const irisGrad = ctx.createRadialGradient(0, 0, eyeRx * 0.15, 0, 0, eyeRx * 0.88);
         irisGrad.addColorStop(0, breedData.eyeIrisInner);
         irisGrad.addColorStop(0.7, breedData.eyeIrisOuter);
@@ -566,13 +740,11 @@
         ctx.fillStyle = irisGrad;
         ctx.fill();
 
-        // Vertical Cat Pupil (Tapered Slit)
         ctx.beginPath();
         ctx.ellipse(0, 0, eyeRx * 0.24, eyeRy * 0.72, 0, 0, Math.PI * 2);
         ctx.fillStyle = '#09090b';
         ctx.fill();
 
-        // Multi-point Specular Highlights (Catchlights)
         ctx.beginPath();
         ctx.ellipse(-eyeRx * 0.28, -eyeRy * 0.28, eyeRx * 0.22, eyeRy * 0.18, -0.3, 0, Math.PI * 2);
         ctx.fillStyle = '#ffffff';
@@ -589,7 +761,7 @@
       renderRealisticEye(true);
       renderRealisticEye(false);
 
-      // 6. CAT NOSE WITH NOSTRILS
+      // 6. 鼻
       ctx.beginPath();
       ctx.moveTo(-radius * 0.1, radius * 0.12);
       ctx.lineTo(radius * 0.1, radius * 0.12);
@@ -598,7 +770,7 @@
       ctx.fillStyle = breedData.id === 'black' ? '#18181b' : '#f43f5e';
       ctx.fill();
 
-      // 7. MOUTH CURVES
+      // 7. 口元のカーブ
       ctx.beginPath();
       ctx.strokeStyle = strokeColor;
       ctx.lineWidth = strokeWidth * 0.85;
@@ -611,7 +783,7 @@
       ctx.quadraticCurveTo(radius * 0.08, radius * 0.38, radius * 0.16, radius * 0.32);
       ctx.stroke();
 
-      // 8. REALISTIC CURVING WHISKERS
+      // 8. ヒゲ
       ctx.strokeStyle = breedData.id === 'black' ? 'rgba(255, 255, 255, 0.75)' : 'rgba(43, 35, 31, 0.85)';
       ctx.lineWidth = strokeWidth * 0.55;
 
@@ -639,7 +811,7 @@
     }
 
     /* ===================================================================
-       3. GAME STATE & DIFFICULTY SETTINGS (PLAN 4 GOALS & REWARDS)
+       3. ゲーム状態管理＆難易度設定（ご指定の制限時間・コイン報酬）
        =================================================================== */
 
     const DIFFICULTIES = {
@@ -648,34 +820,34 @@
         name: '初級',
         timeLimit: 30.0,
         bonusTime: 0.0,
+        maxTime: 30.0,
         baseSpeed: 1.2,
         speedScale: 0.05,
-        clearGoal: 8,
-        clearReward: 10,
+        coinPerCat: 5,
         catRadius: 30,
         badgeClass: 'bg-emerald-100 text-emerald-700'
       },
       normal: {
         id: 'normal',
         name: '中級',
-        timeLimit: 20.0,
+        timeLimit: 30.0,
         bonusTime: 0.0,
-        baseSpeed: 3.2,
-        speedScale: 0.15,
-        clearGoal: 10,
-        clearReward: 30,
+        maxTime: 30.0,
+        baseSpeed: 3.0,
+        speedScale: 0.14,
+        coinPerCat: 10,
         catRadius: 27,
         badgeClass: 'bg-amber-100 text-amber-700'
       },
       hard: {
         id: 'hard',
         name: '上級',
-        timeLimit: 12.0,
+        timeLimit: 20.0,
         bonusTime: 2.0,
-        baseSpeed: 5.0,
-        speedScale: 0.3, // Accelerated moderately so 15 cats is achievable!
-        clearGoal: 15,
-        clearReward: 50,
+        maxTime: 30.0,
+        baseSpeed: 4.8,
+        speedScale: 0.28,
+        coinPerCat: 20,
         catRadius: 24,
         badgeClass: 'bg-rose-100 text-rose-700'
       }
@@ -690,9 +862,11 @@
 
     const targetTitle = document.getElementById('targetTitle');
     const diffBadge = document.getElementById('diffBadge');
+    const liveHighScoreBadge = document.getElementById('liveHighScoreBadge');
     const catCountDisplay = document.getElementById('catCountDisplay');
     const coinDisplay = document.getElementById('coinDisplay');
     const timeDisplay = document.getElementById('timeDisplay');
+    const dangerVignette = document.getElementById('dangerVignette');
 
     const startOverlay = document.getElementById('startOverlay');
     const gameOverOverlay = document.getElementById('gameOverOverlay');
@@ -708,16 +882,74 @@
     let currentDifficulty = DIFFICULTIES.normal;
     let stage = 1;
     let catsFound = 0;
-    let hasAwardedClear = false;
+    let hasBrokenRecordLive = false;
+    let initialBestScore = 0;
+    let initialBestCats = 0;
     let score = 0;
     let sessionCoinsEarned = 0;
     // にゃんカロとのつなぎ（同じサイトの中で iframe として開かれたときだけ使える）
-    //   info()  → { coins, left, best }   reward(枚数) → { ok, msg }   played() / best(点) / close()
     const APP = (() => { try { return window.parent !== window && window.parent.nyankaloMini ? window.parent.nyankaloMini : null; } catch (e) { return null; } })();
-    let totalCoins = APP ? APP.info().coins : 0;
-    let highScore = APP ? APP.info().best : 0;
-    let rewardMsg = '';
-    let timeRemaining = 10.0;
+    let totalCoins = APP ? APP.info().coins : parseInt(localStorage.getItem('cat_finder_coins') || '0', 10);
+
+    // 難易度別の最高記録（スコア・最大発見匹数）の読み込み
+    function loadDifficultyRecords() {
+      const defaultRecords = {
+        easy: { score: 0, cats: 0 },
+        normal: { score: 0, cats: 0 },
+        hard: { score: 0, cats: 0 }
+      };
+      if (APP) {
+        const r = APP.getRec('sagase');
+        if (r) return { easy: r.easy || defaultRecords.easy, normal: r.normal || defaultRecords.normal, hard: r.hard || defaultRecords.hard };
+        return defaultRecords;
+      }
+      try {
+        const saved = localStorage.getItem('cat_finder_records');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return {
+            easy: { score: Number(parsed.easy?.score) || 0, cats: Number(parsed.easy?.cats) || 0 },
+            normal: { score: Number(parsed.normal?.score) || 0, cats: Number(parsed.normal?.cats) || 0 },
+            hard: { score: Number(parsed.hard?.score) || 0, cats: Number(parsed.hard?.cats) || 0 }
+          };
+        }
+        const legacyHigh = parseInt(localStorage.getItem('cat_finder_highscore') || '0', 10);
+        if (legacyHigh > 0) {
+          defaultRecords.normal.score = legacyHigh;
+          localStorage.setItem('cat_finder_records', JSON.stringify(defaultRecords));
+        }
+      } catch (e) {
+        console.error('Failed to load records:', e);
+      }
+      return defaultRecords;
+    }
+
+    let difficultyRecords = loadDifficultyRecords();
+
+    function saveDifficultyRecords() {
+      if (APP) { APP.setRec('sagase', difficultyRecords); return; }
+      try {
+        localStorage.setItem('cat_finder_records', JSON.stringify(difficultyRecords));
+      } catch (e) {
+        console.error('Failed to save records:', e);
+      }
+    }
+
+    // スタート画面の各難易度ボタンに最高記録を反映
+    function updateMenuRecordsUI() {
+      ['easy', 'normal', 'hard'].forEach(diffKey => {
+        const el = document.getElementById(`bestMenu-${diffKey}`);
+        if (!el) return;
+        const rec = difficultyRecords[diffKey];
+        if (rec && (rec.score > 0 || rec.cats > 0)) {
+          el.textContent = `🏆 最高記録: ${rec.score.toLocaleString()}点 (${rec.cats}匹)`;
+        } else {
+          el.textContent = `🏆 最高記録: 未挑戦`;
+        }
+      });
+    }
+
+    let timeRemaining = 30.0;
     let timerInterval = null;
 
     let logicalWidth = 0;
@@ -729,15 +961,20 @@
     let popupTexts = [];
 
     function refreshMenu() {
-      if (APP) { const i = APP.info(); totalCoins = i.coins; highScore = i.best; document.getElementById('rewardLeft').textContent = i.left > 0 ? `今日コインがもらえるのは あと${i.left}回（ミニゲーム全体で1日3回）` : '今日のコイン報酬はおわり（あそぶことはできます）'; }
-      else document.getElementById('rewardLeft').textContent = 'にゃんカロの中で開くとコインがアプリにたまります';
+      const el = document.getElementById('rewardLeft');
+      if (APP) {
+        const i = APP.info(); totalCoins = i.coins;
+        el.textContent = i.left > 0 ? `今日アプリにコインがもらえるのは あと${i.left}回（1回最大${i.max}枚）` : '今日のコイン報酬はおわり（あそぶことはできます）';
+      } else el.textContent = 'にゃんカロの中で開くとコインがアプリにたまります';
       totalCoinsMenu.textContent = totalCoins;
     }
     refreshMenu();
-    document.getElementById('backBtn').addEventListener('click', e => { e.stopPropagation(); gameActive = false; clearInterval(timerInterval); if (APP) APP.close(); else history.back(); });
+    updateMenuRecordsUI();
+    document.getElementById('backBtn').addEventListener('click', e => { e.stopPropagation(); gameActive = false; clearInterval(timerInterval); sound.stopBgm(); if (APP) APP.close(); else history.back(); });
+    if (APP && !APP.info().sound) { sound.muted = true; document.getElementById('soundIcon').textContent = '🔇'; }
 
     /* ===================================================================
-       4. CAT ENTITY & PARTICLES
+       4. 猫エンティティ＆パーティクル（スマホ最適化済みの当たり判定・速度）
        =================================================================== */
 
     class CatEntity {
@@ -751,11 +988,14 @@
         this.rotation = (Math.random() - 0.5) * (Math.PI * 1.0);
         this.rotSpeed = (Math.random() - 0.5) * 0.03 * (currentDifficulty.baseSpeed / 1.5);
 
-        const speed = (currentDifficulty.baseSpeed + (stage - 1) * currentDifficulty.speedScale) * (0.85 + Math.random() * 0.3);
+        // スマホなど幅が狭い画面（640px未満）では移動速度を0.85倍に抑えて見失いにくくする
+        const mobileSpeedFactor = logicalWidth < 640 ? 0.85 : 1.0;
+        const speed = (currentDifficulty.baseSpeed + (stage - 1) * currentDifficulty.speedScale) * mobileSpeedFactor * (0.85 + Math.random() * 0.3);
         const angle = Math.random() * Math.PI * 2;
         this.vx = Math.cos(angle) * speed;
         this.vy = Math.sin(angle) * speed;
 
+        // オフスクリーンCanvasに事前描画して高FPSを維持
         this.cache = document.createElement('canvas');
         const dim = Math.ceil(radius * 3.4);
         this.cache.width = Math.ceil(dim * dpr);
@@ -772,8 +1012,8 @@
 
         const pad = this.radius * 1.1;
         const hudCard = document.querySelector('.hud-card-shadow');
-        const hudHeight = hudCard ? hudCard.getBoundingClientRect().height + 16 : 80;
-        const topBound = hudHeight + this.radius * 1.2;
+        const hudHeight = hudCard ? hudCard.getBoundingClientRect().height + 16 : 76;
+        const topBound = hudHeight + this.radius * 1.15;
 
         if (this.x < pad) { this.x = pad; this.vx = Math.abs(this.vx); }
         if (this.x > width - pad) { this.x = width - pad; this.vx = -Math.abs(this.vx); }
@@ -790,10 +1030,12 @@
         ctx.restore();
       }
 
+      // タップ当たり判定（スマホは1.35倍、PCは1.25倍で押しやすく調整）
       isHit(mx, my) {
         const dx = mx - this.x;
         const dy = my - this.y;
-        const hitRadius = this.radius * 1.2;
+        const hitMultiplier = logicalWidth < 640 ? 1.35 : 1.25;
+        const hitRadius = this.radius * hitMultiplier;
         return (dx * dx + dy * dy) <= (hitRadius * hitRadius);
       }
     }
@@ -842,7 +1084,7 @@
       draw(ctx) {
         ctx.save();
         ctx.globalAlpha = Math.max(0, this.life);
-        ctx.font = '900 20px "Zen Maru Gothic", sans-serif';
+        ctx.font = '900 19px "Zen Maru Gothic", sans-serif';
         ctx.fillStyle = this.color;
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 4;
@@ -854,7 +1096,7 @@
     }
 
     /* ===================================================================
-       5. RESIZING & GAME FLOW
+       5. リサイズ＆ゲーム進行制御
        =================================================================== */
 
     function resizeCanvas() {
@@ -886,28 +1128,56 @@
 
     function updateCatCountUI() {
       if (catCountDisplay) {
-        catCountDisplay.innerHTML = `<span class="text-stone-800">${catsFound}</span>/<span class="text-stone-500">${currentDifficulty.clearGoal}匹</span>`;
+        catCountDisplay.textContent = `${catsFound}匹`;
+      }
+    }
+
+    function updateTensionEffect() {
+      if (!dangerVignette) return;
+      const isDangerTime = (gameActive && timeRemaining <= 5.0 && timeRemaining > 0);
+      sound.setBgmFast(isDangerTime);
+
+      if (isDangerTime) {
+        const urgency = Math.min(1, Math.max(0, (5.0 - timeRemaining) / 5.0));
+        dangerVignette.style.opacity = (0.35 + urgency * 0.6).toFixed(2);
+        dangerVignette.classList.add('danger-vignette-active');
+        timeDisplay.classList.add('animate-pulse', 'scale-105');
+      } else {
+        dangerVignette.style.opacity = '0';
+        dangerVignette.classList.remove('danger-vignette-active');
+        timeDisplay.classList.remove('animate-pulse', 'scale-105');
       }
     }
 
     function startGame(diffKey) {
       sound.init();
+      sound.startBgm();
       currentDifficulty = DIFFICULTIES[diffKey] || DIFFICULTIES.normal;
 
       stage = 1;
       catsFound = 0;
-      hasAwardedClear = false;
+      hasBrokenRecordLive = false;
       score = 0;
       sessionCoinsEarned = 0;
-      rewardMsg = '';
       timeRemaining = currentDifficulty.timeLimit;
       gameActive = true;
+      updateTensionEffect();
+
+      // ラウンド開始時の現在の難易度のベスト記録を保持し、ライブバッジをリセット
+      const savedRec = difficultyRecords[currentDifficulty.id] || { score: 0, cats: 0 };
+      initialBestScore = savedRec.score;
+      initialBestCats = savedRec.cats;
+      if (liveHighScoreBadge) {
+        liveHighScoreBadge.classList.add('hidden');
+        liveHighScoreBadge.classList.remove('live-best-badge-active');
+      }
 
       diffBadge.textContent = currentDifficulty.name;
-      diffBadge.className = `text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-full w-max leading-none mb-0.5 ${currentDifficulty.badgeClass}`;
+      diffBadge.className = `text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-full w-max leading-none ${currentDifficulty.badgeClass}`;
 
       updateCatCountUI();
       coinDisplay.textContent = sessionCoinsEarned;
+      timeDisplay.textContent = `TIME: ${timeRemaining.toFixed(1)}s`;
 
       startOverlay.classList.add('hidden');
       gameOverOverlay.classList.add('hidden');
@@ -927,34 +1197,47 @@
       targetTitle.textContent = targetBreed.title;
       renderTargetIcon(targetBreed);
 
+      // 画面幅・面積比に応じたスマホ密度の最適化
       const isMobile = logicalWidth < 640;
-      const baseCrowd = isMobile ? 8 : 12;
-      const maxCrowd = isMobile ? 45 : 65;
-      const crowdCount = Math.min(baseCrowd + (stage - 1) * 3, maxCrowd);
+      const catRadius = isMobile
+        ? Math.max(19, Math.round(currentDifficulty.catRadius * 0.82))
+        : currentDifficulty.catRadius;
 
-      const catRadius = currentDifficulty.catRadius;
-      const pad = catRadius * 1.4;
-      
+      const pad = catRadius * 1.35;
       const hudCard = document.querySelector('.hud-card-shadow');
-      const hudHeight = hudCard ? hudCard.getBoundingClientRect().height + 16 : 80;
-      const topPad = hudHeight + catRadius * 1.2;
+      const hudHeight = hudCard ? hudCard.getBoundingClientRect().height + 16 : 76;
+      const topPad = hudHeight + catRadius * 1.15;
 
-      // Target Cat
-      const targetX = pad + Math.random() * (logicalWidth - pad * 2);
-      const targetY = topPad + Math.random() * Math.max(10, (logicalHeight - topPad - pad));
+      const playableWidth = Math.max(180, logicalWidth - pad * 2);
+      const playableHeight = Math.max(200, logicalHeight - topPad - pad);
+      const playableArea = playableWidth * playableHeight;
+      const singleCatSpace = Math.pow(catRadius * 2.5, 2);
+
+      const densityFactor = isMobile ? 0.38 : 0.45;
+      const areaCap = Math.max(10, Math.floor((playableArea / singleCatSpace) * densityFactor));
+
+      const baseCrowd = isMobile ? 7 : 11;
+      const stepCrowd = isMobile ? 2 : 3;
+      const hardCap = isMobile ? Math.min(26, areaCap) : Math.min(55, areaCap);
+      const crowdCount = Math.min(baseCrowd + (stage - 1) * stepCrowd, hardCap);
+
+      // お題の猫（必ず1匹だけ出現）
+      const targetX = pad + Math.random() * Math.max(10, logicalWidth - pad * 2);
+      const targetY = topPad + Math.random() * Math.max(10, logicalHeight - topPad - pad);
       const targetCat = new CatEntity(targetX, targetY, catRadius, targetBreed, true);
 
-      // Distractor Cats
+      // ダミー猫（残りの枠）
       const distractorKeys = BREED_KEYS.filter(k => k !== targetKey);
       for (let i = 0; i < crowdCount - 1; i++) {
         const randKey = distractorKeys[Math.floor(Math.random() * distractorKeys.length)];
         const distractorBreed = BREEDS[randKey];
 
-        const x = pad + Math.random() * (logicalWidth - pad * 2);
-        const y = topPad + Math.random() * Math.max(10, (logicalHeight - topPad - pad));
+        const x = pad + Math.random() * Math.max(10, logicalWidth - pad * 2);
+        const y = topPad + Math.random() * Math.max(10, logicalHeight - topPad - pad);
         catEntities.push(new CatEntity(x, y, catRadius, distractorBreed, false));
       }
 
+      // 描画順が偏らないようランダムな位置にお題の猫を挿入
       const insertIdx = Math.floor(Math.random() * (catEntities.length + 1));
       catEntities.splice(insertIdx, 0, targetCat);
     }
@@ -983,11 +1266,12 @@
           triggerGameOver();
         }
         timeDisplay.textContent = `TIME: ${timeRemaining.toFixed(1)}s`;
+        updateTensionEffect();
       }, 50);
     }
 
     /* ===================================================================
-       6. INPUT & REWARD HANDLING
+       6. タップ入力判定＆報酬・ペナルティ処理
        =================================================================== */
 
     function handlePointerDown(e) {
@@ -997,69 +1281,94 @@
       const clickX = e.clientX - rect.left;
       const clickY = e.clientY - rect.top;
 
+      let hitTarget = null;
+      let hitDistractor = false;
+
+      // 重なり合っている場合でもお題の猫へのタップを優先判定
       for (let i = catEntities.length - 1; i >= 0; i--) {
         const cat = catEntities[i];
         if (cat.isHit(clickX, clickY)) {
           if (cat.isTarget) {
-            catsFound++;
-            updateCatCountUI();
-
-            sound.playMeow();
-            sound.playCoin();
-
-            // Check Plan 4 Goal Achievement
-            if (catsFound >= currentDifficulty.clearGoal && !hasAwardedClear) {
-              hasAwardedClear = true;
-              sound.playClearFanfare();
-
-              const r = APP ? APP.reward(currentDifficulty.clearReward) : { ok: true, msg: '' };
-              rewardMsg = r.ok ? "" : r.msg;
-              if (r.ok) { sessionCoinsEarned += currentDifficulty.clearReward; totalCoins += currentDifficulty.clearReward; }
-              coinDisplay.textContent = sessionCoinsEarned;
-
-              popupTexts.push(new FloatingText(cat.x, cat.y - 35, '🎉 CLEAR達成!', '#10b981'));
-              popupTexts.push(new FloatingText(cat.x, cat.y + 10, r.ok ? `+${currentDifficulty.clearReward} 🪙 GET!` : '今日の報酬はおわり', '#f59e0b'));
-            } else {
-              popupTexts.push(new FloatingText(cat.x, cat.y - 10, currentDifficulty.bonusTime > 0 ? `+${currentDifficulty.bonusTime.toFixed(1)}秒!` : '正解!', '#10b981'));
-            }
-
-            // Particles
-            for (let p = 0; p < 18; p++) {
-              particleList.push(new StarParticle(cat.x, cat.y, true));
-            }
-
-            score += 100 + stage * 20;
-
-            if (currentDifficulty.bonusTime > 0) {
-              timeRemaining = Math.min(25.0, timeRemaining + currentDifficulty.bonusTime);
-              timeDisplay.textContent = `TIME: ${timeRemaining.toFixed(1)}s`;
-            }
-
-            stage++;
-
-            gameActive = false;
-            setTimeout(() => {
-              gameActive = true;
-              setupStage();
-            }, 320);
-
+            hitTarget = cat;
+            break;
           } else {
-            // MISS - Penalty (-1.0s + Screen Shake & Error Sound)
-            sound.playWrong();
-
-            gameFrame.classList.remove('animate-shake', 'flash-error');
-            void gameFrame.offsetWidth;
-            gameFrame.classList.add('animate-shake', 'flash-error');
-
-            timeRemaining = Math.max(0, timeRemaining - 1.0);
-            timeDisplay.textContent = `TIME: ${timeRemaining.toFixed(1)}s`;
-
-            popupTexts.push(new FloatingText(clickX, clickY, '-1.0秒!', '#ef4444'));
-
-            if (timeRemaining <= 0) triggerGameOver();
+            hitDistractor = true;
           }
-          break;
         }
+      }
+
+      if (hitTarget) {
+        const cat = hitTarget;
+        catsFound++;
+        updateCatCountUI();
+
+        sound.playMeow();
+        sound.playCoin();
+
+        // 難易度ごとの1匹あたり獲得コインを加算・保存
+        const coinReward = currentDifficulty.coinPerCat;
+        sessionCoinsEarned += coinReward;
+        if (!APP) { totalCoins += coinReward; localStorage.setItem('cat_finder_coins', totalCoins.toString()); }
+        coinDisplay.textContent = sessionCoinsEarned;
+
+        if (currentDifficulty.bonusTime > 0) {
+          popupTexts.push(new FloatingText(cat.x, cat.y - 24, `+${currentDifficulty.bonusTime.toFixed(1)}秒!`, '#10b981'));
+          popupTexts.push(new FloatingText(cat.x, cat.y + 4, `+${coinReward} 🪙`, '#f59e0b'));
+        } else {
+          popupTexts.push(new FloatingText(cat.x, cat.y - 12, `正解! +${coinReward}🪙`, '#10b981'));
+        }
+
+        for (let p = 0; p < 16; p++) {
+          particleList.push(new StarParticle(cat.x, cat.y, true));
+        }
+
+        score += 100 + stage * 20;
+
+        // プレイ中の自己ベスト更新チェック
+        const hasExistingRecord = (initialBestScore > 0 || initialBestCats > 0);
+        if (hasExistingRecord && !hasBrokenRecordLive && (score > initialBestScore || catsFound > initialBestCats)) {
+          hasBrokenRecordLive = true;
+          if (liveHighScoreBadge) {
+            liveHighScoreBadge.classList.remove('hidden');
+            void liveHighScoreBadge.offsetWidth;
+            liveHighScoreBadge.classList.add('live-best-badge-active');
+          }
+          popupTexts.push(new FloatingText(cat.x, cat.y - 46, '👑 自己ベスト更新！', '#d97706'));
+          for (let p = 0; p < 22; p++) {
+            particleList.push(new StarParticle(cat.x, cat.y, true));
+          }
+        }
+
+        // 上級モードなどのボーナス時間加算（上限30.0秒）
+        if (currentDifficulty.bonusTime > 0) {
+          timeRemaining = Math.min(currentDifficulty.maxTime, timeRemaining + currentDifficulty.bonusTime);
+          timeDisplay.textContent = `TIME: ${timeRemaining.toFixed(1)}s`;
+          updateTensionEffect();
+        }
+
+        stage++;
+
+        gameActive = false;
+        setTimeout(() => {
+          gameActive = true;
+          setupStage();
+        }, 280);
+
+      } else if (hitDistractor) {
+        // ダミー猫をタップした場合はペナルティ（-1.0秒＆画面シェイク）
+        sound.playWrong();
+
+        gameFrame.classList.remove('animate-shake', 'flash-error');
+        void gameFrame.offsetWidth;
+        gameFrame.classList.add('animate-shake', 'flash-error');
+
+        timeRemaining = Math.max(0, timeRemaining - 1.0);
+        timeDisplay.textContent = `TIME: ${timeRemaining.toFixed(1)}s`;
+        updateTensionEffect();
+
+        popupTexts.push(new FloatingText(clickX, clickY, '-1.0秒!', '#ef4444'));
+
+        if (timeRemaining <= 0) triggerGameOver();
       }
     }
 
@@ -1068,42 +1377,80 @@
     function triggerGameOver() {
       gameActive = false;
       clearInterval(timerInterval);
+      sound.stopBgm();
+      updateTensionEffect();
 
-      const isClear = catsFound >= currentDifficulty.clearGoal;
+      const diffId = currentDifficulty.id;
+      const currentRecord = difficultyRecords[diffId] || { score: 0, cats: 0 };
+      let isNewRecord = false;
+
+      if (score > currentRecord.score) {
+        currentRecord.score = score;
+        isNewRecord = true;
+      }
+      if (catsFound > currentRecord.cats) {
+        currentRecord.cats = catsFound;
+        isNewRecord = true;
+      }
+
+      if (isNewRecord) {
+        difficultyRecords[diffId] = currentRecord;
+        saveDifficultyRecords();
+        updateMenuRecordsUI();
+      }
+
       const resultEmoji = document.getElementById('resultEmoji');
       const resultHeader = document.getElementById('resultHeader');
       const resultSub = document.getElementById('resultSub');
 
-      if (isClear) {
+      if (isNewRecord && catsFound > 0) {
         sound.playClearFanfare();
         resultEmoji.textContent = '🎉';
-        resultHeader.textContent = 'CLEAR!';
+        resultHeader.textContent = 'TIME UP!';
         resultHeader.className = 'text-3xl sm:text-4xl font-black text-emerald-400 mb-1';
-        resultSub.textContent = `目標 ${currentDifficulty.clearGoal}匹 クリア達成！`;
+        resultSub.textContent = `すごい！${catsFound}匹見つけて新記録達成！`;
+      } else if (catsFound > 0) {
+        sound.playTimeUp();
+        resultEmoji.textContent = '🐱';
+        resultHeader.textContent = 'TIME UP!';
+        resultHeader.className = 'text-3xl sm:text-4xl font-black text-amber-400 mb-1';
+        resultSub.textContent = `${catsFound}匹の猫を見つけました！`;
       } else {
-        sound.playGameOver();
-        resultEmoji.textContent = '😢';
-        resultHeader.textContent = '残念...';
+        sound.playTimeUp();
+        resultEmoji.textContent = '⏰';
+        resultHeader.textContent = 'TIME UP!';
         resultHeader.className = 'text-3xl sm:text-4xl font-black text-rose-400 mb-1';
-        const needed = currentDifficulty.clearGoal - catsFound;
-        resultSub.textContent = `あと ${needed} 匹でクリアでした！`;
+        resultSub.textContent = `次は1匹以上見つけてみよう！`;
       }
 
       document.getElementById('finalDiff').textContent = currentDifficulty.name;
-      document.getElementById('finalCats').textContent = `${catsFound}匹 / 目標 ${currentDifficulty.clearGoal}匹`;
-      document.getElementById('finalCoins').textContent = `🪙 +${sessionCoinsEarned}`;
-      document.getElementById('finalNote').textContent = hasAwardedClear ? rewardMsg : '';
-      document.getElementById('finalScore').textContent = score;
+      document.getElementById('finalCats').textContent = `${catsFound}匹`;
+      // アプリへ：見つけた分のコイン（1回の上限あり・報酬つきプレイを1回使う）
+      let given = sessionCoinsEarned, note = '';
+      if (APP) {
+        const r = APP.reward(sessionCoinsEarned);
+        given = r.given; note = r.msg; totalCoins = APP.info().coins;
+      }
+      document.getElementById('finalCoins').textContent = `🪙 +${given}`;
+      document.getElementById('finalNote').textContent = note;
+      document.getElementById('finalScore').textContent = `${score.toLocaleString()}点`;
 
-      if (APP && !hasAwardedClear) APP.played();   // クリアしなくても「あそんだ」回数（ミッション）に数える
-      if (APP) highScore = APP.best(score);
-      else if (score > highScore) highScore = score;
-      document.getElementById('finalBest').textContent = highScore;
+      const newRecordBadge = document.getElementById('newRecordBadge');
+      if (newRecordBadge) {
+        if (isNewRecord && (score > 0 || catsFound > 0)) {
+          newRecordBadge.classList.remove('hidden');
+        } else {
+          newRecordBadge.classList.add('hidden');
+        }
+      }
+
+      document.getElementById('finalBestLabel').textContent = `最高記録 (${currentDifficulty.name}):`;
+      document.getElementById('finalBest').textContent = `${currentRecord.score.toLocaleString()}点 (${currentRecord.cats}匹)`;
 
       gameOverOverlay.classList.remove('hidden');
     }
 
-    // Difficulty selection menu buttons
+    // 難易度選択ボタンのイベント登録
     document.querySelectorAll('.diffBtn').forEach(btn => {
       btn.addEventListener('click', () => {
         const diffKey = btn.getAttribute('data-diff');
@@ -1118,19 +1465,29 @@
     }
 
     restartBtn.addEventListener('click', () => {
+      sound.stopBgm();
       refreshMenu();
+      updateMenuRecordsUI();
+      if (liveHighScoreBadge) {
+        liveHighScoreBadge.classList.add('hidden');
+        liveHighScoreBadge.classList.remove('live-best-badge-active');
+      }
       gameOverOverlay.classList.add('hidden');
       startOverlay.classList.remove('hidden');
+      updateTensionEffect();
     });
 
     soundBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       sound.muted = !sound.muted;
       soundIcon.textContent = sound.muted ? '🔇' : '🔊';
+      if (!sound.muted) {
+        sound.init();
+      }
     });
 
     /* ===================================================================
-       7. MAIN ANIMATION LOOP
+       7. メインアニメーションループ
        =================================================================== */
 
     function animate() {
@@ -1157,7 +1514,10 @@
       requestAnimationFrame(animate);
     }
 
-    requestAnimationFrame(animate);
+    window.onload = function () {
+      resizeCanvas();
+      requestAnimationFrame(animate);
+    };
 
   </script>
 </body>

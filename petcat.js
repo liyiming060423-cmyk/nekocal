@@ -10,7 +10,7 @@
 //   絵の大きさ・当たり判定などは data.js の CATS に書く。
 const PC_BOX_W = 600, PC_BOX_H = 813;      // 猫を入れる枠（どの猫も同じ）
 const pcCat = b => CATS[b] || CATS.tabby;
-const pcImg = (b, part) => `./${CATS[b] ? b : 'tabby'}-${part}.png`;
+const pcImg = (b, part) => `cats/${CATS[b] ? b : 'tabby'}-${part}.png`;
 
 const PC_LINES = {
   head: ['ゴロゴロ…', 'もっとなでて♡', 'ふにゃ〜'],

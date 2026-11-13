@@ -1,3 +1,6 @@
+// アプリの版。index.html の ?v= と sw.js の VERSION もこれにそろえる
+const APP_VER = '8.1';
+
 // にゃんカロ データ定義
 // アイテム・ショップ・トレーニング・ミッションなど「数字や名前」はここだけで管理する。
 // 値を変えたいときはこのファイルだけ直せばOK。
@@ -113,6 +116,11 @@ const RULE = {
   staminaPerUnit: 5,       //   スタミナ回復
   coinPerUnit: 10,         //   コイン
   miniPlaysPerDay: 3,      // ミニゲームで報酬がもらえる回数
+  photoBonusMax: 3,        // 写真つきでごはんを記録すると、報酬つきプレイが1回ふえる（1日この回数まで）
+  miniRewardMax: 50,       // 組員作ミニゲーム（猫探し・ダッシュ）で1回にもらえるコインの上限
+  slotNetMax: 100,         // スロットで1日に増やせるコインの上限（負けはそのまま減る）
+  crisisWarn: 70,          // 体型がこの値をこえたら猫がSOS（1回目）
+  crisisDanger: 90,        //   この値をこえたら2回目（±100で骸骨／爆発）
   expPerMeal: 10
 };
 
@@ -122,7 +130,7 @@ const LOGIN_REWARDS = [50, 60, 70, 80, 90, 100, 300];
 // 毎日のミッション（check は今日のデータから達成数を数える）
 const MISSIONS = [
   { id: 'photo1',  name: 'ごはんを1回記録する', goal: 1, reward: 30, check: d => d.meals.length },
-  { id: 'meal3',   name: '朝・昼・夜を記録する', goal: 3, reward: 50, check: d => new Set(d.meals.map(m => m.slot)).size },
+  { id: 'meal3',   name: '朝・昼・夜を記録する', goal: 3, reward: 50, check: d => new Set(d.meals.map(m => m.slot).filter(s => s !== 'snack')).size },
   { id: 'train1',  name: 'ジムでトレーニングする', goal: 1, reward: 30, check: d => d.trains || 0 },
   { id: 'mini1',   name: 'ミニゲームをあそぶ',   goal: 1, reward: 20, check: d => d.minis || 0 },
   { id: 'steps5k', name: '5,000歩あるく',        goal: 5000, reward: 50, check: d => d.steps || 0 }
@@ -143,4 +151,4 @@ const QUIZ_FOODS = [
 ];
 
 const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
-const SLOTS = { morning: '朝', noon: '昼', night: '夜' };
+const SLOTS = { morning: '朝', noon: '昼', night: '夜', snack: '間食' };

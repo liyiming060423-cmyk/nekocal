@@ -110,7 +110,7 @@ function save() {
   }
 }
 function day(d = todayStr()) {
-  if (!S.days[d]) S.days[d] = { meals: [], steps: 0, stepUnits: 0, trains: 0, minis: 0, miniRewards: 0, mealRewards: 0 };
+  if (!S.days[d]) S.days[d] = { meals: [], steps: 0, stepUnits: 0, trains: 0, minis: 0, miniRewards: 0, mealRewards: 0, photoBonus: 0, slotNet: 0 };
   return S.days[d];
 }
 const intake = d => (S.days[d] ? S.days[d].meals.reduce((a, m) => a + m.kcal, 0) : 0);
@@ -156,6 +156,47 @@ function settleDay(d) {
   S.history.push({ date: d, intake: it, target: tg, diff, change: ch, idx: S.cat.idx });
   if (S.cat.idx <= -100) S.cat.dead = 'skel';
   if (S.cat.idx >= 100) S.cat.dead = 'boom';
+}
+/* ---- 猫のSOS（骸骨・爆発の前に知らせる） ----
+   太る側：今の体型と「今日このまま1日が終わったら」の体型の大きいほう で判断（食べるほど増えるので前もって分かる）
+   やせる側：今の体型で判断（朝はまだ食べていないので、今日の予想は使わない）
+   1回目 ±crisisWarn、2回目 ±crisisDanger。体型がもどったら、また鳴けるようにする */
+const CRISIS = {
+  hi: [null, { say: 'く、くるしいにゃ…おなかパンパン…！', note: 'おなかがパンパンで苦しそう！このままだと爆発しちゃうかも…' },
+    { say: 'もう限界にゃーーっ！！爆発しちゃうにゃ！！', note: '「もう限界にゃーっ！！」このままだと爆発します！今日はもう食べないで！' }],
+  lo: [null, { say: 'おなかすきすぎて…力が出ないにゃ…', note: 'おなかがすきすぎてフラフラ…。ちゃんと食べさせてあげて！' },
+    { say: 'た、たすけてにゃ…骨になっちゃうにゃ…！', note: '「たすけてにゃ…！」このままだと骸骨になってしまいます！しっかり食べて！' }]
+};
+function crisisNow() {
+  if (S.cat.dead || !S.onboarded) return null;
+  const t = todayStr(), d = S.days[t];
+  let proj = S.cat.idx;
+  if (d && d.meals.length) proj = clamp(S.cat.idx + bodyChange(intake(t) - target(S.user), S.cat.idx), -100, 100);
+  const hi = Math.max(S.cat.idx, proj), lo = S.cat.idx;
+  const st = v => v >= RULE.crisisDanger ? 2 : v >= RULE.crisisWarn ? 1 : 0;
+  const hs = st(hi), ls = st(-lo);
+  if (hs) return { side: 'hi', stage: hs, ...CRISIS.hi[hs] };
+  if (ls) return { side: 'lo', stage: ls, ...CRISIS.lo[ls] };
+  return null;
+}
+function checkCrisis() {
+  if (!S.onboarded || S.cat.dead) return;
+  const a = S.cat.alert || (S.cat.alert = { hi: 0, lo: 0 }), c = crisisNow();
+  // もどったら段階を下げておく（また悪くなったら鳴く）
+  ['hi', 'lo'].forEach(k => { const cur = c && c.side === k ? c.stage : 0; if (cur < a[k]) a[k] = cur; });
+  if (!c || c.stage <= a[c.side]) { save(); return; }
+  a[c.side] = c.stage; save();
+  petSound('cry'); if (c.stage === 2) setTimeout(() => petSound('cry'), 1300);
+  if (S.settings.vibrate && navigator.vibrate) { try { navigator.vibrate(c.stage === 2 ? [300, 120, 300, 120, 600] : [200, 100, 300]); } catch (e) {} }
+  if (UI.tab === 'home' && $('bubble')) { $('bubble').textContent = c.say; $('bubble').hidden = false; $('bubble').classList.remove('pop'); void $('bubble').offsetWidth; $('bubble').classList.add('pop'); }
+  document.body.classList.remove('sos'); void document.body.offsetWidth; document.body.classList.add('sos');
+  toast(`${S.cat.name}：${c.say}`);
+  const s = S.settings;
+  if (s.notify && 'Notification' in window && Notification.permission === 'granted') {
+    const opt = { body: `${S.cat.name}${c.note}`, icon: 'icon-192.png', tag: 'nyankalo-sos', renotify: true, vibrate: [300, 120, 300] };
+    if (navigator.serviceWorker && navigator.serviceWorker.ready) navigator.serviceWorker.ready.then(r => r.showNotification(`🙀 ${S.cat.name}のSOS`, opt)).catch(() => {});
+    else try { new Notification(`🙀 ${S.cat.name}のSOS`, opt); } catch (e) {}
+  }
 }
 function addExp(n) {
   S.cat.exp += n;
@@ -213,6 +254,7 @@ function petSound(n) {
     else if (n === 'hiss') noise(0.45, 0.2, 'highpass', 2800);
     else if (n === 'pop') tone('sine', 480, 920, 0.09, 0.2);
     else if (n === 'dizzy') tone('sine', 900, 260, 0.6, 0.15);
+    else if (n === 'cry') { tone('sawtooth', 700, 1150, 0.25, 0.12); tone('sawtooth', 1150, 380, 0.75, 0.13, 0.22); tone('triangle', 900, 300, 0.9, 0.1, 1.05); }
   } catch (e) {}
 }
 function buzz(ms = 30) { if (S.settings.vibrate && navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} } }
@@ -247,6 +289,7 @@ function bubbleText() {
   const d = day(), h = new Date().getHours(), f = S.cat.idx / 100;
   if (S.cat.dead === 'skel') return '';
   if (S.cat.dead === 'boom') return '';
+  const cr = crisisNow(); if (cr) return cr.say;
   if (S.stamina < 20) return 'つかれたにゃ…';
   const nm = S.user.name && S.user.name !== 'プレイヤー' ? S.user.name + '、' : '';
   if (!d.meals.length && h >= 10) return nm + '飯くれ！';
@@ -334,7 +377,7 @@ $('btnRevive').addEventListener('click', () => {
     const pick = bindCatPicker(root, S.cat.breed);
     root.querySelector('#doRevive').onclick = () => {
       const n = root.querySelector('#newCatName').value.trim() || 'もち';
-      S.cat = Object.assign(S.cat, { name: n, breed: pick(), idx: 0, dead: null, level: 1, exp: 0, stats: { pow: 20, spd: 20, sta: 20 } });
+      S.cat = Object.assign(S.cat, { name: n, breed: pick(), idx: 0, dead: null, alert: { hi: 0, lo: 0 }, level: 1, exp: 0, stats: { pow: 20, spd: 20, sta: 20 } });
       S.stamina = 65; save(); closeModal(); toast(`${n}がやってきた！`); se('get');
     };
   });
@@ -384,7 +427,7 @@ function startFromTitle() {
   const t = $('title'); if (t.classList.contains('out')) return;
   se('get'); buzz(20);
   t.classList.add('out'); setTimeout(() => { t.hidden = true; }, 350);
-  if (!S.onboarded) openWelcome();
+  if (!S.onboarded) openWelcome(); else setTimeout(checkCrisis, 900);
 }
 function openWelcome() {
   let name = S.user.name && S.user.name !== 'プレイヤー' ? S.user.name : '', breed = S.cat.breed || 'tabby', catName = S.cat.name || 'もち';
@@ -550,8 +593,10 @@ function openCapture() {
       d.meals.push(meal);
       let msg = `${name}（${kcal} kcal）を記録`;
       if (d.mealRewards < 5) { d.mealRewards++; addStamina(RULE.staminaPerMeal); addExp(RULE.expPerMeal); addMood(RULE.moodPerMeal); msg += `・スタミナ +${RULE.staminaPerMeal}`; }
+      // 写真つきの記録：ミニゲームの報酬つきプレイ +1（1日 photoBonusMax 回まで）
+      if (cap && (d.photoBonus || 0) < RULE.photoBonusMax) { d.photoBonus = (d.photoBonus || 0) + 1; msg += '・ミニゲーム +1回'; }
       save(); se('get'); buzz(40); setTimeout(() => { if (homeCat) homeCat.react('head'); }, 400);
-      closeModal(); toast(msg);
+      closeModal(); toast(msg); setTimeout(checkCrisis, 2800);
     };
   }, () => { cap = null; $('photoInput').value = ''; });
 }
@@ -701,12 +746,14 @@ function renderTrain() {
       <div class="list">${SHOP_ITEMS.filter(it => it.shop !== false || (S.items[it.id] || 0) > 0).map(it => `<div class="card row"><span style="width:40px;height:40px;flex:none">${I[it.id]}</span><div class="grow"><div class="name">${esc(it.name)} ×${S.items[it.id] || 0}</div><div class="hint">${esc(it.desc)}</div></div><button class="btn small yellow" data-use="${it.id}" ${(S.items[it.id] || 0) > 0 ? '' : 'disabled'}>使う</button></div>`).join('')}</div>
       <p class="hint" style="margin-top:10px">スタミナは、ごはんを記録したり歩いたりすると回復します。</p>`;
   } else if (UI.trainTab === 'mini') {
-    const left = Math.max(0, RULE.miniPlaysPerDay - d.miniRewards);
-    $('trainBody').innerHTML = `<div class="card" style="padding:10px 14px;margin-bottom:10px;font-weight:900;text-align:center">今日の報酬つきプレイ　のこり ${left}回</div>
+    const left = miniLeft(), pb = Math.min(RULE.photoBonusMax, d.photoBonus || 0);
+    $('trainBody').innerHTML = `<div class="card" style="padding:10px 14px;margin-bottom:10px;font-weight:900;text-align:center">今日の報酬つきプレイ　のこり ${left}回<div class="hint" style="font-weight:700">写真つきでごはんを記録すると +1回（今日 ${pb}/${RULE.photoBonusMax}）</div></div>
       <div class="list">
         <div class="card gym-card"><div class="ico" style="background:#FFE0EA;font-weight:900;font-size:30px;color:#C2335E">?</div><div><div style="font-weight:900">どっちが高い？</div><div class="hint">カロリーが高いほうを選ぶクイズ（5問）</div></div><button class="btn small" data-mini="quiz">あそぶ</button></div>
         <div class="card gym-card"><div class="ico">${I.sandbag}</div><div><div style="font-weight:900">サンドバッグ連打</div><div class="hint">10秒でできるだけタップ！</div></div><button class="btn small" data-mini="tap">あそぶ</button></div>
-        <div class="card gym-card"><div class="ico" style="background:#E3F4E5;font-size:30px">🐱</div><div><div style="font-weight:900">本物の猫を探せ！</div><div class="hint">お題の猫をすばやくタップ！クリアで 10〜50コイン</div></div><button class="btn small" data-mini="sagase">あそぶ</button></div>
+        <div class="card gym-card"><div class="ico" style="background:#E3F4E5;font-size:30px">🐱</div><div><div style="font-weight:900">お題の猫を探せ！</div><div class="hint">30秒でお題の猫をたくさんタップ！（最大${RULE.miniRewardMax}コイン）</div></div><button class="btn small" data-mini="sagase">あそぶ</button></div>
+        <div class="card gym-card"><div class="ico" style="background:#F6E7C4;font-size:30px">🏃</div><div><div style="font-weight:900">にゃんこダッシュ</div><div class="hint">ベンチや茂みをよけてコインを集めよう（最大${RULE.miniRewardMax}コイン）</div></div><button class="btn small" data-mini="dash">あそぶ</button></div>
+        <div class="card gym-card"><div class="ico" style="background:#EBDDFF;font-size:30px">🎰</div><div><div style="font-weight:900">にゃんこスロット</div><div class="hint">アプリのコインをかけて目押し！（1日のもうけ上限 ${RULE.slotNetMax}コイン・回数に数えません）</div></div><button class="btn small" data-mini="slot">あそぶ</button></div>
       </div><p class="hint" style="margin-top:10px">ミニゲームはスタミナを使いません。カロリーは一般的な目安です。</p>`;
   } else {
     const eq = S.cat.equip;
@@ -734,7 +781,7 @@ $('trainBody').addEventListener('click', e => {
   }
   else if (t.dataset.mini === 'quiz') playQuiz();
   else if (t.dataset.mini === 'tap') playTap();
-  else if (t.dataset.mini === 'sagase') openSagase();
+  else if (MINI_PAGES[t.dataset.mini]) openMiniPage(t.dataset.mini);
   else if (t.dataset.wear) { const k = t.dataset.wear; S.cat.equip[WEAR[k].slot] = k; save(); se('tap'); renderAll(); }
 });
 function doTraining(t) {
@@ -756,28 +803,49 @@ function doTraining(t) {
     card.appendChild(f); setTimeout(() => f.remove(), 1300);
   }
 }
+// 今日の報酬つきプレイの回数（写真つきの記録で最大+3）
+const miniLimit = () => RULE.miniPlaysPerDay + Math.min(RULE.photoBonusMax, day().photoBonus || 0);
+const miniLeft = () => Math.max(0, miniLimit() - day().miniRewards);
 function miniReward(coins) {
   const d = day(); d.minis++;
-  if (d.miniRewards >= RULE.miniPlaysPerDay) return '今日の報酬はもう受けとりました';
+  if (d.miniRewards >= miniLimit()) return '今日の報酬はもう受けとりました';
   d.miniRewards++; S.coins += coins; se('coin'); return `コイン +${coins}`;
 }
-// 組員作のミニゲーム「本物の猫を探せ！」（sagase.html）を全画面で開く。
+// 組員作のミニゲーム（別ページ）を全画面で開く。
 // ゲームの中からは window.parent.nyankaloMini を通してコインなどを読み書きする。
+const MINI_PAGES = { sagase: ['sagase.html', 'お題の猫を探せ！'], dash: ['dash.html', 'にゃんこダッシュ'], slot: ['slot.html', 'にゃんこスロット'] };
 window.nyankaloMini = {
-  info: () => ({ coins: S.coins, left: Math.max(0, RULE.miniPlaysPerDay - day().miniRewards), best: S.miniBest || 0 }),
-  reward: n => { const ok = day().miniRewards < RULE.miniPlaysPerDay; const msg = miniReward(n); save(); return { ok, msg }; },
+  // 共通
+  info: () => ({ coins: S.coins, left: miniLeft(), max: RULE.miniRewardMax, sound: S.settings.sound, vibrate: S.settings.vibrate }),
+  // 報酬つきプレイ1回ぶん：コインは上限 miniRewardMax まで。回数が残っていなければ0
+  reward: n => {
+    n = Math.max(0, Math.round(n || 0));
+    const d = day(); d.minis++;
+    if (n <= 0) { save(); return { ok: false, given: 0, msg: '' }; }
+    if (d.miniRewards >= miniLimit()) { save(); return { ok: false, given: 0, msg: '今日の報酬はもう受けとりました' }; }
+    const g = Math.min(n, RULE.miniRewardMax);
+    d.miniRewards++; S.coins += g; save();
+    return { ok: true, given: g, msg: g < n ? `アプリに +${g}コイン（1回の上限 ${RULE.miniRewardMax}）` : `アプリに +${g}コイン` };
+  },
   played: () => { day().minis++; save(); },
-  best: sc => { S.miniBest = Math.max(S.miniBest || 0, sc || 0); save(); return S.miniBest; },
-  close: () => closeSagase()
+  // 記録（ゲームごと）
+  getRec: k => (S.miniRec || {})[k] || null,
+  setRec: (k, v) => { S.miniRec = S.miniRec || {}; S.miniRec[k] = v; save(); },
+  // スロット：アプリのコインをかける。1日のもうけ（勝ち−かけ）は slotNetMax まで
+  slotInfo: () => ({ coins: S.coins, net: day().slotNet || 0, max: RULE.slotNetMax }),
+  slotBet: n => { const d = day(); if (S.coins < n) return { ok: false, coins: S.coins }; if (!d.slotPlayed) { d.slotPlayed = true; d.minis++; } S.coins -= n; d.slotNet = (d.slotNet || 0) - n; save(); return { ok: true, coins: S.coins, net: d.slotNet }; },
+  slotWin: n => { const d = day(), net = d.slotNet || 0; const g = Math.max(0, Math.min(n, RULE.slotNetMax - net)); S.coins += g; d.slotNet = net + g; save(); return { given: g, capped: g < n, coins: S.coins, net: d.slotNet }; },
+  close: () => closeMiniPage()
 };
-function openSagase() {
+function openMiniPage(k) {
   if ($('miniFrame')) return;
+  const [src, title] = MINI_PAGES[k];
   const w = document.createElement('div');
   w.className = 'mini-frame'; w.id = 'miniFrame';
-  w.innerHTML = '<iframe src="sagase.html" title="本物の猫を探せ！" allow="autoplay"></iframe>';
+  w.innerHTML = `<iframe src="${src}?v=${APP_VER}" title="${esc(title)}" allow="autoplay"></iframe>`;
   document.body.appendChild(w); document.body.classList.add('mini-open');
 }
-function closeSagase() {
+function closeMiniPage() {
   const w = $('miniFrame'); if (!w) return;
   w.remove(); document.body.classList.remove('mini-open'); renderAll();
 }
@@ -890,6 +958,7 @@ function renderHistory() {
     const dates = weekDates(), sel = UI.histDate, sd = S.days[sel] || { meals: [] }, sdt = parseYmd(sel);
     const cards = Object.keys(SLOTS).map(k => {
       const ms = sd.meals.filter(m => m.slot === k), kc = ms.reduce((a, m) => a + m.kcal, 0), m0 = ms[0];
+      if (!m0 && k === 'snack') return `<div class="meal-card"><span class="slot">${SLOTS[k]}</span><span class="mname">なし</span><span class="ph">${I.plate}</span><span class="hint"> </span></div>`;
       if (!m0) return `<div class="meal-card"><span class="slot">${SLOTS[k]}</span><span class="mname">${sel <= t ? 'まだ' : '－'}</span><span class="ph">${I.plate}</span><span class="hint" style="font-weight:900">${sel === t ? 'たべてないよ' : sel < t ? '記録なし' : ''}</span></div>`;
       return `<div class="meal-card"><span class="slot">${SLOTS[k]}</span><span class="mname">${esc(m0.name)}${ms.length > 1 ? ` ほか${ms.length - 1}` : ''}</span>${m0.photo ? `<img src="${m0.photo}" alt="${esc(m0.name)}の写真">` : `<span class="ph">${I.plate}</span>`}<span class="kc num">${fmt(kc)} kcal</span></div>`;
     }).join('');
@@ -936,7 +1005,7 @@ function renderSettings() {
     <div class="card set-group"><div class="set-row"><div class="grow">バイブレーション<small>iPhone では動かないことがあります</small></div>${sw('sVib', s.vibrate, 'バイブレーション')}</div></div>
     <div class="section-title">通知</div>
     <div class="card set-group">
-      <div class="set-row"><div class="grow">ごはんのリマインダー<small>${perm === 'unsupported' ? 'この端末では通知が使えません' : 'アプリを開いているあいだに届きます'}</small></div>${sw('sNotify', s.notify && perm === 'granted', 'ごはんのリマインダー')}</div>
+      <div class="set-row"><div class="grow">通知（ごはんのリマインダー・猫のSOS）<small>${perm === 'unsupported' ? 'この端末では通知が使えません' : 'アプリを開いているあいだに届きます'}</small></div>${sw('sNotify', s.notify && perm === 'granted', 'ごはんのリマインダー')}</div>
       <div class="set-row"><div class="grow">お昼</div><input type="time" id="sT1" value="${s.remind[0]}" style="width:120px"></div>
       <div class="set-row"><div class="grow">夜</div><input type="time" id="sT2" value="${s.remind[1]}" style="width:120px"></div>
     </div>
@@ -976,7 +1045,7 @@ $('setBody').addEventListener('change', e => {
 // リマインダー：開いているあいだ1分ごとに確認
 let lastNotified = '';
 setInterval(() => {
-  rollover();
+  rollover(); checkCrisis();
   const s = S.settings; if (!s.notify || !('Notification' in window) || Notification.permission !== 'granted') return;
   const now = new Date(), hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`, key = todayStr() + hm;
   const i = s.remind.indexOf(hm); if (i < 0 || lastNotified === key) return;
@@ -1012,4 +1081,4 @@ setTab('home');
 renderTitle();
 $('title').addEventListener('click', startFromTitle);
 $('title').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startFromTitle(); } });
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { rollover(); renderAll(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { rollover(); renderAll(); if ($('title').hidden) checkCrisis(); } });
