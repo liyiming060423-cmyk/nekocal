@@ -1,5 +1,5 @@
 // アプリの版。index.html の ?v= と sw.js の VERSION もこれにそろえる
-const APP_VER = '8.1';
+const APP_VER = '8.2';
 
 // にゃんカロ データ定義
 // アイテム・ショップ・トレーニング・ミッションなど「数字や名前」はここだけで管理する。
@@ -115,6 +115,7 @@ const RULE = {
   stepsUnit: 1000,         // 何歩ごとに
   staminaPerUnit: 5,       //   スタミナ回復
   coinPerUnit: 10,         //   コイン
+  bgmVolume: 0.35,         // BGMの音量（0〜1。効果音より小さめ）
   miniPlaysPerDay: 3,      // ミニゲームで報酬がもらえる回数
   photoBonusMax: 3,        // 写真つきでごはんを記録すると、報酬つきプレイが1回ふえる（1日この回数まで）
   miniRewardMax: 50,       // 組員作ミニゲーム（猫探し・ダッシュ）で1回にもらえるコインの上限

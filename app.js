@@ -83,7 +83,7 @@ function defaultState() {
     start: t, last: t, days: {}, history: [],
     login: { last: '', streak: 0 },
     claimed: { date: t, ids: [] },
-    settings: { sound: true, vibrate: true, notify: false, lang: 'ja', remind: ['12:00', '19:00'] },
+    settings: { sound: true, bgm: true, vibrate: true, notify: false, lang: 'ja', remind: ['12:00', '19:00'] },
     onboarded: false
   };
 }
@@ -410,6 +410,40 @@ function openCatPicker() {
   });
 }
 
+/* ---------- BGM ----------
+   タイトル：Cat life ／ ホーム・りれき・せってい：自宅にて ／ ショップ・更衣室：青空 ／ トレーニング（ジム・ミニゲーム一覧）：Sunrise
+   ミニゲームを開いているあいだ・アプリが裏に回ったときは止める。
+   スマホはタップする前に音を出せないので、最初のタップ（タイトルの音楽ボタンかスタート）から鳴らす。
+   音量は Web Audio でしぼる（iPhone は audio.volume が効かないため） */
+const BGM_FILES = { title: 'bgm-title.mp3', home: 'bgm-home.mp3', shop: 'bgm-shop.mp3', train: 'bgm-train.mp3' };
+let bgmEl = null, bgmGain = null, bgmCur = '', bgmUnlocked = false;
+function bgmWant() {
+  if (S.settings.bgm === false || document.hidden || $('miniFrame')) return '';
+  const t = $('title');
+  if ((t && !t.hidden && !t.classList.contains('out')) || modalLocked) return 'title';   // タイトル画面・はじめての設定
+  if (UI.tab === 'shop') return 'shop';
+  if (UI.tab === 'train') return UI.trainTab === 'locker' ? 'shop' : 'train';
+  return 'home';
+}
+function bgmUpdate() {
+  const want = bgmWant();
+  if (!bgmEl) {
+    if (!want || !bgmUnlocked) return;
+    bgmEl = new Audio(); bgmEl.loop = true; bgmEl.preload = 'auto'; bgmEl.setAttribute('playsinline', '');
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      const src = actx.createMediaElementSource(bgmEl); bgmGain = actx.createGain(); bgmGain.gain.value = RULE.bgmVolume;
+      src.connect(bgmGain); bgmGain.connect(actx.destination);
+    } catch (e) { bgmEl.volume = RULE.bgmVolume; }
+  }
+  if (!want) { bgmEl.pause(); return; }
+  if (want !== bgmCur) { bgmCur = want; bgmEl.src = `${BGM_FILES[want]}?v=${APP_VER}`; }
+  if (actx && actx.state === 'suspended') actx.resume().catch(() => {});
+  if (bgmEl.paused) { const p = bgmEl.play(); if (p && p.catch) p.catch(() => {}); }
+}
+// どこかを最初にタップしたら鳴らせるようにする
+['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, () => { if (!bgmUnlocked) { bgmUnlocked = true; bgmUpdate(); } }, { once: true, capture: true }));
+
 /* ---------- タイトル画面・はじめての設定 ---------- */
 function renderTitle() {
   const box = $('titleCats');
@@ -425,8 +459,8 @@ function renderTitle() {
 }
 function startFromTitle() {
   const t = $('title'); if (t.classList.contains('out')) return;
-  se('get'); buzz(20);
-  t.classList.add('out'); setTimeout(() => { t.hidden = true; }, 350);
+  se('get'); buzz(20); bgmUnlocked = true;
+  t.classList.add('out'); setTimeout(() => { t.hidden = true; bgmUpdate(); }, 350);
   if (!S.onboarded) openWelcome(); else setTimeout(checkCrisis, 900);
 }
 function openWelcome() {
@@ -768,7 +802,7 @@ function statRows() {
   return ['pow', 'spd', 'sta'].map(k => { const v = statWithBonus(k), bonus = v - S.cat.stats[k]; return `<div class="stat-row"><span>${STAT_NAME[k]}</span><span class="bar"><i style="width:${Math.min(100, v / 3)}%;background:${col[k]}"></i></span><b class="num">${v}${bonus ? `<small style="color:var(--orange-d)">+${bonus}</small>` : ''}</b></div>`; }).join('') +
     `<div class="stat-row"><span>EXP</span><span class="bar"><i style="width:${S.cat.exp / expNeed(S.cat.level) * 100}%;background:var(--yellow)"></i></span><b class="num" style="font-size:11px">${S.cat.exp}/${expNeed(S.cat.level)}</b></div>`;
 }
-$('trainSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; UI.trainTab = b.dataset.v; se('tap'); renderTrain(); });
+$('trainSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; UI.trainTab = b.dataset.v; se('tap'); renderTrain(); bgmUpdate(); });
 $('trainBody').addEventListener('click', e => {
   const t = e.target.closest('button'); if (!t) return;
   if (t.dataset.train) doTraining(TRAININGS.find(x => x.id === t.dataset.train));
@@ -843,7 +877,7 @@ function openMiniPage(k) {
   const w = document.createElement('div');
   w.className = 'mini-frame'; w.id = 'miniFrame';
   w.innerHTML = `<iframe src="${src}?v=${APP_VER}" title="${esc(title)}" allow="autoplay"></iframe>`;
-  document.body.appendChild(w); document.body.classList.add('mini-open');
+  document.body.appendChild(w); document.body.classList.add('mini-open'); bgmUpdate();
 }
 function closeMiniPage() {
   const w = $('miniFrame'); if (!w) return;
@@ -1000,7 +1034,8 @@ function renderSettings() {
   const perm = ('Notification' in window) ? Notification.permission : 'unsupported';
   $('setBody').innerHTML = `
     <div class="section-title">音声</div>
-    <div class="card set-group"><div class="set-row"><div class="grow">効果音<small>ボタンやコインの音</small></div>${sw('sSound', s.sound, '効果音')}</div></div>
+    <div class="card set-group"><div class="set-row"><div class="grow">BGM<small>画面ごとの音楽</small></div>${sw('sBgm', s.bgm !== false, 'BGM')}</div>
+      <div class="set-row"><div class="grow">効果音<small>ボタンやコインの音</small></div>${sw('sSound', s.sound, '効果音')}</div></div>
     <div class="section-title">バイブレーション</div>
     <div class="card set-group"><div class="set-row"><div class="grow">バイブレーション<small>iPhone では動かないことがあります</small></div>${sw('sVib', s.vibrate, 'バイブレーション')}</div></div>
     <div class="section-title">通知</div>
@@ -1023,6 +1058,7 @@ $('setBody').addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b) return;
   const s = S.settings;
   if (b.id === 'sSound') { s.sound = !s.sound; se('tap'); }
+  else if (b.id === 'sBgm') { s.bgm = s.bgm === false; bgmUpdate(); }
   else if (b.id === 'sVib') { s.vibrate = !s.vibrate; buzz(80); }
   else if (b.id === 'sNotify') {
     if (!('Notification' in window)) { toast('この端末では通知が使えません'); return; }
@@ -1067,6 +1103,7 @@ function setTab(t) {
   renderAll();
 }
 function renderAll() {
+  bgmUpdate();
   renderHome();
   if (UI.tab === 'shop') renderShop();
   if (UI.tab === 'train') renderTrain();
@@ -1080,5 +1117,10 @@ rollover();
 setTab('home');
 renderTitle();
 $('title').addEventListener('click', startFromTitle);
+$('titleMusic').addEventListener('click', e => {
+  e.stopPropagation(); bgmUnlocked = true;
+  if (S.settings.bgm === false) { S.settings.bgm = true; save(); }
+  bgmUpdate(); $('titleMusic').textContent = '🔊';
+});
 $('title').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startFromTitle(); } });
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { rollover(); renderAll(); if ($('title').hidden) checkCrisis(); } });
+document.addEventListener('visibilitychange', () => { bgmUpdate(); if (!document.hidden) { rollover(); renderAll(); if ($('title').hidden) checkCrisis(); } });

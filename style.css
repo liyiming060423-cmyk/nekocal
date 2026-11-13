@@ -463,3 +463,6 @@ body.sos::after { content: ""; position: fixed; inset: 0; z-index: 80; pointer-e
 .meals3 .meal-card img, .meals3 .meal-card .ph { width: 54px; height: 44px; }
 .meals3 .meal-card .kc { font-size: 13px; }
 .meals3 .meal-card .hint { font-size: 11px; }
+
+/* タイトル画面の音楽ボタン */
+.t-music { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 12px; width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--ink); background: var(--white); font-size: 20px; box-shadow: 0 3px 0 var(--ink); cursor: pointer; }

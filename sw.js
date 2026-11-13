@@ -1,7 +1,7 @@
 // にゃんカロ service worker
 // アプリ本体はキャッシュしてオフラインでも起動できるようにする。
 // 更新したら VERSION の数字を上げると、利用者のスマホに新しい版が届く。
-const VERSION = '8.1';   // index.html などの ?v= と同じ数字にする
+const VERSION = '8.2';   // index.html などの ?v= と同じ数字にする
 const CACHE = 'nekocal-v' + VERSION;
 const V = '?v=' + VERSION;
 const APP_FILES = [
@@ -88,11 +88,8 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // スロットのBGM（1.3MB）は最初に聞いたときに保存する（インストール時には落とさない）
-  if (url.origin === location.origin && url.pathname.endsWith('/slot-bgm.mp3')) {
-    e.respondWith(caches.open(CACHE).then((c) => c.match(req).then((hit) => hit || fetch(req).then((res) => { if (res.ok && res.status === 200) c.put(req, res.clone()); return res; }))));
-    return;
-  }
+  // BGM（mp3）は service worker を通さない（iPhone の Safari は、ここを通すと音楽が鳴らないことがあるため）
+  if (url.pathname.endsWith('.mp3')) return;
 
   // それ以外の自分のファイル：キャッシュ優先
   if (url.origin === location.origin) {
