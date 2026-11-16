@@ -375,7 +375,8 @@ function drawCat(c, x, y, s, bat, time) {
   // シャツ（せなか）
   c.fillStyle = shirt; c.strokeStyle = ol; c.lineWidth = 3;
   c.beginPath(); c.moveTo(-28, -168); c.quadraticCurveTo(-46, -166, -50, -140); c.lineTo(-40, -132); c.lineTo(-40, -96); c.quadraticCurveTo(0, -90, 40, -96); c.lineTo(40, -132); c.lineTo(50, -140); c.quadraticCurveTo(46, -166, 28, -168); c.closePath(); c.fill(); c.stroke();
-  c.fillStyle = lum(shirt) > .62 ? '#4A2A1A' : '#FFFFFF';   // 明るい服は字をこげ茶に c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillStyle = lum(shirt) > .62 ? '#4A2A1A' : '#FFFFFF';   // 明るい服は字をこげ茶に
+  c.textAlign = 'center'; c.textBaseline = 'middle';
   c.font = '900 10px "Zen Maru Gothic",sans-serif'; c.fillText(String(CAT.name || '').slice(0, 6), 0, -141);
   c.font = '900 30px "Zen Maru Gothic",sans-serif'; c.fillText(String(Math.min(99, CAT.level || 1)), 0, -115);
   // 頭（うしろ）
@@ -494,7 +495,14 @@ function drawSuitBack(c, su, HY, ol) {
 
 // ===== 効果音（WebAudio） =====
 let ac = null;
-function audio() { if (!sndOn()) return null; if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } } if (ac.state === 'suspended') ac.resume(); return ac; }
+function audio() {
+  if (!sndOn()) return null;
+  if (ac && ac.state === 'closed') ac = null;   // 閉じたものは作り直す
+  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+  // iPhone は電話・バックグラウンドのあと 'interrupted' になることがある → running 以外ならもどす
+  if (ac.state !== 'running') { try { const pr = ac.resume(); if (pr && pr.catch) pr.catch(() => {}); } catch (_) {} }
+  return ac;
+}
 function noise(a, dur) { const b = a.createBuffer(1, Math.floor(a.sampleRate * dur), a.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = R() * 2 - 1; const s = a.createBufferSource(); s.buffer = b; return s; }
 function tone(a, type, f1, f2, t0, dur, vol) { const o = a.createOscillator(), gn = a.createGain(); o.type = type; o.frequency.setValueAtTime(f1, t0); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + dur); gn.gain.setValueAtTime(vol, t0); gn.gain.exponentialRampToValueAtTime(.001, t0 + dur); o.connect(gn).connect(a.destination); o.start(t0); o.stop(t0 + dur + .02); }
 function nz(a, t0, dur, vol, ftype, freq, q, attack = .005) { const s = noise(a, dur), f = a.createBiquadFilter(), gn = a.createGain(); f.type = ftype; f.frequency.value = freq; f.Q.value = q || 1; gn.gain.setValueAtTime(.0001, t0); gn.gain.exponentialRampToValueAtTime(vol, t0 + attack); gn.gain.exponentialRampToValueAtTime(.001, t0 + dur); s.connect(f).connect(gn).connect(a.destination); s.start(t0); }
@@ -518,8 +526,8 @@ let combo = 0, goldIdx = -1, practiceLeft = 0, pop = null, spark = null, hintKey
 const cur = { x: CX, y: (ZT + ZB) / 2 };
 // 時計。ヒットストップ（打った瞬間に少し止める）のあいだは now() が止まる
 const realNow = () => performance.now() / 1000;
-let stopAt = 0, stopUntil = 0, pauseAcc = 0;
-function now() { const r = realNow(); if (stopUntil && r >= stopUntil) { pauseAcc += stopUntil - stopAt; stopUntil = 0; } return (stopUntil ? stopAt : r) - pauseAcc; }
+let stopAt = 0, stopUntil = 0, pauseAcc = 0, hiddenAt = 0;   // hiddenAt：別のアプリに切りかえた時刻（その間は時計を止める）
+function now() { if (hiddenAt) return hiddenAt - pauseAcc; const r = realNow(); if (stopUntil && r >= stopUntil) { pauseAcc += stopUntil - stopAt; stopUntil = 0; } return (stopUntil ? stopAt : r) - pauseAcc; }
 function hitStop(d) { if (stopUntil) return; stopAt = realNow(); stopUntil = stopAt + d; }
 const HAND0 = { x: 38, y: -150 }, HAND1 = { x: 56, y: -118 };   // 手の位置（かまえ／ふったとき）ローカル
 const A0 = -1.84;                                                 // かまえのバットの向き
@@ -631,7 +639,8 @@ function finish(res) {
       combo++; const cm = COMBO[Math.min(combo, COMBO.length - 1)];
       if (cm > 1) { mul *= cm; notes.push(`${combo}連続 ×${cm}`); }
     } else if (kind !== 'foul' && kind !== 'eye') combo = 0;
-    if (P.gold && base) { mul *= GOLD_MUL; notes.push(`金のボール ×${GOLD_MUL}`); }
+    if (P.gold && base && kind !== 'eye') { mul *= GOLD_MUL;   // 金のボールは「打ったとき」だけ
+      notes.push(`金のボール ×${GOLD_MUL}`); }
   }
   const pts = P.practice ? 0 : Math.round(base * mul);
   if (P.practice) {
@@ -644,15 +653,16 @@ function finish(res) {
   if (res.kind === 'hr') { se('cheer'); flash = 1; for (let i = 0; i < 70; i++) particles.push({ x: rnd(0, W), y: rnd(-60, 0), vx: rnd(-30, 30), vy: rnd(60, 160), r: rnd(0, 6), c: ['#FFD43B', '#FF6B6B', '#4DABF7', '#69DB7C', '#fff'][i % 5], t: now() }); }
   else if (res.kind === 'miss') se('bad');
   else if (res.kind === 'eye') se('start');
-  state = 'after'; phaseT = now() + (res.kind === 'hr' ? 2.2 : 1.5);
+  state = 'after'; phaseT = now() + (res.kind === 'hr' ? 2.2 : ['miss', 'take', 'eye'].includes(res.kind) ? 1.0 : 1.5);   // 打たなかった球はテンポよく次へ
 }
 
 // v9.6：振った直後の評価（ジャスト！など）と、次に直すところ（はやい・もっと下 など）
-function swingTip(sw) {
+// 2つまで（タイミング＋いちばんずれている向き）。sc を小さくすると小さなずれも言う
+function swingTip(sw, sc = 1) {
   const a = [], k = sw.e / TW;
-  if (k < -.3) a.push('はやい'); else if (k > .3) a.push('おそい');
-  if (sw.dy > .35) a.push('もっと下'); else if (sw.dy < -.35) a.push('もっと上');
-  if (Math.abs(sw.dx) > .45) a.push(sw.dx > 0 ? 'もっと右' : 'もっと左');
+  if (k < -.3 * sc) a.push('はやい'); else if (k > .3 * sc) a.push('おそい');
+  const vy = Math.abs(sw.dy) / .35, vx = Math.abs(sw.dx) / .45;
+  if (Math.max(vx, vy) > sc) a.push(vy >= vx ? (sw.dy > 0 ? 'もっと下' : 'もっと上') : (sw.dx > 0 ? 'もっと右' : 'もっと左'));
   return a.join('・');
 }
 function showPop(sw) {
@@ -664,7 +674,9 @@ function showPop(sw) {
   else if (r.q >= .6) { txt = 'ナイス！'; col = '#69DB7C'; }
   else { txt = 'あたりそこね'; col = '#DEE2E6'; }
   const pre = P && !P.inZone ? 'ボール球　' : '';
-  pop = { txt, col, tip: r.kind === 'miss' ? (pre ? 'ボール球' : '') : pre + (tip || 'ばっちり！'), x: clamp(cur.x, 90, 270), y: clamp(cur.y - CRH - 30, 230, 420), t0: now() };
+  // 「ばっちり！」はジャストのときだけ。それ以外でずれが小さいときは、いちばん大きいずれを言う
+  const good = r.kind !== 'miss' && !r.tip && r.q >= .85, tip2 = tip || (good ? 'ばっちり！' : swingTip(sw, .5));
+  pop = { txt, col, tip: r.kind === 'miss' ? (pre ? 'ボール球' : '') : pre + tip2, x: clamp(cur.x, 90, 270), y: clamp(cur.y - CRH - 30, 230, 420), t0: now() };
 }
 // はじめての練習のときの吹き出し（padHint を使う）
 function updateHint() {
@@ -683,6 +695,7 @@ function updateHint() {
 // ===== 毎フレーム =====
 let lastT = now();
 function step() {
+  requestAnimationFrame(step);   // 先に次を予約（途中でエラーが出ても止まらないように）
   const t = now(), dt = Math.min(.05, t - lastT); lastT = t;
   // キーボード
   if (keys.size) { const v = 230 * dt; if (keys.has('ArrowLeft')) moveCur(-v, 0); if (keys.has('ArrowRight')) moveCur(v, 0); if (keys.has('ArrowUp')) moveCur(0, -v); if (keys.has('ArrowDown')) moveCur(0, v); }
@@ -699,7 +712,9 @@ function step() {
       showPop(swing);
     }
     if (state === 'pitch') {
-      if (u >= 1 && !caught) { caught = true; se('mitt'); }
+      // ミットの音は「もう打てない」時刻まで待つ（おそめに振って当たるときに、先に「バスッ」と鳴らないように）
+      const willHit = swing && !swing.applied && swing.res.kind !== 'miss';
+      if (!caught && !willHit && t >= relT + P.T + Math.max(0, TW - LAG)) { caught = true; se('mitt'); }
       const closeAt = relT + Math.max(P.T + TW - LAG + .02, P.T + .08);
       if (t >= closeAt && (!swing || swing.applied)) finish(swing ? swing.res : { kind: 'take' });
     }
@@ -709,7 +724,6 @@ function step() {
   } else if (state === 'after' && t >= phaseT) startPitchCycle(rnd(.35, .9));
   else if (state === 'end' && t >= phaseT) { state = 'over'; showResult(); }
   draw(t);
-  requestAnimationFrame(step);
 }
 
 function batPose(t) {
@@ -734,7 +748,7 @@ function drawBall(x, y, r, gold) {
 function draw(t) {
   const s = cv.width / W;
   g.setTransform(1, 0, 0, 1, 0, 0);
-  if (bg) g.drawImage(bg, 0, 0);
+  if (bg && bg.width && bg.height) g.drawImage(bg, 0, 0);   // 大きさ0の画像は描けない（エラーになる）
   g.setTransform(s, 0, 0, s, 0, 0);
   // ピッチャー
   const dp = { w: 0, f: 0, ball: true };
@@ -830,7 +844,7 @@ function drawMap(t) {
   g.fillStyle = '#C98A4F'; g.beginPath(); g.moveTo(m.hx, m.hy); g.lineTo(...pt(-45, 27.4)); g.lineTo(...pt(0, 38.8)); g.lineTo(...pt(45, 27.4)); g.closePath(); g.fill();
   // 打球
   const u = Math.min(1, (t - fl.t0) / fl.dur), d = fl.dist * (1 - Math.pow(1 - u, 1.6)), deg = fl.dirR * 180 / Math.PI;
-  const [bx, by] = pt(deg, d);
+  const [bx, by] = pt(deg, Math.min(d, (m.hy - m.y - 5) / m.s));   // 遠すぎるホームランも枠の中に（数字は本当の距離）
   g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(m.hx, m.hy); g.lineTo(bx, by); g.stroke();
   if (u >= 1) { g.strokeStyle = fl.kind === 'hr' ? '#FFD43B' : '#E0573F'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(bx - 4, by - 4); g.lineTo(bx + 4, by + 4); g.moveTo(bx + 4, by - 4); g.lineTo(bx - 4, by + 4); g.stroke(); }
   else { g.fillStyle = '#fff'; g.strokeStyle = '#4A2A1A'; g.lineWidth = 1.2; g.beginPath(); g.arc(bx, by, 3, 0, 7); g.fill(); g.stroke(); }
@@ -881,8 +895,13 @@ function drawHud(t) {
     else {
       g.globalAlpha = a > 1 ? 1 - (a - 1) / .3 : 1;
       const sc = a < .12 ? .7 + a / .12 * .4 : a < .22 ? 1.1 - (a - .12) : 1, y = pop.y - Math.min(a, .4) * 20;
-      g.save(); g.translate(pop.x, y); g.scale(sc, sc); outlineText(pop.txt, 0, 0, 22, pop.col, '#4A2A1A', 5); g.restore();
-      if (pop.tip) outlineText(pop.tip, pop.x, y + 22, 13, '#fff', '#4A2A1A', 4);
+      // 文字のはばを測って、画面からはみ出さない位置に
+      const fnt = s => `900 ${s}px "Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif`;
+      g.font = fnt(22); let hw = g.measureText(pop.txt).width * 1.1 / 2;
+      if (pop.tip) { g.font = fnt(13); hw = Math.max(hw, g.measureText(pop.tip).width / 2); }
+      const px = clamp(pop.x, hw + 8, W - hw - 8);
+      g.save(); g.translate(px, y); g.scale(sc, sc); outlineText(pop.txt, 0, 0, 22, pop.col, '#4A2A1A', 5); g.restore();
+      if (pop.tip) outlineText(pop.tip, px, y + 22, 13, '#fff', '#4A2A1A', 4);
       g.globalAlpha = 1;
     }
   }
@@ -914,6 +933,12 @@ stage.addEventListener('pointermove', e => {
 // 長おし → はなすとスイング（投げる前にはなしたときは振らない）
 stage.addEventListener('pointerup', e => { if (drag && e.pointerId === drag.id) { drag = null; doSwing(); } });
 stage.addEventListener('pointercancel', e => { if (drag && e.pointerId === drag.id) drag = null; });
+cv.addEventListener('lostpointercapture', e => { if (drag && e.pointerId === drag.id) drag = null; });   // 指の追跡が切れたら（振らずに）リセット
+// 別のアプリに切りかえている間は時計を止める（もどったら同じところから）
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { if (hiddenAt) return; now(); if (stopUntil) { pauseAcc += realNow() - stopAt; stopUntil = 0; } hiddenAt = realNow(); drag = null; keys.clear(); }   // ヒットストップ中なら止めた分を足して、時刻がもどらないように
+  else if (hiddenAt) { pauseAcc += Math.max(0, realNow() - hiddenAt); hiddenAt = 0; lastT = now(); }
+});
 const keys = new Set();
 window.addEventListener('keydown', e => {
   if (state === 'title' || state === 'over') return;
@@ -961,7 +986,7 @@ function startGame(withPractice) {
   practiceLeft = withPractice || (!b.tut && !played) ? PRACTICE : 0;
   cur.x = CX; cur.y = (ZT + ZB) / 2;
   padHint.innerHTML = '画面を<b>おしたまま</b>動かしてカーソルを合わせ、<br><b>指をはなすとスイング！</b>';
-  padHint.hidden = false; padHint.classList.remove('fade');
+  clearTimeout(hintTimer); padHint.hidden = false; padHint.classList.remove('fade');   // 前のゲームの「かくす」予約を消す
   startPitchCycle(1.1);
 }
 document.getElementById('practiceBtn').addEventListener('click', () => { audio(); se('start'); dogKey = 'shiba'; startGame(true); });
