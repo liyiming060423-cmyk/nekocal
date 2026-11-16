@@ -1,0 +1,80 @@
+// にゃんカロ 小さな道具・アイコン
+// 日付の計算、HTML のエスケープ、アイコンの SVG（I）、きせかえのアイコン（wearIcon）。ほかのファイルはみんなこれを使う
+// （v10.0 で app.js から分けた。読みこむ順番は index.html。ほかのファイルの関数・変数はそのまま使える）
+'use strict';
+
+/* =========================================================
+   1. 小さな道具
+   ========================================================= */
+const KEY = 'nyankalo-v1';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const fmt = n => Number(n || 0).toLocaleString('ja-JP');
+const rand = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const todayStr = () => ymd(new Date());
+const parseYmd = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); };
+const daysBetween = (a, b) => Math.round((parseYmd(b) - parseYmd(a)) / 86400000);
+
+/* =========================================================
+   2. アイコン（SVG）
+   ========================================================= */
+const I = {
+  user: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 22 L12 6 L22 14 Z M38 22 L36 6 L26 14 Z" fill="#F2A65A" stroke="#4A2A1A" stroke-width="2.5" stroke-linejoin="round"/><ellipse cx="24" cy="26" rx="16" ry="14" fill="#F2A65A" stroke="#4A2A1A" stroke-width="2.5"/><circle cx="18" cy="25" r="2" fill="#4A2A1A"/><circle cx="30" cy="25" r="2" fill="#4A2A1A"/><path d="M22 30 h4 l-2 2 z" fill="#E8607A"/></svg>`,
+  gift: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="8" y="20" width="32" height="22" rx="3" fill="#E0573F" stroke="#4A2A1A" stroke-width="2.5"/><rect x="5" y="14" width="38" height="9" rx="3" fill="#F7C64B" stroke="#4A2A1A" stroke-width="2.5"/><path d="M24 14 V42" stroke="#F7C64B" stroke-width="6"/><path d="M24 14 V42" stroke="#4A2A1A" stroke-width="1.5" stroke-dasharray="0"/><path d="M24 14 C18 4 10 8 14 13 Z M24 14 C30 4 38 8 34 13 Z" fill="#F7C64B" stroke="#4A2A1A" stroke-width="2.5" stroke-linejoin="round"/></svg>`,
+  mission: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="10" y="8" width="28" height="34" rx="4" fill="#FFFFFF" stroke="#4A2A1A" stroke-width="2.5"/><rect x="17" y="4" width="14" height="8" rx="3" fill="#F0943F" stroke="#4A2A1A" stroke-width="2.5"/><path d="M16 22 l3 3 5 -6 M16 32 l3 3 5 -6" fill="none" stroke="#4FAE5B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 23 h6 M27 33 h6" stroke="#4A2A1A" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+  camera: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg>`,
+  flame: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4-1-6 1-9z" fill="#F0943F" stroke="#4A2A1A" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 12c1 2 3 3 3 5a3 3 0 0 1-6 0c0-1.5 1-2.5 3-5z" fill="#F7C64B"/></svg>`,
+  bolt: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-2 8 9-12h-7z" fill="#4C8FD6" stroke="#4A2A1A" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+  heart: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z" fill="#E8577A" stroke="#4A2A1A" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+  pencil: `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="#7E6150" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13 7 4 4"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#F7C64B" stroke="#4A2A1A" stroke-width="1.6"/><path d="M12 7v10M7 12h10" stroke="#4A2A1A" stroke-width="2.6" stroke-linecap="round"/></svg>`,
+  shoe: `<svg viewBox="0 0 48 32" aria-hidden="true"><path d="M4 22c0-8 4-14 10-14 2 4 8 4 10 0l4 6c6 0 16 2 16 8v2H4z" fill="#4C8FD6" stroke="#4A2A1A" stroke-width="2.5" stroke-linejoin="round"/><path d="M4 24h40v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" fill="#FFFFFF" stroke="#4A2A1A" stroke-width="2.5"/><path d="M17 14l5 2M19 11l5 2" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/></svg>`,
+  paw: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="#FFFFFF"><ellipse cx="12" cy="16" rx="5" ry="4"/><circle cx="6" cy="10.5" r="2.2"/><circle cx="9.5" cy="6.5" r="2.2"/><circle cx="14.5" cy="6.5" r="2.2"/><circle cx="18" cy="10.5" r="2.2"/></svg>`,
+  gachaMachine: `<svg viewBox="0 0 48 56" aria-hidden="true"><circle cx="24" cy="20" r="16" fill="#E6F4FB" stroke="#4A2A1A" stroke-width="2.5"/><circle cx="17" cy="16" r="4" fill="#E0573F"/><circle cx="27" cy="13" r="4" fill="#4C8FD6"/><circle cx="30" cy="23" r="4" fill="#F7C64B"/><circle cx="20" cy="25" r="4" fill="#4FAE5B"/><path d="M10 34h28l3 18H7z" fill="#E0573F" stroke="#4A2A1A" stroke-width="2.5" stroke-linejoin="round"/><circle cx="24" cy="42" r="4" fill="#F7C64B" stroke="#4A2A1A" stroke-width="2"/></svg>`,
+  luckyBag: `<svg viewBox="0 0 48 52" aria-hidden="true"><path d="M10 18h28l4 30H6z" fill="#D33A3A" stroke="#4A2A1A" stroke-width="2.5" stroke-linejoin="round"/><path d="M17 18c0-8 14-8 14 0" fill="none" stroke="#4A2A1A" stroke-width="2.5"/><text x="24" y="40" text-anchor="middle" font-size="13" font-weight="900" fill="#F7C64B" font-family="sans-serif">福袋</text></svg>`,
+  goldbag: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 2v6" stroke="#4A2A1A" stroke-width="2.5"/><rect x="14" y="8" width="20" height="34" rx="8" fill="#F7C64B" stroke="#4A2A1A" stroke-width="2.5"/><path d="M14 16h20M14 34h20" stroke="#C9971E" stroke-width="2.5"/><path d="M20 22l3 2-3 2M27 22l-3 2 3 2" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/></svg>`,
+  pad: `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="#4A2A1A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="11" rx="5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="16" cy="11.5" r="1" fill="#4A2A1A"/><circle cx="18" cy="13.8" r="1" fill="#4A2A1A"/></svg>`,
+  coin: `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#F7C64B" stroke="#4A2A1A" stroke-width="1.6"/><ellipse cx="12" cy="15" rx="4.2" ry="3.4" fill="#8A5A12"/><circle cx="7.4" cy="10" r="1.7" fill="#8A5A12"/><circle cx="10.4" cy="7.4" r="1.7" fill="#8A5A12"/><circle cx="13.6" cy="7.4" r="1.7" fill="#8A5A12"/><circle cx="16.6" cy="10" r="1.7" fill="#8A5A12"/></svg>`,
+  stone: `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M12 2 L21 9 L12 22 L3 9 Z" fill="#7FC4F2" stroke="#4A2A1A" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 9 h18 M12 2 L8 9 L12 22 L16 9 Z" fill="none" stroke="#4A2A1A" stroke-width="1.2"/></svg>`,
+  steps: `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><ellipse cx="8" cy="9" rx="3.4" ry="5" fill="#4C8FD6" stroke="#4A2A1A" stroke-width="1.4"/><ellipse cx="8" cy="17.5" rx="2.4" ry="2" fill="#4C8FD6" stroke="#4A2A1A" stroke-width="1.4"/><ellipse cx="16" cy="6" rx="3.2" ry="4.6" fill="#4C8FD6" stroke="#4A2A1A" stroke-width="1.4"/><ellipse cx="16" cy="13.8" rx="2.3" ry="1.9" fill="#4C8FD6" stroke="#4A2A1A" stroke-width="1.4"/></svg>`,
+  bag: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#4A2A1A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 12H6.2z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>`,
+  dumb: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#4A2A1A" stroke-width="2.4" stroke-linecap="round"><path d="M6 7v10M18 7v10M3 9.5v5M21 9.5v5M6 12h12"/></svg>`,
+  house: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#4A2A1A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-5.5a2 2 0 0 1 4 0V20" fill="#8A5A3C"/></svg>`,
+  cal: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#4A2A1A" stroke-width="2.2" stroke-linecap="round"><rect x="4" y="5.5" width="16" height="14.5" rx="2" fill="#FFFFFF"/><path d="M4 10h16" /><path d="M9 3.5v4M15 3.5v4"/><circle cx="9" cy="14" r=".8" fill="#4A2A1A"/><circle cx="12" cy="14" r=".8" fill="#4A2A1A"/><circle cx="15" cy="14" r=".8" fill="#4A2A1A"/><circle cx="9" cy="17" r=".8" fill="#4A2A1A"/><circle cx="12" cy="17" r=".8" fill="#4A2A1A"/></svg>`,
+  gear: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#4A2A1A" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M5.5 18.5l2.1-2.1M16.4 7.6l2.1-2.1"/></svg>`,
+  drink: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="16" y="6" width="16" height="6" rx="2" fill="#4FAE5B" stroke="#4A2A1A" stroke-width="2.5"/><path d="M14 14 h20 l-2 28 h-16 z" fill="#BFE7C3" stroke="#4A2A1A" stroke-width="2.5" stroke-linejoin="round"/><path d="M24 20 l-4 9 h5 l-3 8" fill="none" stroke="#F0943F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  protein: `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="10" y="8" width="28" height="8" rx="3" fill="#4C8FD6" stroke="#4A2A1A" stroke-width="2.5"/><rect x="11" y="16" width="26" height="26" rx="5" fill="#FFFFFF" stroke="#4A2A1A" stroke-width="2.5"/><text x="24" y="33" text-anchor="middle" font-size="9" font-weight="900" fill="#4A2A1A" font-family="sans-serif">PRO</text></svg>`,
+  sandbag: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 2 V8" stroke="#4A2A1A" stroke-width="2.5"/><rect x="14" y="8" width="20" height="36" rx="9" fill="#8B5A3C" stroke="#4A2A1A" stroke-width="2.5"/><path d="M14 16 h20 M14 36 h20" stroke="#4A2A1A" stroke-width="2"/></svg>`,
+  tread: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M6 36 L40 30" stroke="#4A2A1A" stroke-width="5" stroke-linecap="round"/><path d="M36 30 L32 10 h8" fill="none" stroke="#4A2A1A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="40" r="3" fill="#4A2A1A"/><circle cx="36" cy="35" r="3" fill="#4A2A1A"/><rect x="30" y="6" width="12" height="7" rx="2" fill="#4C8FD6" stroke="#4A2A1A" stroke-width="2"/></svg>`,
+  barbell: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M4 24 H44" stroke="#9AA3A8" stroke-width="4" stroke-linecap="round"/><rect x="8" y="12" width="7" height="24" rx="2" fill="#2E3A4A" stroke="#4A2A1A" stroke-width="2"/><rect x="33" y="12" width="7" height="24" rx="2" fill="#2E3A4A" stroke="#4A2A1A" stroke-width="2"/><rect x="15" y="16" width="5" height="16" rx="2" fill="#E0573F" stroke="#4A2A1A" stroke-width="2"/><rect x="28" y="16" width="5" height="16" rx="2" fill="#E0573F" stroke="#4A2A1A" stroke-width="2"/></svg>`,
+  plate: `<svg viewBox="0 0 64 50" aria-hidden="true"><ellipse cx="32" cy="36" rx="26" ry="9" fill="#E6EEF4" stroke="#4A2A1A" stroke-width="2"/><g transform="translate(18 2) scale(.5)"><path d="M10 26 L12 4 L26 16 Z M50 26 L48 4 L34 16 Z" fill="#F2A65A" stroke="#4A2A1A" stroke-width="3" stroke-linejoin="round"/><ellipse cx="30" cy="32" rx="24" ry="20" fill="#F2A65A" stroke="#4A2A1A" stroke-width="3"/><path d="M18 30 q4 4 8 0 M34 30 q4 4 8 0" fill="none" stroke="#4A2A1A" stroke-width="3" stroke-linecap="round"/><ellipse cx="30" cy="42" rx="4" ry="3" fill="#7A2E2E"/></g></svg>`
+};
+function bagSVG(c) {
+  return `<svg viewBox="0 0 60 70" aria-hidden="true"><path d="M14 26 Q8 64 30 66 Q52 64 46 26 Z" fill="${c}" stroke="#4A2A1A" stroke-width="3" stroke-linejoin="round"/><path d="M18 26 Q30 14 42 26 Z" fill="${c}" stroke="#4A2A1A" stroke-width="3"/><path d="M18 26 Q30 32 42 26" fill="none" stroke="#F7C64B" stroke-width="4"/><path d="M24 14 l6 6 6 -6" fill="none" stroke="#F7C64B" stroke-width="4" stroke-linecap="round"/><circle cx="30" cy="46" r="9" fill="#FFFFFF" stroke="#4A2A1A" stroke-width="2"/><text x="30" y="50" text-anchor="middle" font-size="11" font-weight="900" fill="#E0573F" font-family="sans-serif">福</text></svg>`;
+}
+function wearIcon(id) {
+  const w = WEAR[id]; if (!w) return '';
+  const L = '#4A2A1A';
+  if (w.slot === 'head') {
+    if (id === 'band_none') return `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="14" fill="none" stroke="#B9A48E" stroke-width="3" stroke-dasharray="4 4"/></svg>`;
+    if (id === 'crown') return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 36 V14 l9 10 7 -14 7 14 9 -10 V36 Z" fill="#E9B730" stroke="${L}" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
+    if (id === 'cap_red') return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 30 Q10 10 28 10 Q40 10 40 30 Z" fill="#D33A3A" stroke="${L}" stroke-width="2.5"/><path d="M4 30 h36" stroke="${L}" stroke-width="4" stroke-linecap="round"/></svg>`;
+    if (id === 'band_pink' || id === 'band_blue') return `<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="18" width="36" height="12" rx="5" fill="${w.color}" stroke="${L}" stroke-width="2.5"/></svg>`;
+    // v9.4 からの頭のきせかえ：小さい顔にかぶせて見せる（cat.js の headGear をそのまま使う）
+    return `<svg viewBox="14 -22 272 252" aria-hidden="true"><ellipse cx="150" cy="130" rx="97" ry="80" fill="#FBE3C6" stroke="${L}" stroke-width="5"/><circle cx="112" cy="124" r="8" fill="${L}"/><circle cx="188" cy="124" r="8" fill="${L}"/><path d="M140 150 q10 10 20 0" fill="none" stroke="${L}" stroke-width="4" stroke-linecap="round"/>${headGear(id, 97)}</svg>`;
+  }
+  if (w.slot === 'suit') {
+    if (id === 'suit_none') return `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="14" fill="none" stroke="#B9A48E" stroke-width="3" stroke-dasharray="4 4"/></svg>`;
+    return `<svg viewBox="-20 -70 340 300" aria-hidden="true"><ellipse cx="150" cy="140" rx="84" ry="66" fill="#FBE3C6" stroke="${L}" stroke-width="5"/><circle cx="120" cy="135" r="7" fill="${L}"/><circle cx="180" cy="135" r="7" fill="${L}"/>${suitHead(id)}</svg>`;
+  }
+  // にじ色（v9.4）はグラデーション
+  const rb = /rainbow/.test(id), fill = rb ? 'url(#wRainbow)' : w.color;
+  const defs = rb ? '<defs><linearGradient id="wRainbow" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F26B6B"/><stop offset=".25" stop-color="#F5C84A"/><stop offset=".5" stop-color="#6CC27A"/><stop offset=".75" stop-color="#5B8FE0"/><stop offset="1" stop-color="#A86AD8"/></linearGradient></defs>' : '';
+  if (w.slot === 'top') return `<svg viewBox="0 0 48 48" aria-hidden="true">${defs}<path d="M16 6 L8 12 L4 22 L11 24 L12 42 H36 L37 24 L44 22 L40 12 L32 6 Q24 12 16 6 Z" fill="${fill}" stroke="${L}" stroke-width="2.5" stroke-linejoin="round"/></svg>`;
+  if (id === 'dumbbell') return I.barbell;
+  return `<svg viewBox="0 0 48 48" aria-hidden="true">${defs}<ellipse cx="24" cy="22" rx="14" ry="15" fill="${fill}" stroke="${L}" stroke-width="2.5"/><rect x="13" y="34" width="22" height="9" rx="3" fill="#FFFFFF" stroke="${L}" stroke-width="2.5"/></svg>`;
+}

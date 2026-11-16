@@ -1,6 +1,7 @@
 # にゃんカロ 版の数字をそろえて上げる（v9.8 から）
 # つかいかた：このファイルと同じフォルダで  python bump.py 9.9
 # 変えるところ：sw.js の VERSION、data.js の APP_VER、各 HTML の ?v=（css・js の読みこみ）
+# v10.0 から：sw.js の APP_FILES（オフライン用に保存するファイルの一覧）も、フォルダの中身から自動で作りなおす
 # ※ mp3 には ?v= をつけない（版を上げるたびに大きな曲をダウンロードしなおさないように）
 import re
 import sys
@@ -26,6 +27,38 @@ def edit(name, pattern, repl, need=True):
     return n
 
 
+# オフライン用に保存しないもの（BGM は service worker を通さない。説明・道具・まとめファイルもいらない）
+SKIP_EXT = {'.mp3', '.md', '.py', '.zip', '.txt'}
+SKIP_NAME = {'sw.js'}
+GAME_PAGES = ['sagase.html', 'dash.html', 'slot.html', 'baseball.html']
+
+
+def sw_list():
+    files = sorted(p.name for p in HERE.iterdir() if p.is_file() and not p.name.startswith('.')
+                   and p.suffix.lower() not in SKIP_EXT and p.name not in SKIP_NAME)
+    out = ["  './',", "  './index.html',", "  './manifest.webmanifest',"]
+    out += [f"  './{h}'," for h in GAME_PAGES if h in files]
+    rest = [f for f in files if f not in ('index.html', 'manifest.webmanifest') and f not in GAME_PAGES]
+    rest = [f for f in rest if not f.endswith('.html')] + [f for f in rest if f.endswith('.html')]
+    for f in rest:
+        out.append(f"  './{f}' + V," if f.endswith(('.js', '.css')) else f"  './{f}',")
+    out[-1] = out[-1].rstrip(',')
+    return out
+
+
+def write_sw_list():
+    p = HERE / 'sw.js'
+    text = p.read_text(encoding='utf-8')
+    m = re.search(r'// BEGIN APP_FILES\n.*?// END APP_FILES', text, flags=re.S)
+    if not m:
+        sys.exit('sw.js に「// BEGIN APP_FILES」「// END APP_FILES」が見つかりません')
+    lines = sw_list()
+    block = '// BEGIN APP_FILES\nconst APP_FILES = [\n' + '\n'.join(lines) + '\n];\n// END APP_FILES'
+    with open(p, 'w', encoding='utf-8', newline='') as f:
+        f.write(text[:m.start()] + block + text[m.end():])
+    return len(lines)
+
+
 def main():
     if len(sys.argv) != 2 or not re.fullmatch(r'\d+\.\d+', sys.argv[1]):
         sys.exit('つかいかた：python bump.py 9.9（数字.数字）')
@@ -38,6 +71,7 @@ def main():
         n = edit(h, r'(\.(?:css|js))\?v=\d+(?:\.\d+)*', rf'\g<1>?v={v}', need=False)
         if n:
             print(f'  {h} ?v=', n, 'か所')
+    print('  sw.js   APP_FILES', write_sw_list(), 'ファイル')
     print('おわり。GitHub に全部アップロードしてください。')
 
 
