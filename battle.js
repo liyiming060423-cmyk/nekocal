@@ -34,6 +34,7 @@ const bErr = r => r.status === 0 ? 'サーバーにつながりません。電�
 /* ---------- ロビー ---------- */
 function openBattleLobby() {
   if ($('battleUI')) return;
+  if (S.cat.hospital) { toast('入院中は対戦できません（退院したら戦えるよ）'); se('bad'); return; }   // v9.9
   const w = document.createElement('div');
   w.id = 'battleUI'; w.className = 'b-ui';
   w.innerHTML = `<div class="b-head"><button class="b-x" data-b="close" aria-label="とじる">×</button><h2>⚔️ 猫バトル</h2></div><div class="b-body" id="bBody"><p class="b-wait">サーバーにつないでいます…</p></div>`;

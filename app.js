@@ -91,6 +91,9 @@ function defaultState() {
     items: { drink: 0, protein: 0, goldbag: 0 }, protein: false, goldbag: 0, mood: RULE.moodStart,
     owned: ['band_none', 'tee_orange', 'gloves_brown', 'suit_none'],
     start: t, last: t, days: {}, history: [],
+    settled: addDays(t, -1),          // v9.9 どの日まで締めたか（体型の計算がすんだ日）
+    streak: { n: 0, pass: '' },       // v9.9 連続記録（n=日数、pass=おやすみ券を使った週の月曜日）
+    resultQ: [],                      // v9.9 まだ見せていない「きのうの結果」
     login: { last: '', streak: 0 },
     claimed: { date: t, ids: [] },
     settings: { sound: true, bgm: true, vibrate: true, notify: false, lang: 'ja', remind: ['12:00', '19:00'] },
@@ -111,6 +114,16 @@ function load() {
     if (!st.cat.equip.suit) st.cat.equip.suit = 'suit_none';
     // v9.1：はじめてガイド（前からのデータにも出す）
     st.guide = Object.assign({ tour: false, hits: [], got: [], done: false }, s.guide);
+    // v9.9：締め・連続記録・入院。前の版は 0 時に前の日まで締めていたので、締めたのは「最後に開いた日の前の日」まで
+    if (!s.settled) st.settled = addDays(st.last || todayStr(), -1);
+    st.streak = Object.assign({ n: 0, pass: '' }, s.streak);
+    if (!Array.isArray(st.resultQ)) st.resultQ = [];
+    // 前の版で骸骨・爆発になっていた猫は、今日から入院（入院費はとらない）
+    if (st.cat.dead) {
+      const t = todayStr();
+      st.cat.hospital = { from: t, until: addDays(t, HOSPITAL.days), reason: st.cat.dead, good: 0 };
+      st.cat.idx = st.cat.dead === 'boom' ? HOSPITAL.admitIdx : -HOSPITAL.admitIdx; st.cat.dead = null;
+    }
     return st;
   } catch (e) { return defaultState(); }
 }
@@ -152,28 +165,95 @@ const expNeed = lv => 50 + lv * 50;
 const statWithBonus = k => S.cat.stats[k] + ['head', 'top', 'hand', 'suit'].reduce((a, sl) => a + (((WEAR[S.cat.equip[sl]] || {}).bonus || {})[k] || 0), 0);
 function mealSlotNow() { const h = new Date().getHours() + new Date().getMinutes() / 60; return h < 10.5 ? 'morning' : h < 15.5 ? 'noon' : 'night'; }
 
-// 日付が変わっていたら、前の日を自動で締める
-// 日付が変わって締めたら true を返す（v9.8：開いたまま0時をこえたら画面を描きなおすため）
+/* ---------- 1日の締め（v9.9） ----------
+   0時：ごきげんが下がる・古い写真を消す（今までどおり）。
+   体型の計算（締め）は、すぐにはしない。きのうの分は 今日の RULE.closeHour 時まで待つ（わすれたごはんを足せるように）。
+   「これでしめる」を押すか、時刻をすぎたら締める。おとといより前の日は待たずに締める。
+   締めた結果は S.resultQ にためて、「きのうの結果」で見せる。 */
+const MAIN_SLOTS = ['morning', 'noon', 'night'];
+const weekMon = d => { const x = parseYmd(d); return addDays(d, -((x.getDay() + 6) % 7)); };   // その週の月曜日
+// ある日のごはんで体型がどう変わるか（計算だけ。from=いまの体型）
+function dayChange(d, from) {
+  const tg = target(S.user), meals = (S.days[d] && S.days[d].meals) || [], it = intake(d);
+  const main = new Set(meals.map(m => m.slot).filter(x => MAIN_SLOTS.includes(x))).size;
+  if (!meals.length) return { tg, it, main, n: 0, diff: null, ch: 0, partial: false };
+  const diff = it - tg; let ch = bodyChange(diff, from), partial = false;
+  // 記録が少なくて、目標より少ない日：わすれているだけかもしれないので、やせる方向は少しだけ
+  if (main < RULE.partialMinMain && diff < -100) { partial = true; ch = Math.max(ch, -RULE.partialCap); }
+  return { tg, it, main, n: meals.length, diff, ch, partial };
+}
+// まだ締めていない日（ふつうは きのう だけ）
+const pendingDays = () => { const out = [], t = todayStr(); for (let d = addDays(S.settled, 1); d < t; d = addDays(d, 1)) out.push(d); return out; };
+const pendingYesterday = () => S.settled < addDays(todayStr(), -1);
+// ごはんを足したり直したりできる日：今日と、まだ締めていない日
+const canEditDay = d => d === todayStr() || (d > S.settled && d < todayStr());
+
+// 日付が変わったときの処理。日付が変わったか、締めた日があれば true を返す
 function rollover() {
   const t = todayStr();
-  if (S.last === t) return false;
-  let d = S.last;
-  while (d < t) { settleDay(d); S.mood = clamp((S.mood ?? RULE.moodStart) + RULE.moodPerDay, 0, 100); d = addDays(d, 1); }
-  S.last = t;
-  // 7日より前の写真は消して容量を節約
-  Object.keys(S.days).forEach(k => { if (daysBetween(k, t) > 7) S.days[k].meals.forEach(m => { m.photo = null; }); if (daysBetween(k, t) > 60) delete S.days[k]; });
-  save();
-  return true;
+  let changed = false;
+  if (S.last !== t) {
+    let d = S.last;
+    while (d < t) { S.mood = clamp((S.mood ?? RULE.moodStart) + RULE.moodPerDay, 0, 100); d = addDays(d, 1); }
+    S.last = t; changed = true;
+    // 7日より前の写真は消して容量を節約（60日より前の記録は消す）
+    Object.keys(S.days).forEach(k => { if (daysBetween(k, t) > 7) S.days[k].meals.forEach(m => { m.photo = null; }); if (daysBetween(k, t) > 60) delete S.days[k]; });
+  }
+  if (settleDue(false)) changed = true;
+  if (changed) save();
+  return changed;
+}
+// 締める日を締める。now=true なら きのうも今すぐ締める（「これでしめる」）
+function settleDue(now) {
+  const t = todayStr(), y = addDays(t, -1), wait = !now && new Date().getHours() < RULE.closeHour;
+  let any = false;
+  for (let d = addDays(S.settled, 1); d < t; d = addDays(d, 1)) {
+    if (d === y && wait) break;
+    settleDay(d); S.settled = d; any = true;
+  }
+  if (checkDischarge()) any = true;
+  if (any) save();
+  return any;
 }
 function settleDay(d) {
-  if (S.cat.dead) return;
-  const tg = target(S.user), dd = S.days[d];
-  if (!dd || !dd.meals.length) { S.history.push({ date: d, intake: 0, target: tg, diff: null, change: 0, idx: S.cat.idx }); return; }
-  const it = intake(d), diff = it - tg, ch = bodyChange(diff, S.cat.idx);
-  S.cat.idx = clamp(S.cat.idx + ch, -100, 100);
-  S.history.push({ date: d, intake: it, target: tg, diff, change: ch, idx: S.cat.idx });
-  if (S.cat.idx <= -100) S.cat.dead = 'skel';
-  if (S.cat.idx >= 100) S.cat.dead = 'boom';
+  const from = S.cat.idx, r = dayChange(d, from), hosp = S.cat.hospital;
+  let to = clamp(from + r.ch, -100, 100), event = null, lost = 0;
+  if (hosp) {
+    // 入院中：もう倒れない。バランスのいい日を数える（入院した日から）
+    to = clamp(to, -90, 90);
+    if (d >= hosp.from && r.n && r.main >= RULE.partialMinMain && Math.abs(r.diff) <= 100) hosp.good = (hosp.good || 0) + 1;
+  }
+  S.cat.idx = to;
+  // 連続記録とコイン（おやすみ券は1週間に STREAK.passPerWeek 枚。いまは1枚の前提で、使った週を覚える）
+  const st = S.streak; let coins = 0, pass = false;
+  if (r.n) {
+    st.n++; coins = STREAK.perDay + (STREAK.bonus[st.n] || (st.n > 30 && st.n % 30 === 0 ? STREAK.bonus[30] : 0));
+  } else if (st.n > 0 && STREAK.passPerWeek > 0 && st.pass !== weekMon(d)) { st.pass = weekMon(d); pass = true; }
+  else st.n = 0;
+  S.coins += coins;
+  // 骸骨・爆発 → ねこ病院に入院（次の日から）
+  if (!hosp && Math.abs(to) >= 100) {
+    const reason = to < 0 ? 'skel' : 'boom', start = addDays(d, 1);
+    lost = Math.min(HOSPITAL.coinMax, Math.floor(S.coins * HOSPITAL.coinRate));
+    S.coins -= lost; S.mood = HOSPITAL.mood;
+    S.cat.hospital = { from: start, until: addDays(start, HOSPITAL.days), reason, good: 0 };
+    S.cat.idx = reason === 'boom' ? HOSPITAL.admitIdx : -HOSPITAL.admitIdx;
+    S.cat.alert = { hi: 0, lo: 0 };
+    event = reason;
+  }
+  S.history.push({ date: d, intake: r.it, target: r.tg, diff: r.diff, change: to - from, idx: S.cat.idx });
+  S.resultQ.push({ date: d, it: r.it, tg: r.tg, diff: r.diff, n: r.n, from, to, partial: r.partial, coins, streak: st.n, pass, event, lost });
+  if (S.resultQ.length > 40) S.resultQ.splice(0, S.resultQ.length - 40);
+}
+// 退院できるか（日数がたった・バランスのいい日がそろった）。退院したら true
+function checkDischarge() {
+  const h = S.cat.hospital; if (!h) return false;
+  if (todayStr() < h.until && (h.good || 0) < HOSPITAL.goodDays) return false;
+  const from = S.cat.idx;
+  if (Math.abs(S.cat.idx) > HOSPITAL.leaveIdx) S.cat.idx = Math.sign(S.cat.idx) * HOSPITAL.leaveIdx;
+  S.cat.hospital = null; S.cat.alert = { hi: 0, lo: 0 };
+  S.resultQ.push({ event: 'leave', from, to: S.cat.idx, early: todayStr() < h.until });
+  return true;
 }
 /* ---- 猫のSOS（骸骨・爆発の前に知らせる） ----
    太る側：今の体型と「今日このまま1日が終わったら」の体型の大きいほう で判断（食べるほど増えるので前もって分かる）
@@ -187,10 +267,8 @@ const CRISIS = {
     { say: 'た、たすけてにゃ…骨になっちゃうにゃ…！', note: '「たすけてにゃ…！」このままだと骸骨になってしまいます！しっかり食べて！' }]
 };
 function crisisNow() {
-  if (S.cat.dead || !S.onboarded) return null;
-  const t = todayStr(), d = S.days[t];
-  let proj = S.cat.idx;
-  if (d && d.meals.length) proj = clamp(S.cat.idx + bodyChange(intake(t) - target(S.user), S.cat.idx), -100, 100);
+  if (S.cat.hospital || !S.onboarded) return null;
+  const t = todayStr(), proj = clamp(S.cat.idx + dayChange(t, S.cat.idx).ch, -100, 100);
   const hi = Math.max(S.cat.idx, proj), lo = S.cat.idx;
   const st = v => v >= RULE.crisisDanger ? 2 : v >= RULE.crisisWarn ? 1 : 0;
   const hs = st(hi), ls = st(-lo);
@@ -199,7 +277,7 @@ function crisisNow() {
   return null;
 }
 function checkCrisis() {
-  if (!S.onboarded || S.cat.dead) return;
+  if (!S.onboarded || S.cat.hospital) return;
   const a = S.cat.alert || (S.cat.alert = { hi: 0, lo: 0 }), c = crisisNow();
   // もどったら段階を下げておく（また悪くなったら鳴く）
   ['hi', 'lo'].forEach(k => { const cur = c && c.side === k ? c.stage : 0; if (cur < a[k]) a[k] = cur; });
@@ -306,12 +384,12 @@ function catFace() {
 }
 function bubbleText() {
   const d = day(), h = new Date().getHours(), f = S.cat.idx / 100;
-  if (S.cat.dead === 'skel') return '';
-  if (S.cat.dead === 'boom') return '';
+  if (S.cat.hospital) return '早くよくなりたいにゃ…';
   const cr = crisisNow(); if (cr) return cr.say;
   if (S.stamina < 20) return 'つかれたにゃ…';
   const nm = S.user.name && S.user.name !== 'プレイヤー' ? S.user.name + '、' : '';
   if (!d.meals.length && h >= 10) return nm + '飯くれ！';
+  if (h >= 19 && S.sumSeen !== todayStr()) return nm + '今日のまとめ、見てにゃ！';   // v9.9：夜は「今日のまとめ」へ（カロリーのカードから）
   if ((S.mood ?? 60) < 30) return nm + 'かまってほしいニャ…';
   if (f > 0.5) return 'おなかパンパン…';
   if (f < -0.5) return 'おなかすいた…';
@@ -321,7 +399,7 @@ function bubbleText() {
 }
 function homeMood() {
   const h = new Date().getHours();
-  if (S.stamina < 20) return 'tired';
+  if (S.cat.hospital || S.stamina < 20) return 'tired';
   if (!day().meals.length && h >= 10) return 'hungry';
   return 'normal';
 }
@@ -361,7 +439,15 @@ function renderHome() {
   $('kcalBar').style.width = Math.min(100, it / scale * 100) + '%';
   $('kcalBar').style.background = Math.abs(it - tg) <= 100 ? 'var(--green)' : it > tg ? 'var(--orange)' : 'var(--blue)';
   $('kcalMark').style.left = (tg / scale * 100) + '%';
-  if (!S.guide.done) {   // はじめてガイドのあいだは、バナーをガイドにする
+  const bn = $('eventBanner'); bn.classList.remove('hosp-b', 'close-b');
+  if (S.cat.hospital) {   // v9.9：入院中は退院までのようす
+    const h = S.cat.hospital, left = Math.max(1, daysBetween(t, h.until)), g = Math.max(0, HOSPITAL.goodDays - (h.good || 0));
+    bn.classList.remove('guide'); bn.classList.add('hosp-b');
+    bn.innerHTML = `<span class="ev-ico ev-emoji" aria-hidden="true">🏥</span><span class="ev-txt"><small>入院中</small>あと${left}日で退院<br>バランス ${h.good || 0}/${HOSPITAL.goodDays}日</span>`;
+  } else if (pendingYesterday()) {   // v9.9：まだ締めていない きのう
+    bn.classList.remove('guide'); bn.classList.add('close-b');
+    bn.innerHTML = `<span class="ev-ico ev-emoji" aria-hidden="true">🌙</span><span class="ev-txt"><small>きのうの記録</small>${RULE.closeHour}時に しめるよ<br><b>見なおす</b></span>`;
+  } else if (!S.guide.done) {   // はじめてガイドのあいだは、バナーをガイドにする
     const g = guideCount();
     $('eventBanner').classList.add('guide');
     $('eventBanner').innerHTML = `<span class="ev-ico">${I.mission}</span><span class="ev-txt"><small>はじめてガイド</small>${g.got} / ${GUIDE.tasks.length} クリア<br>${g.ready ? '<b>受けとれるよ！</b>' : 'コインがもらえる！'}</span>`;
@@ -378,37 +464,29 @@ function renderHome() {
   const km = d.steps * (S.user.height || 165) * RULE.strideRate / 100000;
   $('pillSteps').innerHTML = `<span class="sc-ico">${I.shoe}</span><span class="sc-main"><small>歩数</small><b><span class="num">${km.toFixed(1)}</span> km</b><small class="num">${fmt(d.steps)}歩</small></span><span class="sc-arrow" aria-hidden="true">›</span>`;
   const st = bodyState(S.cat.idx);
-  $('bodyPill').innerHTML = `<span class="sb-ico">${I.paw}</span><span class="sb-main"><small>${esc(S.cat.name)}　Lv.${S.cat.level}</small><b>${st[0]}</b><span class="sb-bar"><i style="left:${(S.cat.idx + 100) / 2}%"></i></span></span>`;
+  $('bodyPill').innerHTML = `<span class="sb-ico">${I.paw}</span><span class="sb-main"><small>${esc(S.cat.name)}　Lv.${S.cat.level}</small><b>${S.cat.hospital ? '入院中' : st[0]}</b><span class="sb-bar"><i style="left:${(S.cat.idx + 100) / 2}%"></i></span></span>`;
   $('bodyPill').style.background = st[1];
-  $('btnRevive').hidden = !S.cat.dead;
+  $('tab-home').classList.toggle('hosp', !!S.cat.hospital);
   $('dotLogin').hidden = S.login.last === t;
   $('dotMission').hidden = !MISSIONS.some(m => m.check(d) >= m.goal && !claimedToday().includes(m.id));
 }
 function claimedToday() { if (S.claimed.date !== todayStr()) S.claimed = { date: todayStr(), ids: [] }; return S.claimed.ids; }
 
 $('btnUser').addEventListener('click', () => openProfile(false));
-$('kcalCard').addEventListener('click', () => { UI.histTab = 'week'; UI.histDate = todayStr(); setTab('history'); });
+$('kcalCard').addEventListener('click', () => { UI.histTab = 'week'; UI.histWeek = 0; UI.histDate = todayStr(); setTab('history'); });
 $('pillCoins').addEventListener('click', () => { UI.shopTab = 'shop'; setTab('shop'); });
 $('btnGacha').addEventListener('click', () => { UI.shopTab = 'gacha'; setTab('shop'); });
-$('eventBanner').addEventListener('click', () => { if (!S.guide.done) { openGuide(); return; } UI.shopTab = 'gacha'; setTab('shop'); });
+$('eventBanner').addEventListener('click', () => {
+  if (S.cat.hospital) { openHospitalInfo(); return; }
+  if (pendingYesterday()) { openCloseDay(); return; }
+  if (!S.guide.done) { openGuide(); return; }
+  UI.shopTab = 'gacha'; setTab('shop');
+});
 $('bodyPill').addEventListener('click', () => { UI.histTab = 'status'; setTab('history'); });
 $('pillSteps').addEventListener('click', () => openWalk());
 $('btnLogin').addEventListener('click', openLogin);
 $('btnMission').addEventListener('click', openMissions);
 $('btnCamera').addEventListener('click', openCapture);
-$('btnRevive').addEventListener('click', () => {
-  openModal(`<h2 id="modalTitle">新しい猫を迎える</h2><div class="stack"><p style="margin:0">${esc(S.cat.name)}とはお別れです。コイン・アイテム・きせかえはそのまま引きつぎます。</p>
-  ${catPickerHTML(S.cat.breed)}
-  <label class="f">新しい猫の名前<input type="text" id="newCatName" maxlength="10" value="もち"></label><button class="btn block" id="doRevive">この猫を迎える</button></div>`, root => {
-    const pick = bindCatPicker(root, S.cat.breed);
-    root.querySelector('#doRevive').onclick = () => {
-      const n = root.querySelector('#newCatName').value.trim() || 'もち';
-      S.cat = Object.assign(S.cat, { name: n, breed: pick(), idx: 0, dead: null, alert: { hi: 0, lo: 0 }, level: 1, exp: 0, stats: { pow: 20, spd: 20, sta: 20 } });
-      S.stamina = 65; save(); closeModal(); toast(`${n}がやってきた！`); se('get');
-    };
-  });
-});
-
 /* ---------- 猫えらび ---------- */
 function catArtHTML(b) {
   const c = CATS[b];
@@ -491,7 +569,7 @@ function startFromTitle() {
   t.classList.add('out'); setTimeout(() => { t.hidden = true; bgmUpdate(); }, 350);
   if (!S.onboarded) openWelcome();
   else if (!S.guide.tour) setTimeout(startTour, 700);   // v9.1：まだホームの案内を見ていない人（前からの人も1回）
-  else { setTimeout(checkCrisis, 900); setTimeout(checkBackupNag, 1800); }
+  else setTimeout(maybeShowDaily, 900);   // v9.9：きのうの結果 → きのうを締める → SOS → バックアップ の順
 }
 function openWelcome() {
   let name = S.user.name && S.user.name !== 'プレイヤー' ? S.user.name : '', breed = S.cat.breed || 'tabby', catName = S.cat.name || 'もち';
@@ -696,6 +774,103 @@ function openLogin() {
   });
 }
 
+/* ---------- 毎日の流れ（v9.9）：きのうの結果・きのうを締める・入院と退院 ---------- */
+const mdw = d => { const x = parseYmd(d); return `${x.getMonth() + 1}/${x.getDate()}（${WEEK[x.getDay()]}）`; };
+const signed = n => (n > 0 ? '+' : n < 0 ? '−' : '±') + fmt(Math.abs(n));
+// ほかの画面（モーダル・案内・ミニゲーム・対戦・さんぽ・タイトル）が出ていないとき true
+const screenFree = () => $('modal').hidden && !$('tour') && !$('miniFrame') && !$('battleUI') && !document.querySelector('.walk') && $('title').hidden;
+// アプリを開いたとき・もどったときに、順番に1つずつ出す
+function maybeShowDaily() {
+  if (!S.onboarded || !screenFree()) return;
+  if (S.resultQ.length) { showResults(); return; }
+  const y = addDays(todayStr(), -1);
+  if (pendingYesterday() && S.closeAsk !== y) { S.closeAsk = y; save(); openCloseDay(); return; }
+  checkCrisis(); setTimeout(checkBackupNag, 900);
+}
+// 体型メーター（from から to へ針が動く）
+function meterHTML(from, to) {
+  return `<div class="body-meter res-meter"><i style="left:${(from + 100) / 2}%" data-to="${(to + 100) / 2}"></i></div><div class="body-labels"><span>骸骨</span><span>ちょうどいい</span><span>爆発</span></div>`;
+}
+function runMeter(root) { const i = root.querySelector('.res-meter i'); if (i) setTimeout(() => { i.style.left = i.dataset.to + '%'; }, 450); }
+// きのうの記録を締める（わすれたごはんを足すか、これでしめる）
+function openCloseDay() {
+  const y = pendingDays().slice(-1)[0]; if (!y || !screenFree()) return;
+  const dd = S.days[y] || { meals: [] }, r = dayChange(y, S.cat.idx), to = clamp(S.cat.idx + r.ch, -100, 100);
+  const rows = Object.keys(SLOTS).map(k => {
+    const ms = dd.meals.filter(m => m.slot === k);
+    return `<div class="r"><span class="cl-slot">${SLOTS[k]}</span><span class="cl-name">${ms.length ? esc(ms.map(m => m.name).join('・')) : '<span class="muted">なし</span>'}</span><b class="num">${ms.length ? fmt(ms.reduce((a, m) => a + m.kcal, 0)) : ''}</b></div>`;
+  }).join('');
+  openModal(`<h2 id="modalTitle">きのうの記録をしめる</h2><div class="stack">
+    <p style="margin:0">${mdw(y)}の記録です。わすれたごはんはない？ 今日の${RULE.closeHour}時に自動でしめて、体型が変わります。</p>
+    <div class="card close-list">${rows}<div class="r t"><span>合計</span><span></span><b class="num">${fmt(r.it)} / ${fmt(r.tg)} kcal</b></div></div>
+    <div class="card close-pred">このまま しめると：<b>${S.cat.hospital ? '入院中' : bodyState(to)[0]}</b> <span class="num">（${signed(to - S.cat.idx)}）</span>
+      ${r.partial ? '<small>朝・昼・夜の記録が少ないので、やせる変化は小さくなります</small>' : ''}${!r.n ? '<small>記録がない日は、体型は変わりません</small>' : ''}</div>
+    <button class="btn white block" id="clAdd">＋ わすれたごはんを追加</button>
+    <button class="btn block" id="clGo">これでしめる</button>
+    <button class="btn white block" id="clLater">あとで（${RULE.closeHour}時に自動でしめる）</button></div>`, root => {
+    root.querySelector('#clAdd').onclick = () => { closeModal(); openCapture({ date: y, done: () => setTimeout(openCloseDay, 250) }); };
+    root.querySelector('#clGo').onclick = () => { se('tap'); settleDue(true); closeModal(); };
+    root.querySelector('#clLater').onclick = closeModal;
+  }, () => setTimeout(maybeShowDaily, 300));
+}
+// きのうの結果（何日かぶんたまっていたら、まとめて1枚）
+function showResults() {
+  const q = S.resultQ.splice(0); save();
+  const days = q.filter(r => r.event !== 'leave'), leave = q.find(r => r.event === 'leave');
+  const next = () => { if (leave) showLeave(leave); else setTimeout(maybeShowDaily, 300); };
+  if (!days.length) { next(); return; }
+  const first = days[0], last = days[days.length - 1], admit = days.find(r => r.event === 'skel' || r.event === 'boom');
+  const from = first.from, to = admit ? (admit.event === 'boom' ? 100 : -100) : last.to;
+  const coins = days.reduce((a, r) => a + (r.coins || 0), 0), better = Math.abs(to) < Math.abs(from) || (Math.abs(to) <= 12);
+  const one = days.length === 1;
+  const kcal = r => r.n ? `<b class="num">${fmt(r.it)}</b> / ${fmt(r.tg)} kcal <span class="num ${Math.abs(r.diff) <= 100 ? 'ok' : ''}">（${signed(r.diff)}）</span>` : '<span class="muted">記録なし</span>';
+  const head = one ? `<div class="card res-kcal"><span>食べた / 目標</span><span>${kcal(first)}</span></div>`
+    : `<div class="card res-days">${days.map(r => `<div class="r"><span>${mdw(r.date)}</span><span>${kcal(r)}</span><b class="num">${signed(r.to - r.from)}</b></div>`).join('')}</div>`;
+  const notes = [];
+  if (days.some(r => r.partial)) notes.push('朝・昼・夜の記録が少ない日は、やせる変化を小さくしました');
+  if (one && !first.n) notes.push('ごはんの記録がない日は、体型は変わりません');
+  const passes = days.filter(r => r.pass).length, broke = days.some(r => !r.n && !r.pass && r.streak === 0);
+  const stTxt = `🔥 連続記録 <b class="num">${last.streak}</b>日${coins ? `　<span class="res-coin">コイン +${fmt(coins)}</span>` : ''}${passes ? '<br><small>おやすみ券を使ったので、連続記録はつづいています</small>' : ''}${broke ? '<br><small>記録のない日があったので、連続記録はリセットされました</small>' : ''}`;
+  const catHTML = admit ? petCatHTML({ breed: S.cat.breed, dead: admit.event }) : petCatHTML({ breed: S.cat.breed, idx: last.to, equip: S.cat.equip, mood: better ? 'normal' : 'tired' });
+  openModal(`<h2 id="modalTitle">${one ? `きのうの結果<small>${mdw(first.date)}</small>` : `いないあいだの結果<small>${days.length}日ぶん</small>`}</h2>
+    <div class="stack res"><div class="res-cat">${catHTML}</div>${head}
+      <div class="card res-body"><div class="res-lbl"><span>${bodyState(from)[0]}</span><span aria-hidden="true">→</span><b>${bodyState(to)[0]}</b><span class="num">（${signed(to - from)}）</span></div>
+        ${meterHTML(from, to)}${notes.map(n => `<p class="hint" style="margin:6px 0 0">${n}</p>`).join('')}</div>
+      <div class="card res-streak">${stTxt}</div>
+      ${admit ? `<div class="card res-admit"><b>🏥 ${esc(S.cat.name)}が${admit.event === 'boom' ? '食べすぎて破裂' : 'やせすぎて骨に'}…！ ねこ病院に入院しました</b>
+        <p>入院費 −${fmt(admit.lost)}コイン・ごきげんが ${HOSPITAL.mood} に。${HOSPITAL.days}日で退院します（バランスのいいごはんを${HOSPITAL.goodDays}日記録すると早く退院）。入院中はトレーニングと対戦はお休みです。レベル・能力・きせかえはそのままです。</p></div>` : ''}
+      <button class="btn block" id="resOk">${admit ? 'お見舞いに行く' : 'OK'}</button></div>`, root => {
+    runMeter(root);
+    root.querySelector('#resOk').onclick = closeModal;
+    if (admit) { petSound('cry'); buzz([300, 120, 300]); } else if (coins) { setTimeout(() => { se(better ? 'get' : 'coin'); }, 500); }
+  }, next);
+}
+// 退院
+function showLeave(r) {
+  openModal(`<h2 id="modalTitle">退院おめでとう！</h2><div class="stack res">
+    <div class="res-cat">${petCatHTML({ breed: S.cat.breed, idx: r.to, equip: S.cat.equip })}</div>
+    <p style="margin:0;text-align:center;font-weight:900">${esc(S.cat.name)}が元気になって帰ってきた！${r.early ? '<br>バランスのいいごはんで、早めに退院できたにゃ' : ''}</p>
+    <div class="card res-body"><div class="res-lbl"><span>${bodyState(r.from)[0]}</span><span aria-hidden="true">→</span><b>${bodyState(r.to)[0]}</b></div>${meterHTML(r.from, r.to)}</div>
+    <button class="btn block" id="lvOk">おかえり！</button></div>`, root => {
+    runMeter(root); se('get'); setTimeout(() => petSound('meow'), 300);
+    root.querySelector('#lvOk').onclick = closeModal;
+  }, () => setTimeout(maybeShowDaily, 300));
+}
+// 入院中のようす（ホームのバナーから）
+function openHospitalInfo() {
+  const h = S.cat.hospital; if (!h) return;
+  const left = Math.max(1, daysBetween(todayStr(), h.until)), g = h.good || 0;
+  openModal(`<h2 id="modalTitle">🏥 ねこ病院</h2><div class="stack">
+    <p style="margin:0">${esc(S.cat.name)}は${h.reason === 'boom' ? '食べすぎ' : 'やせすぎ'}で入院中です。</p>
+    <div class="card" style="padding:12px 14px;font-weight:700;line-height:1.9">退院まで あと <b class="num">${left}</b>日<br>
+      バランスのいいごはん <b class="num">${g}</b> / ${HOSPITAL.goodDays}日 <small class="muted">（そろうと早く退院）</small>
+      <div class="prog"><i style="width:${Math.min(100, g / HOSPITAL.goodDays * 100)}%"></i></div></div>
+    <p class="hint" style="margin:0">バランスのいい日＝目標カロリー ±100kcal で、朝・昼・夜のうち${RULE.partialMinMain}回以上記録した日（締めたときに数えます）。入院中はトレーニングと対戦はお休み。ミニゲーム・さんぽ・きせかえはできます。</p>
+    <button class="btn block" id="hpMeal">ごはんを記録する</button></div>`, root => {
+    root.querySelector('#hpMeal').onclick = () => { closeModal(); openCapture(); };
+  });
+}
+
 /* ---------- ミッション ---------- */
 /* ---------- はじめてガイド・ホームの案内（v9.1） ---------- */
 function guideHit(id) { if (!S.guide.hits.includes(id)) { S.guide.hits.push(id); save(); } }
@@ -787,7 +962,7 @@ function endTour() {
   window.removeEventListener('resize', tourPlace);
   const first = !S.guide.tour;
   tourI = -1; S.guide.tour = true; save(); renderHome();
-  if (first) setTimeout(checkCrisis, 600);
+  if (first) setTimeout(maybeShowDaily, 600);
 }
 
 function openMissions() {
@@ -823,11 +998,16 @@ function aiDevId() {
     return v;
   } catch (e) { return ''; }
 }
-function openCapture() {
-  if (S.cat.dead) { toast('まず新しい猫を迎えてください'); return; }
+// opt.date：その日に記録する（v9.9：まだ締めていない きのう に足すとき）。opt.done：閉じたあとに呼ぶ（記録したら true）
+function openCapture(opt = {}) {
   cap = null;
-  const slot = mealSlotNow();
-  openModal(`<h2 id="modalTitle">ごはんを記録</h2><div class="stack">
+  const t = todayStr(), date = opt.date && opt.date !== t && canEditDay(opt.date) ? opt.date : t, past = date !== t;
+  // きのうの分を足すときは、まだ記録のない朝・昼・夜から選んでおく
+  const pd = S.days[date], slot = past ? (MAIN_SLOTS.find(k => !(pd && pd.meals.some(m => m.slot === k))) || 'snack') : mealSlotNow();
+  const pdt = parseYmd(date);
+  let saved = false;
+  openModal(`<h2 id="modalTitle">ごはんを記録${past ? `（${pdt.getMonth() + 1}/${pdt.getDate()}）` : ''}</h2><div class="stack">
+    ${past ? '<p class="hint past-note">きのうの分の記録です。カロリーと体型に入ります（スタミナなどのごほうびはありません）</p>' : ''}
     <button type="button" class="photo-box" id="capPhoto">写真を撮る ／ えらぶ</button>
     <button class="btn red block" id="capAI" disabled>AIでカロリーを調べる</button>
     <p class="hint" id="capStatus" role="status" aria-live="polite">写真をえらぶと使えます</p>
@@ -853,20 +1033,21 @@ function openCapture() {
     root.querySelector('#capSave').onclick = () => {
       const name = root.querySelector('#capName').value.trim() || '食事', kcal = Math.round(+root.querySelector('#capKcal').value);
       if (!(kcal > 0 && kcal <= 5000)) { toast('カロリーを1〜5000の数字で入れてください'); return; }
-      const d = day(), now = new Date();
+      const d = day(date), now = new Date();
       const g = q => { const v = root.querySelector(q).value; return v === '' ? null : clamp(Math.round(+v) || 0, 0, 1000); };
-      const meal = { id: Math.random().toString(36).slice(2, 9), slot: slotV, name, kcal, photo: cap ? cap.thumb : null, time: `${pad(now.getHours())}:${pad(now.getMinutes())}` };
+      const meal = { id: Math.random().toString(36).slice(2, 9), slot: slotV, name, kcal, photo: cap ? cap.thumb : null, time: past ? 'あとから' : `${pad(now.getHours())}:${pad(now.getMinutes())}` };
       const pc = g('#capC'), pp = g('#capP'), pf = g('#capF');
       if (pc != null || pp != null || pf != null) Object.assign(meal, { carbs: pc || 0, protein: pp || 0, fat: pf || 0 });
       d.meals.push(meal);
       let msg = `${name}（${kcal} kcal）を記録`;
+      if (past) { saved = true; save(); se('coin'); closeModal(); toast(msg + '（きのうの分）'); return; }   // v9.9：あとから足した分は ごほうびなし
       if (d.mealRewards < 5) { d.mealRewards++; addStamina(RULE.staminaPerMeal); addExp(RULE.expPerMeal); addMood(RULE.moodPerMeal); msg += `・スタミナ +${RULE.staminaPerMeal}`; }
       // 写真つきの記録：ミニゲームの報酬つきプレイ +1（1日 photoBonusMax 回まで）
       if (cap && (d.photoBonus || 0) < RULE.photoBonusMax) { d.photoBonus = (d.photoBonus || 0) + 1; msg += '・ミニゲーム +1回'; }
       save(); se('get'); buzz(40); setTimeout(() => { if (homeCat) homeCat.react('head'); }, 400);
-      closeModal(); toast(msg); setTimeout(checkCrisis, 2800);
+      saved = true; closeModal(); toast(msg); setTimeout(checkCrisis, 2800);
     };
-  }, () => { cap = null; $('photoInput').value = ''; });
+  }, () => { cap = null; $('photoInput').value = ''; if (opt.done) setTimeout(() => opt.done(saved), 0); });
 }
 $('photoInput').addEventListener('change', async e => {
   const f = e.target.files && e.target.files[0]; if (!f) return;
@@ -1015,12 +1196,12 @@ function renderTrain() {
   $('trainSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === UI.trainTab));
   const d = day();
   if (UI.trainTab === 'gym') {
-    $('trainBody').innerHTML = `${S.protein ? '<p class="boost">プロテイン効果中：次のトレーニングが1.5倍</p>' : ''}${S.goldbag > 0 ? `<p class="boost">金のサンドバッグ効果中：あと${S.goldbag}回 2倍</p>` : ''}
-      <div class="gym-cards">${TRAININGS.map(t => { const ok = S.stamina >= t.cost && !S.cat.dead; return `<div class="gym-card2" id="gc-${t.id}"><div class="gc-head">${{ bag: 'サンドバッグ<br>連打', tread: 'トレッドミル', weight: 'ウェイト<br>トレーニング' }[t.id] || esc(t.name)}</div>
+    $('trainBody').innerHTML = `${S.cat.hospital ? '<p class="boost hosp-note">🏥 入院中は トレーニングと対戦はお休み（ミニゲーム・きせかえはできます）</p>' : ''}${S.protein ? '<p class="boost">プロテイン効果中：次のトレーニングが1.5倍</p>' : ''}${S.goldbag > 0 ? `<p class="boost">金のサンドバッグ効果中：あと${S.goldbag}回 2倍</p>` : ''}
+      <div class="gym-cards">${TRAININGS.map(t => { const ok = S.stamina >= t.cost && !S.cat.hospital; return `<div class="gym-card2" id="gc-${t.id}"><div class="gc-head">${{ bag: 'サンドバッグ<br>連打', tread: 'トレッドミル', weight: 'ウェイト<br>トレーニング' }[t.id] || esc(t.name)}</div>
         <div class="gc-body"><span class="gc-ico">${I[{ bag: 'sandbag', tread: 'tread', weight: 'barbell' }[t.id]]}</span><span class="gc-cost">スタミナ −${t.cost}</span><span class="gc-label">${esc(t.label)}</span>
         <button class="btn small red gc-start" data-train="${t.id}" ${ok ? '' : 'disabled'}>START</button></div></div>`; }).join('')}</div>
       <div class="scene gym-scene b-entry" data-battle="1" role="button" tabindex="0" aria-label="猫バトル（対戦）をひらく"><img src="gym-bg.webp" alt="ジムで猫たちがトレーニングしている絵" width="900" height="718"><span class="vs-badge">⚔️ 対戦</span></div>
-      <button class="btn red block b-open" data-battle="1">⚔️ 猫バトル（対戦）へ</button>
+      <button class="btn red block b-open" data-battle="1" ${S.cat.hospital ? 'disabled' : ''}>⚔️ 猫バトル（対戦）へ</button>
       <div class="section-title">もちもの</div>
       <div class="list">${SHOP_ITEMS.filter(it => it.shop !== false || (S.items[it.id] || 0) > 0).map(it => `<div class="card row"><span style="width:40px;height:40px;flex:none">${I[it.id]}</span><div class="grow"><div class="name">${esc(it.name)} ×${S.items[it.id] || 0}</div><div class="hint">${esc(it.desc)}</div></div><button class="btn small yellow" data-use="${it.id}" ${(S.items[it.id] || 0) > 0 ? '' : 'disabled'}>使う</button></div>`).join('')}</div>
       <p class="hint" style="margin-top:10px">スタミナは、ごはんを記録したり歩いたりすると回復します。</p>`;
@@ -1086,7 +1267,7 @@ $('trainBody').addEventListener('click', e => {
   else if (t.dataset.wear) { const k = t.dataset.wear; S.cat.equip[WEAR[k].slot] = k; guideHit('wear'); save(); se('tap'); renderAll(); }
 });
 function doTraining(t) {
-  if (S.cat.dead) return;
+  if (S.cat.hospital) { toast('入院中はトレーニングできません（ミニゲームはできます）'); return; }
   if (S.stamina < t.cost) { toast('スタミナが足りません。ごはんを記録するか歩こう'); se('bad'); return; }
   S.stamina -= t.cost;
   const gold = (S.goldbag || 0) > 0;
@@ -1226,7 +1407,9 @@ function playTap() {
 /* =========================================================
    10. りれき
    ========================================================= */
-function weekDates() { const t = todayStr(), dow = parseYmd(t).getDay(), mon = addDays(t, -((dow + 6) % 7)); return Array.from({ length: 7 }, (_, i) => addDays(mon, i)); }
+// off：0＝今週、−1＝先週…（v9.9：前の週も見られる。記録は60日分のこっている）
+const WEEKS_BACK = 8;
+function weekDates(off = 0) { const mon = addDays(weekMon(todayStr()), off * 7); return Array.from({ length: 7 }, (_, i) => addDays(mon, i)); }
 function chartSVG(dates) {
   const tg = target(S.user), vals = dates.map(intake), max = Math.max(tg * 1.4, ...vals, 1);
   const W = 340, H = 190, x0 = 46, x1 = 330, y0 = 14, y1 = 160, bw = 26, step = (x1 - x0) / 7;
@@ -1262,25 +1445,46 @@ function pfcCard(meals) {
     ${row('protein', 'たんぱく質', '#E8577A')}${row('fat', '脂質', '#F7C64B')}${row('carbs', '糖質', '#4C8FD6')}
     <p class="hint" style="margin:6px 0 0">％はエネルギーの割合。目安 たんぱく質13〜20%・脂質20〜30%・炭水化物50〜65%${ms.length < meals.length ? `（${meals.length - ms.length}件は数値なし）` : ''}</p></div>`;
 }
+// 「このまま締めると」の予想（今日のまとめ・まだ締めていない きのう）
+function predHTML(d) {
+  const t = todayStr();
+  if (S.cat.hospital) {
+    const r = dayChange(d, S.cat.idx), ok = r.n && r.main >= RULE.partialMinMain && Math.abs(r.diff) <= 100;
+    return `<div class="card pred-card">🏥 バランスのいい日：<b>${ok ? 'クリアしそう！' : 'まだ'}</b><small>目標 ±100kcal で、朝・昼・夜のうち${RULE.partialMinMain}回以上の記録</small></div>`;
+  }
+  let from = S.cat.idx;
+  for (const p of pendingDays()) if (p < d) from = clamp(from + dayChange(p, from).ch, -100, 100);   // 先に締める日のぶんを足しておく
+  const r = dayChange(d, from), to = clamp(from + r.ch, -100, 100);
+  return `<div class="card pred-card">${d === t ? 'このまま今日が終わると' : 'このまま しめると'}：<b>${bodyState(to)[0]}</b> <span class="num">（${signed(to - from)}）</span>
+    <small>${d === t ? `あしたの${RULE.closeHour}時に しめて体型が変わります（それまでは直せます）` : `今日の${RULE.closeHour}時に しめます`}</small>${r.partial ? '<small>朝・昼・夜の記録が少ないので、やせる変化は小さくなります</small>' : ''}</div>`;
+}
 function renderHistory() {
   const t = todayStr(), dt = parseYmd(t);
   $('histDate').textContent = `Date ${dt.getMonth() + 1}/${dt.getDate()}（${WEEK[dt.getDay()]}）`;
   const tabs = `<div class="hist-seg" role="tablist"><button role="tab" data-h="status" aria-selected="${UI.histTab === 'status'}">ステータス</button><button role="tab" data-h="week" aria-selected="${UI.histTab === 'week'}">1週間の<br>きろく</button></div>`;
   if (UI.histTab === 'week') {
-    const dates = weekDates(), sel = UI.histDate, sd = S.days[sel] || { meals: [] }, sdt = parseYmd(sel);
+    const off = clamp(UI.histWeek || 0, -WEEKS_BACK, 0), dates = weekDates(off);
+    if (!dates.includes(UI.histDate) || UI.histDate > t) UI.histDate = off === 0 ? t : dates[6];
+    const sel = UI.histDate, sd = S.days[sel] || { meals: [] }, sdt = parseYmd(sel), edit = canEditDay(sel);
+    if (sel === t && S.sumSeen !== t) { S.sumSeen = t; save(); }
     const cards = Object.keys(SLOTS).map(k => {
       const ms = sd.meals.filter(m => m.slot === k), kc = ms.reduce((a, m) => a + m.kcal, 0), m0 = ms[0];
       if (!m0 && k === 'snack') return `<div class="meal-card"><span class="slot">${SLOTS[k]}</span><span class="mname">なし</span><span class="ph">${I.plate}</span><span class="hint"> </span></div>`;
       if (!m0) return `<div class="meal-card"><span class="slot">${SLOTS[k]}</span><span class="mname">${sel <= t ? 'まだ' : '－'}</span><span class="ph">${I.plate}</span><span class="hint" style="font-weight:900">${sel === t ? 'たべてないよ' : sel < t ? '記録なし' : ''}</span></div>`;
       return `<div class="meal-card"><span class="slot">${SLOTS[k]}</span><span class="mname">${esc(m0.name)}${ms.length > 1 ? ` ほか${ms.length - 1}` : ''}</span>${m0.photo ? `<img src="${m0.photo}" alt="${esc(m0.name)}の写真">` : `<span class="ph">${I.plate}</span>`}<span class="kc num">${fmt(kc)} kcal</span></div>`;
     }).join('');
-    const list = sd.meals.length ? `<div class="list meal-list" style="margin-top:12px">${sd.meals.map(m => `<div class="card row">${m.photo ? `<img src="${m.photo}" alt="">` : `<span class="ph"></span>`}<div class="grow"><div class="name">${esc(m.name)}</div><div class="hint">${SLOTS[m.slot]}　${esc(m.time)}${m.carbs != null ? `<br>糖質${m.carbs}g・たんぱく質${m.protein}g・脂質${m.fat}g` : ''}</div></div><b class="num">${fmt(m.kcal)} kcal</b>${sel === t ? `<button class="x-btn" data-del="${m.id}" aria-label="${esc(m.name)}を消す">✕</button>` : ''}</div>`).join('')}</div>` : '';
-    $('histBody').innerHTML = `<div class="card chart-card">${chartSVG(dates)}</div>
-      <div class="chips" style="justify-content:space-between;margin-top:8px">${dates.map(d => `<button class="chip" data-day="${d}" ${d > t ? 'disabled' : ''} style="${d === sel ? 'background:var(--yellow)' : ''}">${WEEK[parseYmd(d).getDay()]} <span class="num">${intake(d) ? fmt(intake(d)) : '-'}</span></button>`).join('')}</div>
+    // v9.9：締める前の日（今日・まだ締めていない きのう）は、タップで直せる
+    const row = m => { const inner = `${m.photo ? `<img src="${m.photo}" alt="">` : `<span class="ph"></span>`}<div class="grow"><div class="name">${esc(m.name)}</div><div class="hint">${SLOTS[m.slot]}　${esc(m.time)}${m.carbs != null ? `<br>糖質${m.carbs}g・たんぱく質${m.protein}g・脂質${m.fat}g` : ''}</div></div><b class="num">${fmt(m.kcal)} kcal</b>`;
+      return edit ? `<button type="button" class="card row edit" data-edit="${m.id}" aria-label="${esc(m.name)}を直す">${inner}</button>` : `<div class="card row">${inner}</div>`; };
+    const list = sd.meals.length ? `<div class="list meal-list" style="margin-top:12px">${sd.meals.map(row).join('')}</div>` : '';
+    const add = edit ? `<button class="btn white block add-meal" data-addmeal="1">＋ ${sel === t ? 'ごはんを記録' : 'わすれたごはんを追加'}</button>` : (sel < t ? '<p class="hint" style="margin:10px 4px 0">この日はもう しめたので、直せません</p>' : '');
+    $('histBody').innerHTML = `<div class="hist-week"><button class="btn small white" data-wk="-1" ${off <= -WEEKS_BACK ? 'disabled' : ''} aria-label="前の週">◀ 前の週</button><b>${off === 0 ? '今週' : `${mdw(dates[0])}〜`}</b><button class="btn small white" data-wk="1" ${off >= 0 ? 'disabled' : ''} aria-label="次の週">次の週 ▶</button></div>
+      <div class="card chart-card" style="margin-top:8px">${chartSVG(dates)}</div>
+      <div class="chips hist-days">${dates.map(d => `<button class="chip" data-day="${d}" ${d > t ? 'disabled' : ''} style="${d === sel ? 'background:var(--yellow)' : ''}" aria-label="${mdw(d)} ${intake(d) ? fmt(intake(d)) + 'kcal' : '記録なし'}"><b>${WEEK[parseYmd(d).getDay()]}</b><span class="num">${intake(d) ? fmt(intake(d)) : '-'}</span></button>`).join('')}</div>
       ${tabs}
       <div class="section-title">${sel === t ? '本日' : `${sdt.getMonth() + 1}/${sdt.getDate()}（${WEEK[sdt.getDay()]}）`}</div>
       <div class="meals3">${cards}</div>
-      <div class="card" style="margin-top:12px;padding:10px 14px;display:flex;justify-content:space-between;font-weight:900"><span>合計</span><span class="num">${fmt(intake(sel))} / ${fmt(target(S.user))} kcal</span></div>${pfcCard(sd.meals)}${list}`;
+      <div class="card" style="margin-top:12px;padding:10px 14px;display:flex;justify-content:space-between;font-weight:900"><span>合計</span><span class="num">${fmt(intake(sel))} / ${fmt(target(S.user))} kcal</span></div>${edit ? predHTML(sel) : ''}${pfcCard(sd.meals)}${list}${add}`;
   } else {
     const st = bodyState(S.cat.idx), recDays = Object.values(S.days).filter(d => d.meals.length).length;
     const meals = Object.values(S.days).reduce((a, d) => a + d.meals.length, 0), steps = Object.values(S.days).reduce((a, d) => a + (d.steps || 0), 0);
@@ -1290,7 +1494,9 @@ function renderHistory() {
       <div class="section-title">体型</div>
       <div class="card" style="padding:12px 14px"><div style="display:flex;justify-content:space-between;font-weight:900;margin-bottom:8px"><span>${st[0]}</span><span class="num">${S.cat.idx > 0 ? '+' : ''}${S.cat.idx}</span></div>
         <div class="body-meter"><i style="left:${(S.cat.idx + 100) / 2}%"></i></div><div class="body-labels"><span>骸骨</span><span>ちょうどいい</span><span>爆発</span></div>
-        <p class="hint" style="margin-top:8px">毎日0時に、前の日の「食べた量 − 目標」で体型が変わります。目標±100kcalなら、ちょうどいいに少しもどります。</p></div>
+        <p class="hint" style="margin-top:8px">その日の「食べた量 − 目標」で体型が変わります。しめるのは つぎの日の${RULE.closeHour}時（「これでしめる」を押せば すぐ）。目標±100kcalなら、ちょうどいいに少しもどります。朝・昼・夜の記録が少ない日は、やせる変化を小さくします。</p></div>
+      ${S.cat.hospital ? `<div class="card hosp-note" style="margin-top:10px;padding:10px 14px;font-weight:900;border:2.5px solid var(--ink);border-radius:14px">🏥 入院中　退院まで あと${Math.max(1, daysBetween(t, S.cat.hospital.until))}日（バランスのいい日 ${S.cat.hospital.good || 0}/${HOSPITAL.goodDays}）</div>` : ''}
+      <div class="card streak-card"><span>🔥 連続記録</span><span><b class="num">${S.streak.n}</b>日　<small class="muted">今週のおやすみ券 ${S.streak.pass === weekMon(t) ? 0 : STREAK.passPerWeek}/${STREAK.passPerWeek}</small></span></div>
       <div class="section-title">これまで</div>
       <div class="totals"><div class="card"><b class="num">${recDays}</b><span>記録した日</span></div><div class="card"><b class="num">${meals}</b><span>ごはんの記録</span></div><div class="card"><b class="num">${fmt(steps)}</b><span>歩いた歩数</span></div></div>
       <div class="card" style="margin-top:10px;padding:10px 14px;font-size:14px">基礎代謝 <b>${fmt(bmr(S.user))}</b> kcal　→　1日の目標 <b>${fmt(target(S.user))}</b> kcal</div>`;
@@ -1300,8 +1506,44 @@ $('histBody').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.h) { UI.histTab = b.dataset.h; se('tap'); renderHistory(); }
   else if (b.dataset.day) { UI.histDate = b.dataset.day; renderHistory(); }
-  else if (b.dataset.del) { const d = day(); d.meals = d.meals.filter(m => m.id !== b.dataset.del); save(); toast('消しました'); renderAll(); }
+  else if (b.dataset.wk) { UI.histWeek = clamp((UI.histWeek || 0) + +b.dataset.wk, -WEEKS_BACK, 0); UI.histDate = null; se('tap'); renderHistory(); }
+  else if (b.dataset.edit) openMealEdit(UI.histDate, b.dataset.edit);
+  else if (b.dataset.addmeal) { if (UI.histDate === todayStr()) openCapture(); else openCapture({ date: UI.histDate }); }
 });
+// ごはんの記録を直す・消す（v9.9：今日と、まだ締めていない日だけ）
+function openMealEdit(date, id) {
+  const dd = S.days[date], m = dd && dd.meals.find(x => x.id === id);
+  if (!m) return;
+  if (!canEditDay(date)) { toast('この日はもう しめたので、直せません'); return; }
+  const v = x => x == null ? '' : x;
+  openModal(`<h2 id="modalTitle">ごはんを直す<small>${mdw(date)}</small></h2><div class="stack">
+    <div class="radio-row" id="edSlot">${Object.entries(SLOTS).map(([k, n]) => `<button type="button" data-v="${k}" aria-pressed="${k === m.slot}">${n}</button>`).join('')}</div>
+    <div class="form-grid" style="grid-template-columns:minmax(0,2fr) minmax(0,1fr)">
+      <label class="f">料理名<input type="text" id="edName" maxlength="30" value="${esc(m.name)}"></label>
+      <label class="f">kcal<input type="number" id="edKcal" inputmode="numeric" min="1" max="5000" value="${m.kcal}"></label></div>
+    <div class="form-grid pfc-in">
+      <label class="f">糖質 g<input type="number" id="edC" inputmode="numeric" min="0" max="1000" value="${v(m.carbs)}" placeholder="－"></label>
+      <label class="f">たんぱく質 g<input type="number" id="edP" inputmode="numeric" min="0" max="500" value="${v(m.protein)}" placeholder="－"></label>
+      <label class="f">脂質 g<input type="number" id="edF" inputmode="numeric" min="0" max="500" value="${v(m.fat)}" placeholder="－"></label></div>
+    <button class="btn block" id="edSave">ほぞんする</button>
+    <button class="btn white block" id="edDel">この記録を消す</button></div>`, root => {
+    let slotV = m.slot, armed = false;
+    root.querySelector('#edSlot').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; slotV = b.dataset.v; root.querySelectorAll('#edSlot button').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+    root.querySelector('#edSave').onclick = () => {
+      const kcal = Math.round(+root.querySelector('#edKcal').value);
+      if (!(kcal > 0 && kcal <= 5000)) { toast('カロリーを1〜5000の数字で入れてください'); return; }
+      const g = q => { const x = root.querySelector(q).value; return x === '' ? null : clamp(Math.round(+x) || 0, 0, 1000); };
+      const pc = g('#edC'), pp = g('#edP'), pf = g('#edF');
+      Object.assign(m, { name: root.querySelector('#edName').value.trim() || '食事', kcal, slot: slotV });
+      if (pc != null || pp != null || pf != null) Object.assign(m, { carbs: pc || 0, protein: pp || 0, fat: pf || 0 }); else { delete m.carbs; delete m.protein; delete m.fat; }
+      save(); se('coin'); closeModal(); toast('直しました'); setTimeout(checkCrisis, 600);
+    };
+    root.querySelector('#edDel').onclick = e => {
+      if (!armed) { armed = true; e.target.textContent = 'もう一度押すと消えます'; e.target.classList.add('red'); return; }
+      dd.meals = dd.meals.filter(x => x.id !== id); save(); closeModal(); toast('消しました');
+    };
+  });
+}
 
 /* =========================================================
    11. せってい
@@ -1360,7 +1602,7 @@ $('setBody').addEventListener('click', async e => {
 });
 // 開いているあいだ1分ごとに、日付が変わっていないか・猫のSOS を確認
 // v9.8：ごはんのリマインダー（開いているときしか届かなかった）はやめた。0時をこえたら画面を描きなおす
-setInterval(() => { if (rollover()) renderAll(); checkCrisis(); }, 60000);
+setInterval(() => { if (rollover()) { renderAll(); maybeShowDaily(); } else checkCrisis(); }, 60000);
 
 /* ---------- 新しい版のお知らせ（v9.8） ----------
    新しい service worker（sw.js）は、前の版が開いているあいだは待っている。
@@ -1412,4 +1654,4 @@ $('titleMusic').addEventListener('click', e => {
   bgmUpdate(); $('titleMusic').textContent = '🔊';
 });
 $('title').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startFromTitle(); } });
-document.addEventListener('visibilitychange', () => { bgmUpdate(); if (!document.hidden) { rollover(); renderAll(); if ($('title').hidden) checkCrisis(); } });
+document.addEventListener('visibilitychange', () => { bgmUpdate(); if (!document.hidden) { rollover(); renderAll(); if ($('title').hidden) maybeShowDaily(); } });
