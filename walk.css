@@ -14,7 +14,7 @@ body.walk-open { overflow: hidden; }
 .walk-nums div, .walk-sum div { background: var(--white); border: 2px solid var(--ink); border-radius: 12px; padding: 6px 4px; text-align: center; }
 .walk-nums b, .walk-sum b { display: block; font-size: 20px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.15; }
 .walk-sum b { font-size: 24px; }
-.walk-nums small, .walk-sum small { font-size: 11px; font-weight: 700; }
+.walk-nums small, .walk-sum small { font-size: 12px; font-weight: 700; }
 .walk-next { grid-column: 1 / -1; display: grid; gap: 4px; }
 .walk-bar { height: 12px; border-radius: 99px; border: 2px solid var(--ink); background: var(--white); overflow: hidden; }
 .walk-bar i { display: block; height: 100%; width: 0; background: var(--orange); transition: width .4s; }

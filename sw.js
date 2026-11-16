@@ -1,7 +1,7 @@
 // にゃんカロ service worker
 // アプリ本体はキャッシュしてオフラインでも起動できるようにする。
 // 更新したら VERSION の数字を上げると、利用者のスマホに新しい版が届く。
-const VERSION = '9.7';   // index.html などの ?v= と同じ数字にする
+const VERSION = '9.8';   // index.html などの ?v= と同じ数字にする
 const CACHE = 'nekocal-v' + VERSION;
 const V = '?v=' + VERSION;
 const APP_FILES = [
@@ -51,10 +51,14 @@ const APP_FILES = [
 ];
 
 const GAME_PAGES = ['sagase.html', 'dash.html', 'slot.html', 'baseball.html'];
+const NAV_WAIT = 3000;   // 画面を開くとき、ネットの返事をこの時間（ミリ秒）まで待つ
 
+// v9.8：前の版が開いているあいだは、すぐには入れかわらずに待つ（古い画面と新しいファイルが混ざらないように）。
+// アプリ（app.js の swWaiting）から 'skip' が来たら入れかわる。はじめての人は待たずにすぐ動く。
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(APP_FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(APP_FILES)));
 });
+self.addEventListener('message', (e) => { if (e.data === 'skip') self.skipWaiting(); });
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
@@ -71,14 +75,21 @@ self.addEventListener('fetch', (e) => {
 
   // 画面（HTML）：ネット優先、つながらなければキャッシュ
   // （ミニゲームのページも画面なので、ページごとに別々に保存する）
+  // v9.8：電波が弱くて 3 秒たっても返事がないときは、キャッシュの画面を先に出す（ネットの返事が来たら裏でキャッシュを更新）
   if (req.mode === 'navigate') {
     const page = url.pathname.split('/').pop();
     const key = GAME_PAGES.includes(page) ? './' + page : './index.html';
-    e.respondWith(
-      fetch(req)
-        .then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(key, copy)); } return res; })
-        .catch(() => caches.match(key))
-    );
+    const net = fetch(req).then((res) => {
+      if (res.ok) { const copy = res.clone(); return caches.open(CACHE).then((c) => c.put(key, copy)).then(() => res, () => res); }
+      return res;
+    });
+    e.waitUntil(net.catch(() => {}));
+    e.respondWith(new Promise((resolve) => {
+      let done = false;
+      const finish = (r) => { if (!done && r) { done = true; resolve(r); } };
+      net.then(finish, () => caches.match(key).then((hit) => { if (hit) finish(hit); else if (!done) { done = true; resolve(Response.error()); } }));
+      setTimeout(() => { caches.match(key).then(finish); }, NAV_WAIT);
+    }));
     return;
   }
 

@@ -153,15 +153,17 @@ const statWithBonus = k => S.cat.stats[k] + ['head', 'top', 'hand', 'suit'].redu
 function mealSlotNow() { const h = new Date().getHours() + new Date().getMinutes() / 60; return h < 10.5 ? 'morning' : h < 15.5 ? 'noon' : 'night'; }
 
 // 日付が変わっていたら、前の日を自動で締める
+// 日付が変わって締めたら true を返す（v9.8：開いたまま0時をこえたら画面を描きなおすため）
 function rollover() {
   const t = todayStr();
-  if (S.last === t) return;
+  if (S.last === t) return false;
   let d = S.last;
   while (d < t) { settleDay(d); S.mood = clamp((S.mood ?? RULE.moodStart) + RULE.moodPerDay, 0, 100); d = addDays(d, 1); }
   S.last = t;
   // 7日より前の写真は消して容量を節約
   Object.keys(S.days).forEach(k => { if (daysBetween(k, t) > 7) S.days[k].meals.forEach(m => { m.photo = null; }); if (daysBetween(k, t) > 60) delete S.days[k]; });
   save();
+  return true;
 }
 function settleDay(d) {
   if (S.cat.dead) return;
@@ -178,8 +180,9 @@ function settleDay(d) {
    やせる側：今の体型で判断（朝はまだ食べていないので、今日の予想は使わない）
    1回目 ±crisisWarn、2回目 ±crisisDanger。体型がもどったら、また鳴けるようにする */
 const CRISIS = {
-  hi: [null, { say: 'く、くるしいにゃ…おなかパンパン…！', note: 'おなかがパンパンで苦しそう！このままだと爆発しちゃうかも…' },
-    { say: 'もう限界にゃーーっ！！爆発しちゃうにゃ！！', note: '「もう限界にゃーっ！！」このままだと爆発します！今日はもう食べないで！' }],
+  // v9.8：「食べないで」とは言わず、体を動かすほうにさそう
+  hi: [null, { say: 'く、くるしいにゃ…おなかパンパン…！', note: 'おなかがパンパンで苦しそう…！ さんぽやジムで、いっしょに体を動かそう' },
+    { say: 'もう限界にゃーーっ！！爆発しちゃうにゃ！！', note: '「もう限界にゃーっ！！」このままだと爆発しちゃう！ 今日はもう十分食べたにゃ。さんぽやジムで動こう！' }],
   lo: [null, { say: 'おなかすきすぎて…力が出ないにゃ…', note: 'おなかがすきすぎてフラフラ…。ちゃんと食べさせてあげて！' },
     { say: 'た、たすけてにゃ…骨になっちゃうにゃ…！', note: '「たすけてにゃ…！」このままだと骸骨になってしまいます！しっかり食べて！' }]
 };
@@ -461,7 +464,8 @@ function bgmUpdate() {
     } catch (e) { bgmEl.volume = RULE.bgmVolume; }
   }
   if (!want) { bgmEl.pause(); return; }
-  if (want !== bgmCur) { bgmCur = want; bgmEl.src = `${BGM_FILES[want]}?v=${APP_VER}`; }
+  // v9.8：mp3 には ?v= をつけない（版を上げるたびに大きな曲を全部ダウンロードしなおさないように。曲を変えるときはファイル名を変える）
+  if (want !== bgmCur) { bgmCur = want; bgmEl.src = BGM_FILES[want]; }
   if (actx && actx.state === 'suspended') actx.resume().catch(() => {});
   if (bgmEl.paused) { const p = bgmEl.play(); if (p && p.catch) p.catch(() => {}); }
 }
@@ -550,7 +554,7 @@ function openProfile(first) {
     root.querySelector('#pSave').onclick = () => {
       const v = read();
       if (!(v.age >= 10 && v.age <= 100 && v.height >= 100 && v.height <= 230 && v.weight >= 25 && v.weight <= 250)) { toast('年齢・身長・体重を確かめてください'); return; }
-      S.user = v; S.cat.name = root.querySelector('#pCat').value.trim() || 'もち'; S.onboarded = true; save(); closeModal(); toast(`目標は 1日 ${fmt(target(v))} kcal`);
+      S.user = v; S.cat.name = root.querySelector('#pCat').value.trim() || 'もち'; S.onboarded = true; save(); askPersist(); closeModal(); toast(`目標は 1日 ${fmt(target(v))} kcal`);
       if (first && !S.guide.tour) setTimeout(startTour, 900);
     };
   }, null, first);
@@ -580,6 +584,22 @@ const BK_APP = 'nyankalo', DAY_MS = 864e5, BK_NAG_DAYS = 7;
 const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isStandalone = () => navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
 const verNum = v => String(v || '0').split('.').reduce((a, x) => a * 1000 + (parseInt(x, 10) || 0), 0);
+// v9.8：ブラウザに「このデータは消さないで」とお願いする（容量が足りないときなどに自動で消されにくくなる）
+async function askPersist() {
+  try { if (navigator.storage && navigator.storage.persist && !(await navigator.storage.persisted())) await navigator.storage.persist(); } catch (e) {}
+  if (UI.tab === 'settings') showPersist();
+}
+// せっていの「データの保護」に、いまの状態を書く
+async function showPersist() {
+  const el = $('sPersist'); if (!el) return;
+  let on = null;
+  try { if (navigator.storage && navigator.storage.persisted) on = await navigator.storage.persisted(); } catch (e) {}
+  const el2 = $('sPersist'); if (!el2) return;
+  el2.textContent = on === true ? 'オン：ブラウザがデータを自動で消しにくくなっています'
+    : on === null ? 'この端末では確かめられません。ときどきバックアップしてね'
+    : isIOS() && !isStandalone() ? 'オフ：Safari の共有ボタン →「ホーム画面に追加」から開くと、データが消えにくくなります'
+    : 'オフ：ホーム画面に追加（インストール）して使うと、オンになりやすくなります';
+}
 function backupAgoText() {
   if (!S.lastBackup) return 'まだ一度も保存していません';
   const n = Math.floor((Date.now() - S.lastBackup) / DAY_MS);
@@ -897,7 +917,8 @@ async function runAI(root) {
 /* =========================================================
    8. ショップ
    ========================================================= */
-function balanceHTML() { return `<span class="pill">${I.coin}<span class="num">${fmt(S.coins)}</span></span><span class="pill">${I.stone}<span class="num">${fmt(S.stones)}</span></span>`; }
+// v9.8：石（💎）は手に入れる方法も使い道もないので表示をやめた（S.stones はデータに残す）
+function balanceHTML() { return `<span class="pill">${I.coin}<span class="num">${fmt(S.coins)}</span></span>`; }
 const shopQty = { drink: 1, protein: 1, goldbag: 1 };
 function renderShop() {
   $('shopBalance').innerHTML = balanceHTML();
@@ -906,11 +927,7 @@ function renderShop() {
     $('shopBody').innerHTML = `
       <div class="section-title">アイテム</div>
       <div class="list">${SHOP_ITEMS.filter(it => it.shop !== false).map(it => `<div class="card shop-item"><div class="ico">${I[it.id]}</div><div><div class="name" style="font-weight:900">${esc(it.name)}</div><div class="hint">${esc(it.desc)}　もっている：${S.items[it.id] || 0}</div><div class="price">${I.coin.replace('width="24" height="24"', 'width="18" height="18" style="vertical-align:-3px"')} ${fmt(it.price)}</div></div>
-        <div class="buy-row"><span class="stepper"><button type="button" data-dec="${it.id}" aria-label="へらす">−</button><output>${shopQty[it.id]}</output><button type="button" data-inc="${it.id}" aria-label="ふやす">＋</button></span><button class="btn small" data-buy="${it.id}">購入</button></div></div>`).join('')}</div>
-      <div class="section-title">石</div>
-      <div class="list">${STONE_PACKS.map(p => `<div class="card shop-item"><div class="ico">${I.stone.replace('width="24" height="24"', 'width="38" height="38"')}</div><div><div style="font-weight:900">石 ×${p.n}</div><div class="price">¥${fmt(p.yen)}</div></div>
-        <div class="buy-row"><button class="btn small white" data-stone="${p.n}">購入</button></div></div>`).join('')}</div>
-      <p class="demo-note">学校の制作アプリなので、石の購入（お金を使う機能）は動きません。見た目だけのサンプルです。</p>`;
+        <div class="buy-row"><span class="stepper"><button type="button" data-dec="${it.id}" aria-label="へらす">−</button><output>${shopQty[it.id]}</output><button type="button" data-inc="${it.id}" aria-label="ふやす">＋</button></span><button class="btn small" data-buy="${it.id}">購入</button></div></div>`).join('')}</div>`;
   } else {
     $('shopBody').innerHTML = `<div class="scene shop-scene">
       <img src="shop-bg.webp" alt="猫の店員がいる福袋ガチャのお店の絵" width="900" height="762">
@@ -932,7 +949,6 @@ $('shopBody').addEventListener('click', e => {
     if (S.coins < cost) { toast(`コインが ${fmt(cost - S.coins)} 足りません`); se('bad'); return; }
     S.coins -= cost; S.items[it.id] = (S.items[it.id] || 0) + n; shopQty[it.id] = 1; save(); se('coin'); buzz(); toast(`${it.name} ×${n} を買いました`); renderAll();
   }
-  else if (t.dataset.stone) { toast('学校の制作アプリなので、石は買えません'); }
   else if (t.dataset.bag) { t.classList.add('picked'); setTimeout(() => confirmGacha(+t.dataset.bag), 300); }
 });
 const BAG_NAMES = ['緑の福袋', '麻の福袋', '赤の福袋', '白の福袋'];
@@ -1000,10 +1016,11 @@ function renderTrain() {
   const d = day();
   if (UI.trainTab === 'gym') {
     $('trainBody').innerHTML = `${S.protein ? '<p class="boost">プロテイン効果中：次のトレーニングが1.5倍</p>' : ''}${S.goldbag > 0 ? `<p class="boost">金のサンドバッグ効果中：あと${S.goldbag}回 2倍</p>` : ''}
-      <div class="scene gym-scene b-entry" data-battle="1" role="button" tabindex="0" aria-label="猫バトル（対戦）をひらく"><img src="gym-bg.webp" alt="ジムで猫たちがトレーニングしている絵" width="900" height="718"><span class="vs-badge">⚔️ 対戦</span></div>
       <div class="gym-cards">${TRAININGS.map(t => { const ok = S.stamina >= t.cost && !S.cat.dead; return `<div class="gym-card2" id="gc-${t.id}"><div class="gc-head">${{ bag: 'サンドバッグ<br>連打', tread: 'トレッドミル', weight: 'ウェイト<br>トレーニング' }[t.id] || esc(t.name)}</div>
         <div class="gc-body"><span class="gc-ico">${I[{ bag: 'sandbag', tread: 'tread', weight: 'barbell' }[t.id]]}</span><span class="gc-cost">スタミナ −${t.cost}</span><span class="gc-label">${esc(t.label)}</span>
         <button class="btn small red gc-start" data-train="${t.id}" ${ok ? '' : 'disabled'}>START</button></div></div>`; }).join('')}</div>
+      <div class="scene gym-scene b-entry" data-battle="1" role="button" tabindex="0" aria-label="猫バトル（対戦）をひらく"><img src="gym-bg.webp" alt="ジムで猫たちがトレーニングしている絵" width="900" height="718"><span class="vs-badge">⚔️ 対戦</span></div>
+      <button class="btn red block b-open" data-battle="1">⚔️ 猫バトル（対戦）へ</button>
       <div class="section-title">もちもの</div>
       <div class="list">${SHOP_ITEMS.filter(it => it.shop !== false || (S.items[it.id] || 0) > 0).map(it => `<div class="card row"><span style="width:40px;height:40px;flex:none">${I[it.id]}</span><div class="grow"><div class="name">${esc(it.name)} ×${S.items[it.id] || 0}</div><div class="hint">${esc(it.desc)}</div></div><button class="btn small yellow" data-use="${it.id}" ${(S.items[it.id] || 0) > 0 ? '' : 'disabled'}>使う</button></div>`).join('')}</div>
       <p class="hint" style="margin-top:10px">スタミナは、ごはんを記録したり歩いたりすると回復します。</p>`;
@@ -1047,7 +1064,7 @@ function lockerHTML(eq) {
 function statRows() {
   const col = { pow: 'var(--red)', spd: 'var(--blue)', sta: 'var(--green)' };
   return ['pow', 'spd', 'sta'].map(k => { const v = statWithBonus(k), bonus = v - S.cat.stats[k]; return `<div class="stat-row"><span>${STAT_NAME[k]}</span><span class="bar"><i style="width:${Math.min(100, v / 3)}%;background:${col[k]}"></i></span><b class="num">${v}${bonus ? `<small style="color:var(--orange-d)">+${bonus}</small>` : ''}</b></div>`; }).join('') +
-    `<div class="stat-row"><span>EXP</span><span class="bar"><i style="width:${S.cat.exp / expNeed(S.cat.level) * 100}%;background:var(--yellow)"></i></span><b class="num" style="font-size:11px">${S.cat.exp}/${expNeed(S.cat.level)}</b></div>`;
+    `<div class="stat-row"><span>EXP</span><span class="bar"><i style="width:${S.cat.exp / expNeed(S.cat.level) * 100}%;background:var(--yellow)"></i></span><b class="num" style="font-size:12px">${S.cat.exp}/${expNeed(S.cat.level)}</b></div>`;
 }
 $('trainSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; UI.trainTab = b.dataset.v; se('tap'); renderTrain(); bgmUpdate(); });
 $('trainBody').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-battle]')) { e.preventDefault(); openBattleLobby(); } });
@@ -1301,17 +1318,13 @@ function renderSettings() {
     <div class="card set-group"><div class="set-row"><div class="grow">バイブレーション<small>iPhone では動かないことがあります</small></div>${sw('sVib', s.vibrate, 'バイブレーション')}</div></div>
     <div class="section-title">通知</div>
     <div class="card set-group">
-      <div class="set-row"><div class="grow">通知（ごはんのリマインダー・猫のSOS）<small>${perm === 'unsupported' ? 'この端末では通知が使えません' : 'アプリを開いているあいだに届きます'}</small></div>${sw('sNotify', s.notify && perm === 'granted', 'ごはんのリマインダー')}</div>
-      <div class="set-row"><div class="grow">お昼</div><input type="time" id="sT1" value="${s.remind[0]}" style="width:120px"></div>
-      <div class="set-row"><div class="grow">夜</div><input type="time" id="sT2" value="${s.remind[1]}" style="width:120px"></div>
+      <div class="set-row"><div class="grow">猫のSOS通知<small>${perm === 'unsupported' ? 'この端末では通知が使えません' : 'アプリを開いているあいだだけ届きます（閉じているときは届きません）'}</small></div>${sw('sNotify', s.notify && perm === 'granted', '猫のSOS通知')}</div>
     </div>
-    <div class="section-title">言語</div>
-    <div class="card set-group"><div class="set-row"><div class="grow">言語 / Language</div><select id="sLang" style="width:150px"><option value="ja" selected>日本語</option><option value="zh" disabled>中文（準備中）</option><option value="en" disabled>English（準備中）</option></select></div></div>
     <div class="section-title">データ</div>
     <div class="card set-group">
       <div class="set-row"><div class="grow">バックアップを保存<small>${esc(backupAgoText())}。写真もふくめて1つのファイルにします</small></div><button class="btn small" id="sBackup">保存</button></div>
       <div class="set-row"><div class="grow">バックアップから復元<small>機種変更のときなど。今のデータは上書きされます</small></div><button class="btn small white" id="sRestore">えらぶ</button></div>
-      ${isIOS() && !isStandalone() ? '<div class="set-row"><div class="grow">iPhone の人へ<small>Safari の共有ボタン →「ホーム画面に追加」から開くと、データが消えにくくなります</small></div></div>' : ''}
+      <div class="set-row"><div class="grow">データの保護<small id="sPersist">しらべています…</small></div></div>
     </div>
     <div class="section-title">そのほか</div>
     <div class="card set-group">
@@ -1320,7 +1333,8 @@ function renderSettings() {
       <div class="set-row"><div class="grow">プロフィール・目標カロリー</div><button class="btn small white" id="sProfile">ひらく</button></div>
       <div class="set-row"><div class="grow">データをすべて消す<small>猫・コイン・記録が最初にもどります</small></div><button class="btn small ${resetArmed ? 'red' : 'white'}" id="sReset">${resetArmed ? 'もう一度押すと消えます' : '消す'}</button></div>
     </div>
-    <p class="hint" style="text-align:center;margin:14px 0">にゃんカロ　宮崎情報ビジネス専門学校 制作アプリ</p>`;
+    <p class="hint" style="text-align:center;margin:14px 0">にゃんカロ v${APP_VER}　宮崎情報ビジネス専門学校 制作アプリ</p>`;
+  showPersist();
 }
 $('setBody').addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -1344,24 +1358,27 @@ $('setBody').addEventListener('click', async e => {
   }
   save(); renderSettings();
 });
-$('setBody').addEventListener('change', e => {
-  if (e.target.id === 'sT1') S.settings.remind[0] = e.target.value || '12:00';
-  if (e.target.id === 'sT2') S.settings.remind[1] = e.target.value || '19:00';
-  save();
-});
-// リマインダー：開いているあいだ1分ごとに確認
-let lastNotified = '';
-setInterval(() => {
-  rollover(); checkCrisis();
-  const s = S.settings; if (!s.notify || !('Notification' in window) || Notification.permission !== 'granted') return;
-  const now = new Date(), hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`, key = todayStr() + hm;
-  const i = s.remind.indexOf(hm); if (i < 0 || lastNotified === key) return;
-  const slot = i === 0 ? 'noon' : 'night'; if (day().meals.some(m => m.slot === slot)) return;
-  lastNotified = key;
-  const body = `${S.cat.name}「${SLOTS[slot]}ごはん、まだにゃ？」`;
-  if (navigator.serviceWorker && navigator.serviceWorker.ready) navigator.serviceWorker.ready.then(r => r.showNotification('にゃんカロ', { body, icon: 'icon-192.png' })).catch(() => {});
-  else new Notification('にゃんカロ', { body });
-}, 60000);
+// 開いているあいだ1分ごとに、日付が変わっていないか・猫のSOS を確認
+// v9.8：ごはんのリマインダー（開いているときしか届かなかった）はやめた。0時をこえたら画面を描きなおす
+setInterval(() => { if (rollover()) renderAll(); checkCrisis(); }, 60000);
+
+/* ---------- 新しい版のお知らせ（v9.8） ----------
+   新しい service worker（sw.js）は、前の版が開いているあいだは待っている。
+   タイトル画面のうちなら すぐ入れかえて読みなおす。遊んでいる途中なら上にお知らせを出し、タップで更新する。
+   （index.html の登録のところから swWaiting が呼ばれる） */
+let swNew = null;
+function swApply() { if (!swNew) return; window.__swSkip = true; try { swNew.postMessage('skip'); } catch (e) {} }
+function swWaiting(w) {
+  swNew = w;
+  const t = $('title');
+  if (t && !t.hidden && !t.classList.contains('out')) { swApply(); return; }
+  if ($('updBar')) return;
+  const b = document.createElement('button');
+  b.id = 'updBar'; b.className = 'upd-bar'; b.type = 'button';
+  b.innerHTML = '新しい版があります　<b>タップで更新</b>';
+  b.onclick = () => { b.disabled = true; b.textContent = '更新しています…'; swApply(); };
+  document.body.appendChild(b);
+}
 
 /* =========================================================
    12. タブ切りかえ・全体の描画
@@ -1385,6 +1402,7 @@ document.querySelector('.tabbar').addEventListener('click', e => { const b = e.t
 $('tiShop').innerHTML = I.bag; $('tiTrain').innerHTML = I.dumb; $('tiHome').innerHTML = I.house; $('tiHistory').innerHTML = I.cal; $('tiSettings').innerHTML = I.gear;
 
 rollover();
+if (S.onboarded) askPersist();
 setTab('home');
 renderTitle();
 $('title').addEventListener('click', startFromTitle);

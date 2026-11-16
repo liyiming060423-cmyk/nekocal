@@ -30,9 +30,9 @@
 .b-rank .rk { text-align: center; } .b-rank li:nth-child(1) .rk { color: #C99A06; } .b-rank li:nth-child(2) .rk { color: #8A8F98; } .b-rank li:nth-child(3) .rk { color: #B0703A; }
 .b-rank .nm { font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .b-rank .nm small { font-weight: 700; color: var(--muted); }
-.b-rank .wl { font-size: 11px; color: var(--muted); }
+.b-rank .wl { font-size: 12px; color: var(--muted); }
 .b-rank .rt { text-align: right; }
-.cpu { font-style: normal; font-size: 10px; background: #DDE3EA; color: #4A5568; border-radius: 6px; padding: 1px 5px; margin-left: 4px; }
+.cpu { font-style: normal; font-size: 12px; background: #DDE3EA; color: #4A5568; border-radius: 6px; padding: 1px 5px; margin-left: 4px; }
 .b-log li { display: flex; gap: 8px; align-items: center; padding: 6px 10px; background: var(--white); border-radius: 12px; margin-bottom: 4px; font-weight: 700; }
 .b-log .w, .b-log .l { font-weight: 900; font-size: 12px; padding: 1px 8px; border-radius: 999px; color: #fff; }
 .b-log .w { background: var(--green); } .b-log .l { background: #8A8F98; }
@@ -75,7 +75,7 @@
 .b-hand:has(.b-card:nth-child(4)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .b-card { font: inherit; color: var(--ink); border: 3px solid var(--ink); border-radius: 14px; background: var(--white); padding: 8px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; box-shadow: 0 4px 0 var(--ink); cursor: pointer; text-align: center; }
 .b-card:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
-.b-card .ic { font-size: 28px; line-height: 1.1; } .b-card b { font-size: 14px; } .b-card small { font-size: 10px; color: var(--muted); line-height: 1.3; }
+.b-card .ic { font-size: 28px; line-height: 1.1; } .b-card b { font-size: 14px; } .b-card small { font-size: 12px; color: var(--muted); line-height: 1.3; }
 .b-card.k-atk { background: #FFE6DD; } .b-card.k-guard { background: #E1EEFB; } .b-card.k-counter { background: #EDE3FA; } .b-card.k-charge { background: #FFF1CF; }
 .b-card.sp { background: linear-gradient(135deg, #FFE36E, #FF8FB8); animation: vsPulse 1s ease-in-out infinite; }
 .b-card.mini { box-shadow: none; padding: 6px 10px; cursor: default; }
