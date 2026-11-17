@@ -79,8 +79,12 @@ async function bLobby() {
 /* ---------- 対戦 ---------- */
 let B = null;   // 対戦中のようす
 const bRand = (a, b) => a + Math.random() * (b - a);
+// v10.2：能力の効き目は v ÷ (v + curveK) の曲線（高いほど のびがゆるやか）。数字は data.js の BATTLE
+const bCurve = v => { v = Math.max(0, +v || 0); return v / (v + BATTLE.curveK); };
+const bHp = sta => Math.round(BATTLE.hpBase + BATTLE.hpAdd * bCurve(sta));
+const bPowMul = pow => BATTLE.powBase + BATTLE.powAdd * bCurve(pow);
 function bFighter(p, isMe) {
-  const hp = Math.round(BATTLE.hpBase + p.sta * BATTLE.hpPerSta);
+  const hp = bHp(p.sta);
   return { name: p.cat, owner: p.name, breed: p.breed, equip: p.equip || {}, level: p.level, pow: p.pow, spd: p.spd, sta: p.sta, rating: p.rating, cpu: p.cpu, hp, maxHp: hp, gauge: 0, charged: false, me: isMe, hand: [], last: [] };
 }
 function bDeal(f) {
@@ -107,7 +111,7 @@ function bAiPick(f, foe) {
   for (const k of keys) { r -= w[k]; if (r <= 0) return k; }
   return keys[0];
 }
-const bDmg = (att, card) => Math.max(1, Math.round(BCARDS[card].p * (1 + att.pow / BATTLE.powDiv) * (att.charged ? BATTLE.chargeMul : 1) * bRand(0.9, 1.1)));
+const bDmg = (att, card) => Math.max(1, Math.round(BCARDS[card].p * bPowMul(att.pow) * (att.charged ? BATTLE.chargeMul : 1) * bRand(0.9, 1.1)));
 const bDodge = (att, def) => Math.random() < Math.min(0.3, Math.max(0.03, 0.05 + (def.spd - att.spd) / Math.max(1, def.spd + att.spd) * 0.4));
 // 1ターンの結果をイベントの列にする（画面ではこれを順に見せる）
 function bResolve(a, ca, b, cb) {
@@ -127,7 +131,7 @@ function bResolve(a, ca, b, cb) {
     if (att.hp <= 0) continue;
     const card = BCARDS[c];
     if (dc === 'counter' && (c === 'straight' || card.special)) {
-      const d = Math.max(1, Math.round(card.p * BATTLE.counterMul * (1 + def.pow / BATTLE.powDiv) * bRand(0.9, 1.1)));
+      const d = Math.max(1, Math.round(card.p * BATTLE.counterMul * bPowMul(def.pow) * bRand(0.9, 1.1)));
       att.hp = Math.max(0, att.hp - d); att.charged = false;
       ev.push({ t: 'counter', who: def, target: att, dmg: d, text: 'カウンター！' }); continue;
     }

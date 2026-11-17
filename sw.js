@@ -1,7 +1,7 @@
 // にゃんカロ service worker
 // アプリ本体はキャッシュしてオフラインでも起動できるようにする。
 // 更新したら VERSION の数字を上げると、利用者のスマホに新しい版が届く。
-const VERSION = '10.1';   // index.html などの ?v= と同じ数字にする
+const VERSION = '10.2';   // index.html などの ?v= と同じ数字にする
 const CACHE = 'nekocal-v' + VERSION;
 const V = '?v=' + VERSION;
 // ↓ ここは bump.py が自動で書く（フォルダの中のファイルから作る。手で直さなくてよい）
@@ -20,6 +20,7 @@ const APP_FILES = [
   './cat.js' + V,
   './daily.js' + V,
   './data.js' + V,
+  './fonts.css' + V,
   './fx.js' + V,
   './grey-body.webp',
   './grey-gloves.webp',
@@ -63,7 +64,10 @@ const APP_FILES = [
   './white-body.webp',
   './white-gloves.webp',
   './white-shirt.webp',
-  './white-tail.webp'
+  './white-tail.webp',
+  './zmg-500.woff2' + V,
+  './zmg-700.woff2' + V,
+  './zmg-900.woff2' + V
 ];
 // END APP_FILES
 
@@ -110,18 +114,7 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Google Fonts：キャッシュがあればすぐ使い、裏で更新
-  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
-    e.respondWith(
-      caches.open(CACHE).then((c) =>
-        c.match(req).then((hit) => {
-          const net = fetch(req).then((res) => { c.put(req, res.clone()); return res; }).catch(() => hit);
-          return hit || net;
-        })
-      )
-    );
-    return;
-  }
+  // v10.2：文字は自分のサイトの zmg-*.woff2（下の「自分のファイル」と同じあつかい）。Google Fonts は使わない
 
   // BGM（mp3）は service worker を通さない（iPhone の Safari は、ここを通すと音楽が鳴らないことがあるため）
   if (url.pathname.endsWith('.mp3')) return;

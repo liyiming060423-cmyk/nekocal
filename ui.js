@@ -8,13 +8,67 @@
    ========================================================= */
 let modalClose = null;
 let modalLocked = false;   // はじめての設定中は × や外側タップで閉じない
+
+/* ---------- v10.2：ダイアログの あいだの フォーカス（キーボード・読み上げの人向け） ----------
+   開いているあいだ：うしろの画面（#app・下のメニュー・タイトル）は inert（さわれない・読み上げない）、Tab はダイアログの中だけを回る
+   閉じたら：開く前に押していたボタンにフォーカスをもどす（描きなおされていたら同じ id・data の新しいボタンへ） */
+const TRAP = [];   // 開いているダイアログ（{ el, back }）。上にあるほど あと
+const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+const isTouch = () => 'ontouchstart' in window;
+function trapBack() {   // 待ってもどる先：id か data-○○ で探せるように覚えておく
+  const a = document.activeElement;
+  if (!a || a === document.body) return null;
+  const d = Object.entries(a.dataset || {})[0];
+  return { el: a, id: a.id, sel: d ? `[data-${d[0].replace(/[A-Z]/g, m => '-' + m.toLowerCase())}="${CSS.escape(d[1])}"]` : '' };
+}
+function trapInert() {
+  const on = TRAP.length > 0;
+  [$('app'), document.querySelector('.tabbar'), $('title')].forEach(e => { if (e) e.inert = on; });
+}
+function trapOpen(el, first) {
+  if (TRAP.some(t => t.el === el)) return;   // つづけて開いたとき（中身の入れかえ）は、最初に押したボタンを覚えたまま
+  TRAP.push({ el, back: trapBack() }); trapInert();
+  trapFocus(el, first);
+}
+function trapFocus(el, first) {
+  // さわる画面（スマホ）では、入力欄にフォーカスするとキーボードが出てしまうので、ダイアログそのものにフォーカスする
+  const f = first || el.querySelector(FOCUSABLE);
+  const box = el.querySelector('[role="dialog"]') || el;
+  if (f && !isTouch()) f.focus({ preventScroll: true });
+  if (!el.contains(document.activeElement)) { if (!box.hasAttribute('tabindex')) box.setAttribute('tabindex', '-1'); box.focus({ preventScroll: true }); }
+}
+function trapClose(el) {
+  const i = TRAP.findIndex(t => t.el === el); if (i < 0) return;
+  const { back } = TRAP.splice(i, 1)[0]; trapInert();
+  if (TRAP.length) { trapFocus(TRAP[TRAP.length - 1].el); return; }
+  if (!back) return;
+  let b = back.el.isConnected ? back.el : (back.id && $(back.id)) || (back.sel && document.querySelector(back.sel));
+  if (b && !b.closest('[hidden]') && !b.disabled) b.focus({ preventScroll: true });
+}
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Tab' || !TRAP.length) return;
+  const el = TRAP[TRAP.length - 1].el;
+  const list = [...el.querySelectorAll(FOCUSABLE)].filter(x => x.offsetParent !== null || x === document.activeElement);
+  if (!list.length) { e.preventDefault(); return; }
+  const a = list[0], z = list[list.length - 1], cur = document.activeElement;
+  if (!el.contains(cur)) { e.preventDefault(); (e.shiftKey ? z : a).focus(); }
+  else if (e.shiftKey && (cur === a || !list.includes(cur))) { e.preventDefault(); z.focus(); }
+  else if (!e.shiftKey && cur === z) { e.preventDefault(); a.focus(); }
+});
+
 function openModal(html, onMount, onClose, locked) {
   modalLocked = !!locked; $('modalClose').hidden = modalLocked;
+  const again = TRAP.some(t => t.el === $('modal'));
   $('modalBody').innerHTML = html; $('modal').hidden = false; modalClose = onClose || null;
   if (onMount) onMount($('modalBody'));
-  const f = $('modalBody').querySelector('input,button,select'); if (f && !('ontouchstart' in window)) f.focus();
+  const f = $('modalBody').querySelector(FOCUSABLE);
+  if (again) trapFocus($('modal'), f); else trapOpen($('modal'), f);   // v10.2
 }
-function closeModal() { modalLocked = false; $('modalClose').hidden = false; $('modal').hidden = true; $('modalBody').innerHTML = ''; const c = modalClose; modalClose = null; if (c) c(); renderAll(); setTimeout(levelUpTry, 250); }   // v10.1：待っているレベルアップがあれば出す
+function closeModal() {
+  modalLocked = false; $('modalClose').hidden = false; $('modal').hidden = true; $('modalBody').innerHTML = ''; const c = modalClose; modalClose = null; if (c) c(); renderAll();
+  if ($('modal').hidden) trapClose($('modal'));   // v10.2：閉じたあと すぐ次の画面が開いたときは、フォーカスは そのまま中に
+  setTimeout(levelUpTry, 250);   // v10.1：待っているレベルアップがあれば出す
+}
 $('modalClose').addEventListener('click', closeModal);
 $('modal').addEventListener('click', e => { if (e.target === $('modal') && !modalLocked) closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('modal').hidden && !modalLocked) closeModal(); });
@@ -59,12 +113,17 @@ function renderTitle() {
     $('titleHello').textContent = 'ようこそ！';
   }
 }
+// v10.2：ホーム画面のアイコンを長押し →「ごはんを記録」（manifest の shortcuts）で開いたとき（?go=camera）
+let launchGo = new URLSearchParams(location.search).get('go');
+if (launchGo) { try { history.replaceState(null, '', location.pathname); } catch (e) {} }   // 読みこみなおしで もう一度 開かないように
 function startFromTitle() {
   const t = $('title'); if (t.classList.contains('out')) return;
   se('get'); buzz(20); bgmUnlocked = true;
   t.classList.add('out'); setTimeout(() => { t.hidden = true; bgmUpdate(); }, 350);
+  const go = launchGo; launchGo = null;
   if (!S.onboarded) openWelcome();
   else if (!S.guide.tour) setTimeout(startTour, 700);   // v9.1：まだホームの案内を見ていない人（前からの人も1回）
+  else if (go === 'camera' && !S.cat.dead) setTimeout(() => openCapture({ done: () => setTimeout(maybeShowDaily, 500) }), 450);   // v10.2：記録の画面をすぐ出す（お知らせなどは そのあと）
   else setTimeout(maybeShowDaily, 900);   // v9.9：きのうの結果 → きのうを締める → SOS → バックアップ の順
 }
 function openWelcome() {

@@ -1,7 +1,13 @@
 {
+  "id": "./",
   "name": "にゃんカロ",
   "short_name": "にゃんカロ",
   "description": "ごはんを撮って、歩いて、筋トレして育てる猫の育成ゲーム",
+  "categories": [
+    "games",
+    "health",
+    "lifestyle"
+  ],
   "lang": "ja",
   "start_url": "./",
   "scope": "./",
@@ -10,8 +16,38 @@
   "background_color": "#FDE9C9",
   "theme_color": "#FDE9C9",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "ごはんを記録",
+      "short_name": "記録",
+      "description": "カメラで ごはんを記録する",
+      "url": "./?go=camera",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
   ]
 }

@@ -2,13 +2,14 @@
 # つかいかた：このファイルと同じフォルダで  python bump.py 9.9
 # 変えるところ：sw.js の VERSION、data.js の APP_VER、各 HTML の ?v=（css・js の読みこみ）
 # v10.0 から：sw.js の APP_FILES（オフライン用に保存するファイルの一覧）も、フォルダの中身から自動で作りなおす
+# v10.2：文字（.woff2）にも ?v= をつける（字を入れなおしたとき古い文字が残らないように）
 # ※ mp3 には ?v= をつけない（版を上げるたびに大きな曲をダウンロードしなおさないように）
 import re
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-HTMLS = ['index.html', 'sagase.html', 'slot.html', 'dash.html', 'baseball.html']
+HTMLS = ['index.html', 'sagase.html', 'slot.html', 'dash.html', 'baseball.html', 'fonts.css']   # v10.2：fonts.css の中の文字ファイル（.woff2?v=）も
 
 
 def edit(name, pattern, repl, need=True):
@@ -41,7 +42,7 @@ def sw_list():
     rest = [f for f in files if f not in ('index.html', 'manifest.webmanifest') and f not in GAME_PAGES]
     rest = [f for f in rest if not f.endswith('.html')] + [f for f in rest if f.endswith('.html')]
     for f in rest:
-        out.append(f"  './{f}' + V," if f.endswith(('.js', '.css')) else f"  './{f}',")
+        out.append(f"  './{f}' + V," if f.endswith(('.js', '.css', '.woff2')) else f"  './{f}',")
     out[-1] = out[-1].rstrip(',')
     return out
 
@@ -68,7 +69,7 @@ def main():
     print('  sw.js   VERSION', edit('sw.js', r"const VERSION = '[^']*'", f"const VERSION = '{v}'"), 'か所')
     print('  data.js APP_VER', edit('data.js', r"const APP_VER = '[^']*'", f"const APP_VER = '{v}'"), 'か所')
     for h in HTMLS:
-        n = edit(h, r'(\.(?:css|js))\?v=\d+(?:\.\d+)*', rf'\g<1>?v={v}', need=False)
+        n = edit(h, r'(\.(?:css|js|woff2))\?v=\d+(?:\.\d+)*', rf'\g<1>?v={v}', need=False)
         if n:
             print(f'  {h} ?v=', n, 'か所')
     print('  sw.js   APP_FILES', write_sw_list(), 'ファイル')

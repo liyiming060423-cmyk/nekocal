@@ -48,6 +48,8 @@ select{padding:12px 10px;background:#fff;color:#4c2678;border:2px solid #ffe36e;
 .pay-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .pay-item{padding:7px 3px;border-radius:10px;background:linear-gradient(135deg,#51277e,#29134f);text-align:center;font-size:13px;font-weight:bold;color:#fff}
 .pay-item b{display:block;margin-top:3px;color:#ffe36e;font-size:15px}
+.pay-item small{display:block;margin-top:2px;font-size:12px;font-weight:normal;color:#e9dcff}
+.payouts .odds{margin-top:8px;font-size:12px;line-height:1.6;color:#e9dcff}
 .note{margin:10px 0 0;color:#cbbcf5;font-size:11px;text-align:center}
 .jackpot{position:absolute;top:-18px;left:50%;transform:translateX(-50%);padding:5px 18px;border-radius:30px;border:2px solid #fff;background:linear-gradient(90deg,#ff4fa3,#ffb52e);font-size:12px;font-weight:1000;letter-spacing:2px;box-shadow:0 0 15px #ff4fa3}
 .confetti{position:fixed;top:-20px;z-index:10;pointer-events:none;font-size:22px;animation:fall 1.8s linear forwards}
@@ -82,9 +84,10 @@ select{padding:12px 10px;background:#fff;color:#4c2678;border:2px solid #ffe36e;
   <div class="controls"><select id="betAmount" aria-label="賭け金"><option value="10">10コイン BET</option><option value="20">20コイン BET</option><option value="30" selected>30コイン BET</option></select><button id="spin">🎰 SPIN!!</button></div>
  </section>
  <section class="payouts"><h2>🐱 絵柄別 PAYOUT</h2><div class="pay-grid">
-  <div class="pay-item">🍎 りんご<b>×2</b></div><div class="pay-item">🥗 サラダ<b>×3</b></div><div class="pay-item">🐟 おさかな<b>×4</b></div>
-  <div class="pay-item">🏋️ ダンベル<b>×5</b></div><div class="pay-item">🥊 グローブ<b>×8</b></div><div class="pay-item">🐈 にゃんこ<b>×10</b></div>
- </div><p class="note">同じ絵柄が3つ揃うと BET × 絵柄倍率 のコインを獲得！</p></section>
+  <div class="pay-item">🍎 りんご<b>×2</b><small>1/216</small></div><div class="pay-item">🥗 サラダ<b>×3</b><small>1/216</small></div><div class="pay-item">🐟 おさかな<b>×4</b><small>1/216</small></div>
+  <div class="pay-item">🏋️ ダンベル<b>×5</b><small>1/216</small></div><div class="pay-item">🥊 グローブ<b>×8</b><small>1/216</small></div><div class="pay-item">🐈 にゃんこ<b>×10</b><small>1/216</small></div>
+ </div><p class="note">同じ絵柄が3つ揃うと BET × 絵柄倍率 のコインを獲得！</p>
+ <p class="note odds" id="oddsNote"></p></section>
 </main>
 <script>
 const symbols=["🍎","🥗","🐟","🏋️","🥊","🐈"];
@@ -102,12 +105,15 @@ function playWinSound(){[[523,0],[659,.13],[784,.26],[1047,.42],[1318,.58]].forE
 function updateUI(){coinsEl.textContent=coins;earnedEl.textContent=APP?(earned>0?'+':'')+earned:earned;spinBtn.disabled=busy;betSelect.disabled=busy;
  if(APP){document.getElementById('earnedLabel').textContent='📈 今日のもうけ';document.getElementById('limitNote').textContent=earned>=netMax?`今日のもうけ上限（${netMax}枚）に達しました。当たってもコインは増えません`:`アプリのコインをかけます。1日のもうけ上限 ${netMax}枚（あと${netMax-Math.max(0,earned)}枚）`}}
 updateUI();
+// v10.2：タイミングまかせで止めたときの確率と返還率（RTP）。倍率（multipliers）から計算するので、倍率を変えても自動で合う
+(()=>{const n=symbols.length,one=n*n*n,rtp=symbols.reduce((a,s)=>a+multipliers[s],0)/one;document.querySelectorAll('.pay-item small').forEach(e=>{e.textContent='1/'+one});
+ document.getElementById('oddsNote').innerHTML=`タイミングまかせで止めたとき：どれかが3つ揃う確率 <b>1/${one/n}</b>（約${(100*n/one).toFixed(1)}%）<br>かけたコインのうち 平均で返ってくる割合（返還率）<b>約${Math.round(rtp*100)}%</b>。目押しが うまいほど上がる`})();
 function randomSymbol(){return symbols[Math.floor(Math.random()*symbols.length)]}
 function shuffledSymbols(){const order=[...symbols];for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]]}return order}
 class Reel{
- constructor(id,buttonId){this.el=document.getElementById(id);this.stopBtn=document.getElementById(buttonId);this.topEl=this.el.querySelector('.top');this.currEl=this.el.querySelector('.curr');this.y=0;this.step=this.el.clientHeight;this.speed=this.step/13;this.spinning=false;this.stopping=false;this.onStopped=null;this.order=shuffledSymbols();this.orderIndex=0;this.currEl.textContent=randomSymbol();this.topEl.textContent=randomSymbol();this.render();this.stopBtn.addEventListener('click',()=>{if(this.spinning&&!this.stopping){this.stopping=true;this.stopBtn.disabled=true;playStopSound()}})}
- start(onStopped){this.onStopped=onStopped;this.spinning=true;this.stopping=false;this.stopBtn.disabled=false;this.y=0;this.order=shuffledSymbols();this.orderIndex=0;this.topEl.textContent=this.order[this.orderIndex];this.animate()}
- animate(){if(!this.spinning)return;this.y+=this.speed;if(this.y>=this.step){this.y-=this.step;this.currEl.textContent=this.topEl.textContent;if(this.stopping){this.y=0;this.spinning=false;this.render();this.stopBtn.disabled=true;this.onStopped(this.currEl.textContent);return}else{this.orderIndex=(this.orderIndex+1)%this.order.length;this.topEl.textContent=this.order[this.orderIndex]}}this.render();requestAnimationFrame(()=>this.animate())}
+ constructor(id,buttonId){this.el=document.getElementById(id);this.stopBtn=document.getElementById(buttonId);this.topEl=this.el.querySelector('.top');this.currEl=this.el.querySelector('.curr');this.y=0;this.step=this.el.clientHeight;this.msPer=1000/60*13;this.last=0;this.spinning=false;this.stopping=false;this.onStopped=null;this.order=shuffledSymbols();this.orderIndex=0;this.currEl.textContent=randomSymbol();this.topEl.textContent=randomSymbol();this.render();this.stopBtn.addEventListener('click',()=>{if(this.spinning&&!this.stopping){this.stopping=true;this.stopBtn.disabled=true;playStopSound()}})}
+ start(onStopped){this.onStopped=onStopped;this.spinning=true;this.stopping=false;this.stopBtn.disabled=false;this.y=0;this.last=0;this.order=shuffledSymbols();this.orderIndex=0;this.topEl.textContent=this.order[this.orderIndex];requestAnimationFrame(t=>this.animate(t))}
+ animate(now){if(!this.spinning)return;now=now||performance.now();const dt=this.last?Math.min(50,Math.max(0,now-this.last)):1000/60;this.last=now;this.y+=this.step*dt/this.msPer;if(this.y>=this.step){this.y-=this.step;this.currEl.textContent=this.topEl.textContent;if(this.stopping){this.y=0;this.spinning=false;this.render();this.stopBtn.disabled=true;this.onStopped(this.currEl.textContent);return}else{this.orderIndex=(this.orderIndex+1)%this.order.length;this.topEl.textContent=this.order[this.orderIndex]}}this.render();requestAnimationFrame(t=>this.animate(t))}
  render(){this.currEl.style.transform=`translateY(${this.y}px)`;this.topEl.style.transform=`translateY(${this.y-this.step}px)`}
 }
 const reels=[new Reel('reel0','stop0'),new Reel('reel1','stop1'),new Reel('reel2','stop2')];

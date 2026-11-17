@@ -205,7 +205,9 @@ function startTour() {
   el.querySelector('#tourBack').onclick = () => { if (tourI > 0) { se('tap'); tourShow(tourI - 1); } };
   el.querySelector('#tourNext').onclick = () => { se('tap'); if (tourI < TOUR.length - 1) tourShow(tourI + 1); else endTour(); };
   window.addEventListener('resize', tourPlace);
+  el.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); endTour(); } });   // v10.2：Esc でも終われる
   tourShow(0);
+  trapOpen(el, el.querySelector('#tourNext'));   // v10.2：うしろは inert・Tab は案内の中だけ・終わったら元の場所へ
 }
 function tourRect(sel) {
   let r = null;
@@ -241,7 +243,7 @@ function tourPlace() {
   else { box.style.top = ''; box.style.bottom = Math.min(vh - r.top + pad + 14, vh - 190) + 'px'; }
 }
 function endTour() {
-  const el = $('tour'); if (el) el.remove();
+  const el = $('tour'); if (el) { el.remove(); trapClose(el); }
   window.removeEventListener('resize', tourPlace);
   const first = !S.guide.tour;
   tourI = -1; S.guide.tour = true; save(); renderHome();
