@@ -14,7 +14,7 @@ function openModal(html, onMount, onClose, locked) {
   if (onMount) onMount($('modalBody'));
   const f = $('modalBody').querySelector('input,button,select'); if (f && !('ontouchstart' in window)) f.focus();
 }
-function closeModal() { modalLocked = false; $('modalClose').hidden = false; $('modal').hidden = true; $('modalBody').innerHTML = ''; const c = modalClose; modalClose = null; if (c) c(); renderAll(); }
+function closeModal() { modalLocked = false; $('modalClose').hidden = false; $('modal').hidden = true; $('modalBody').innerHTML = ''; const c = modalClose; modalClose = null; if (c) c(); renderAll(); setTimeout(levelUpTry, 250); }   // v10.1：待っているレベルアップがあれば出す
 $('modalClose').addEventListener('click', closeModal);
 $('modal').addEventListener('click', e => { if (e.target === $('modal') && !modalLocked) closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('modal').hidden && !modalLocked) closeModal(); });
@@ -82,7 +82,7 @@ function openWelcome() {
   };
   const step2 = root => {
     root.innerHTML = `<h2 id="modalTitle">猫をえらぶ（2/3）</h2><div class="stack">
-      <p style="margin:0">いっしょに暮らす猫をえらんでね。あとから「せってい」で変えられます。</p>
+      <p style="margin:0">いっしょに暮らす猫をえらんでね。あとから「ねこ」タブで変えられます。</p>
       ${catPickerHTML(breed)}
       <label class="f">猫の名前<input type="text" id="wCat" maxlength="10" value="${esc(catName)}"></label>
       <div class="w-nav"><button type="button" class="btn white" id="wBack">もどる</button><button type="button" class="btn" id="wNext2">つぎへ</button></div></div>`;
@@ -132,6 +132,18 @@ function openProfile(first) {
       if (first && !S.guide.tour) setTimeout(startTour, 900);
     };
   }, null, first);
+}
+
+/* ---------- メニューが変わったお知らせ（v10.1。前から遊んでいる人に1回だけ） ---------- */
+function showNews() {
+  S.news = APP_NEWS; save();
+  openModal(`<h2 id="modalTitle">メニューが かわったよ</h2><div class="stack">
+    <div class="card news-list"><div><b>ねこ</b><span>ステータスと きせかえ（前の更衣室）は ここ</span></div>
+      <div><b>あそぶ</b><span>ジム・ミニゲーム・対戦（前のトレーニング）</span></div>
+      <div><b>きろく</b><span>1週間のごはんの記録（前のりれき）</span></div>
+      <div><b>⚙</b><span>せってい は ホームの右上</span></div></div>
+    <p class="hint" style="margin:0">ログボとミッションは、ホームの左（スタミナの上）に うつりました。</p>
+    <button class="btn block" id="nwOk">OK</button></div>`, root => { root.querySelector('#nwOk').onclick = closeModal; }, () => setTimeout(maybeShowDaily, 300));
 }
 
 /* ---------- 新しい版のお知らせ（v9.8） ----------

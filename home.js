@@ -57,8 +57,9 @@ function mountHomeCat() {
 }
 function renderHome() {
   const d = day(), t = todayStr(), tg = target(S.user), it = intake(t);
-  $('pillCoins').innerHTML = `${I.coin.replace('width="24" height="24"', '')}<span class="num">${fmt(S.coins)}</span><span class="plus">${I.plus}</span>`;
-  $('btnUser').innerHTML = `<span class="nc-ico">${I.user}</span><span class="nc-name">${esc(S.user.name || 'プレイヤー')}</span>${I.pencil}`;
+  $('pillCoins').innerHTML = `${I.coin.replace('width="24" height="24"', '')}<span class="num coin-num">${coinText()}</span><span class="plus">${I.plus}</span>`;
+  $('btnUser').innerHTML = `<span class="nc-ico">${I.user}</span><span class="nc-name">${esc(S.user.name || 'プレイヤー')}</span>`;   // v10.1：えんぴつの絵はやめて、名前の字を広く
+  if (!$('btnSettings').querySelector('svg')) $('btnSettings').innerHTML = I.gear;
   if (!$('btnLogin').querySelector('svg')) $('btnLogin').insertAdjacentHTML('afterbegin', I.gift);
   if (!$('btnMission').querySelector('svg')) $('btnMission').insertAdjacentHTML('afterbegin', I.mission);
   $('kcalIco').innerHTML = I.flame;
@@ -75,11 +76,11 @@ function renderHome() {
     bn.innerHTML = `<span class="ev-ico ev-emoji" aria-hidden="true">🏥</span><span class="ev-txt"><small>入院中</small>あと${left}日で退院<br>バランス ${h.good || 0}/${HOSPITAL.goodDays}日</span>`;
   } else if (pendingYesterday()) {   // v9.9：まだ締めていない きのう
     bn.classList.remove('guide'); bn.classList.add('close-b');
-    bn.innerHTML = `<span class="ev-ico ev-emoji" aria-hidden="true">🌙</span><span class="ev-txt"><small>きのうの記録</small>${RULE.closeHour}時に しめるよ<br><b>見なおす</b></span>`;
+    bn.innerHTML = `<span class="ev-ico ev-emoji" aria-hidden="true">🌙</span><span class="ev-txt"><small>きのうの記録</small>${RULE.closeHour}時にしめる<br><b>見なおす ›</b></span>`;
   } else if (!S.guide.done) {   // はじめてガイドのあいだは、バナーをガイドにする
     const g = guideCount();
     $('eventBanner').classList.add('guide');
-    $('eventBanner').innerHTML = `<span class="ev-ico">${I.mission}</span><span class="ev-txt"><small>はじめてガイド</small>${g.got} / ${GUIDE.tasks.length} クリア<br>${g.ready ? '<b>受けとれるよ！</b>' : 'コインがもらえる！'}</span>`;
+    $('eventBanner').innerHTML = `<span class="ev-txt"><small>はじめてガイド</small>${g.got} / ${GUIDE.tasks.length} クリア<br>${g.ready ? '<b>受けとれるよ！</b>' : 'コインがもらえる！'}</span>`;
   } else {
     $('eventBanner').classList.remove('guide');
     $('eventBanner').innerHTML = `<span class="ev-ico">${I.luckyBag}</span><span class="ev-txt"><small>${esc(EVENT.tag)}</small>${EVENT.title}</span>`;
@@ -98,11 +99,12 @@ function renderHome() {
   $('tab-home').classList.toggle('hosp', !!S.cat.hospital);
   $('dotLogin').hidden = S.login.last === t;
   $('dotMission').hidden = !MISSIONS.some(m => m.check(d) >= m.goal && !claimedToday().includes(m.id));
+  coinSync();   // v10.1：コインの数字がふえた・へったら動かす（fx.js）
 }
 function claimedToday() { if (S.claimed.date !== todayStr()) S.claimed = { date: todayStr(), ids: [] }; return S.claimed.ids; }
 
 $('btnUser').addEventListener('click', () => openProfile(false));
-$('kcalCard').addEventListener('click', () => { UI.histTab = 'week'; UI.histWeek = 0; UI.histDate = todayStr(); setTab('history'); });
+$('kcalCard').addEventListener('click', () => { UI.histWeek = 0; UI.histDate = todayStr(); setTab('history'); });
 $('pillCoins').addEventListener('click', () => { UI.shopTab = 'shop'; setTab('shop'); });
 $('btnGacha').addEventListener('click', () => { UI.shopTab = 'gacha'; setTab('shop'); });
 $('eventBanner').addEventListener('click', () => {
@@ -111,7 +113,8 @@ $('eventBanner').addEventListener('click', () => {
   if (!S.guide.done) { openGuide(); return; }
   UI.shopTab = 'gacha'; setTab('shop');
 });
-$('bodyPill').addEventListener('click', () => { UI.histTab = 'status'; setTab('history'); });
+$('bodyPill').addEventListener('click', () => { UI.catTab = 'status'; setTab('cat'); });   // v10.1：ステータスは「ねこ」タブ
+$('btnSettings').addEventListener('click', () => { se('tap'); setTab('settings'); });
 $('pillSteps').addEventListener('click', () => openWalk());
 $('btnLogin').addEventListener('click', openLogin);
 $('btnMission').addEventListener('click', openMissions);
@@ -146,7 +149,7 @@ function openLogin() {
     <button class="btn block" id="loginClaim" ${can ? '' : 'disabled'}>${can ? `${LOGIN_REWARDS[pos]}コインを受けとる` : '今日はもう受けとりました'}</button></div>`, root => {
     root.querySelector('#loginClaim').onclick = () => {
       if (S.login.last === todayStr()) return;
-      S.login = { last: t, streak: nextStreak }; S.coins += LOGIN_REWARDS[pos]; save(); se('coin'); buzz(); closeModal(); toast(`コイン +${LOGIN_REWARDS[pos]}`);
+      S.login = { last: t, streak: nextStreak }; S.coins += LOGIN_REWARDS[pos]; save(); se('coin'); buzz(); coinFx(LOGIN_REWARDS[pos], root.querySelector('#loginClaim')); closeModal();
     };
   });
 }
@@ -176,12 +179,12 @@ function openGuide() {
       if (e.target.closest('#gTour')) { closeModal(); setTab('home'); setTimeout(startTour, 300); return; }
       if (e.target.closest('#gBonus')) {
         if (S.guide.done || S.guide.got.length < GUIDE.tasks.length) return;
-        S.guide.done = true; S.coins += GUIDE.bonus; save(); se('get'); buzz([60, 40, 60]); closeModal(); toast(`はじめてガイド ぜんぶクリア！ コイン +${GUIDE.bonus}`); return;
+        S.guide.done = true; S.coins += GUIDE.bonus; save(); se('get'); buzz([60, 40, 60]); coinFx(GUIDE.bonus, e.target.closest('#gBonus')); closeModal(); toast('はじめてガイド ぜんぶクリア！'); return;
       }
       const b = e.target.closest('[data-g]'); if (!b) return;
       const t = GUIDE.tasks.find(x => x.id === b.dataset.g);
       if (!t || S.guide.got.includes(t.id) || !t.check(S, S.guide.hits)) return;
-      S.guide.got.push(t.id); S.coins += GUIDE.reward; save(); se('coin'); buzz(); toast(`コイン +${GUIDE.reward}`); root.innerHTML = draw(); renderHome();
+      S.guide.got.push(t.id); S.coins += GUIDE.reward; save(); se('coin'); buzz(); coinFx(GUIDE.reward, b); root.innerHTML = draw(); renderHome();
     });
   });
 }
@@ -259,7 +262,7 @@ function openMissions() {
       const b = e.target.closest('[data-m]'); if (!b) return;
       const m = MISSIONS.find(x => x.id === b.dataset.m); const cl = claimedToday();
       if (cl.includes(m.id) || m.check(day()) < m.goal) return;
-      cl.push(m.id); S.coins += m.reward; save(); se('coin'); buzz(); toast(`コイン +${m.reward}`); root.innerHTML = draw(); renderHome();
+      cl.push(m.id); S.coins += m.reward; save(); se('coin'); buzz(); coinFx(m.reward, b); root.innerHTML = draw(); renderHome();
     });
   });
 }

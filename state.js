@@ -23,6 +23,7 @@ function defaultState() {
     login: { last: '', streak: 0 },
     claimed: { date: t, ids: [] },
     settings: { sound: true, bgm: true, vibrate: true, notify: false, lang: 'ja', remind: ['12:00', '19:00'] },
+    news: APP_NEWS,                   // v10.1 どの版のお知らせまで見たか（はじめての人には出さない）
     onboarded: false
   };
 }
@@ -44,6 +45,7 @@ function load() {
     if (!s.settled) st.settled = addDays(st.last || todayStr(), -1);
     st.streak = Object.assign({ n: 0, pass: '' }, s.streak);
     if (!Array.isArray(st.resultQ)) st.resultQ = [];
+    if (s.news === undefined) st.news = '';   // v10.1：前の版のデータ → メニューが変わったお知らせを1回出す
     // 前の版で骸骨・爆発になっていた猫は、今日から入院（入院費はとらない）
     if (st.cat.dead) {
       const t = todayStr();
@@ -54,7 +56,7 @@ function load() {
   } catch (e) { return defaultState(); }
 }
 let S = load();
-const UI = { tab: 'home', shopTab: 'shop', trainTab: 'gym', histTab: 'week', histDate: todayStr(), face: null };
+const UI = { tab: 'home', shopTab: 'shop', trainTab: 'gym', catTab: 'status', histDate: todayStr(), face: null };   // v10.1：catTab＝ねこタブ（status / wear）
 
 // 保存。容量がいっぱいなら古い写真から消して保存し直す。それでもだめなら知らせる（v10.0：前は何も言わずに失敗していた）
 let saveFailAt = 0;
@@ -68,7 +70,7 @@ function save() {
       S.days[k].meals.forEach(m => { m.photo = null; });
       try { store.write(KEY, json()); toast('容量がいっぱいなので、古い写真を消しました'); return true; } catch (e2) {}
     }
-    if (Date.now() - saveFailAt > 60000) { saveFailAt = Date.now(); toast('データを保存できませんでした。せってい →「バックアップを保存」をしてください'); }
+    if (Date.now() - saveFailAt > 60000) { saveFailAt = Date.now(); toast('データを保存できませんでした。ホーム右上の ⚙ せってい →「バックアップを保存」をしてください'); }
     return false;
   }
 }

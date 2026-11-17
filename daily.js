@@ -11,9 +11,11 @@ const screenFree = () => $('modal').hidden && !$('tour') && !$('miniFrame') && !
 // アプリを開いたとき・もどったときに、順番に1つずつ出す
 function maybeShowDaily() {
   if (!S.onboarded || !screenFree()) return;
+  if (S.news !== APP_NEWS) { showNews(); return; }   // v10.1：メニューが変わったお知らせ（前から遊んでいる人に1回）
   if (S.resultQ.length) { showResults(); return; }
   const y = addDays(todayStr(), -1);
   if (pendingYesterday() && S.closeAsk !== y) { S.closeAsk = y; save(); openCloseDay(); return; }
+  if (levelUpTry()) return;   // v10.1：レベルアップ・レベルのごほうび（fx.js）
   checkCrisis(); setTimeout(checkBackupNag, 900);
 }
 // 体型メーター（from から to へ針が動く）
@@ -71,7 +73,7 @@ function showResults() {
       <button class="btn block" id="resOk">${admit ? 'お見舞いに行く' : 'OK'}</button></div>`, root => {
     runMeter(root);
     root.querySelector('#resOk').onclick = closeModal;
-    if (admit) { petSound('cry'); buzz([300, 120, 300]); } else if (coins) { setTimeout(() => { se(better ? 'get' : 'coin'); }, 500); }
+    if (admit) { petSound('cry'); buzz([300, 120, 300]); } else if (coins) { setTimeout(() => { se(better ? 'get' : 'coin'); coinFx(coins, root.querySelector('.res-coin')); }, 500); }
   }, next);
 }
 // 退院

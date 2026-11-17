@@ -60,7 +60,7 @@ let toastT;
 function toast(t) { const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 2600); }
 
 /* ---------- BGM ----------
-   タイトル：Cat life ／ ホーム・りれき・せってい：自宅にて ／ ショップ・更衣室：青空 ／ トレーニング（ジム・ミニゲーム一覧）：Sunrise
+   タイトル：Cat life ／ ホーム・きろく・ねこ（ステータス）・せってい：自宅にて ／ ショップ・ねこ（きせかえ）：青空 ／ あそぶ（ジム・ミニゲーム一覧）：Sunrise
    ミニゲームを開いているあいだ・アプリが裏に回ったときは止める。
    スマホはタップする前に音を出せないので、最初のタップ（タイトルの音楽ボタンかスタート）から鳴らす。
    音量は Web Audio でしぼる（iPhone は audio.volume が効かないため） */
@@ -72,7 +72,8 @@ function bgmWant() {
   const t = $('title');
   if ((t && !t.hidden && !t.classList.contains('out')) || modalLocked) return 'title';   // タイトル画面・はじめての設定
   if (UI.tab === 'shop') return 'shop';
-  if (UI.tab === 'train') return UI.trainTab === 'locker' ? 'shop' : 'train';
+  if (UI.tab === 'train') return 'train';
+  if (UI.tab === 'cat' && UI.catTab === 'wear') return 'shop';   // v10.1：きせかえ（前の更衣室）は ショップの曲
   return 'home';
 }
 function bgmUpdate() {

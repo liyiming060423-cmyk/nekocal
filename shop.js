@@ -7,7 +7,7 @@
    8. ショップ
    ========================================================= */
 // v9.8：石（💎）は手に入れる方法も使い道もないので表示をやめた（S.stones はデータに残す）
-function balanceHTML() { return `<span class="pill">${I.coin}<span class="num">${fmt(S.coins)}</span></span>`; }
+function balanceHTML() { return `<span class="pill coin-target">${I.coin}<span class="num coin-num">${coinText()}</span></span>`; }   // v10.1：coin-num＝数字が動く、coin-target＝コインが飛んでくる所（fx.js）
 const shopQty = { drink: 1, protein: 1, goldbag: 1 };
 function renderShop() {
   $('shopBalance').innerHTML = balanceHTML();
@@ -73,25 +73,31 @@ function pullGacha() {
   wears = wears.map(k => ({ wear: k }));
   const pool = srNew ? wears : wears.concat((GACHA_ITEMS[rar] || []).map(x => ({ item: x.id, n: x.n })));
   const got = pool[Math.floor(Math.random() * pool.length)];
-  let body;
+  let body, refund = 0, label = '';
   if (got.item) {
     const it = SHOP_ITEMS.find(x => x.id === got.item);
-    S.items[got.item] = (S.items[got.item] || 0) + got.n;
-    body = `<div class="item-big ${rar}">${I[got.item]}</div><span class="rar ${rar}">${rar}</span>
+    S.items[got.item] = (S.items[got.item] || 0) + got.n; label = `${it.name} ×${got.n}`;
+    body = `<div class="g-stage ${rar}"><span class="g-rays"></span><div class="item-big ${rar}">${I[got.item]}</div></div><span class="rar ${rar}">${rar}</span>
       <div style="font-weight:900;font-size:20px">${esc(it.name)} ×${got.n}</div><div class="hint">トレーニングアイテム：${esc(it.desc)}</div>
-      <p style="margin:0;font-weight:900">トレーニングの「もちもの」に入りました</p>`;
+      <p style="margin:0;font-weight:900">「あそぶ」→ ジム の「もちもの」に入りました</p>`;
   } else {
-    const id = got.wear, w = WEAR[id], dup = S.owned.includes(id);
-    if (dup) S.coins += DUP_REFUND; else S.owned.push(id);
-    body = `<div class="item-big ${rar}">${wearIcon(id)}</div><span class="rar ${rar}">${rar}</span>
+    const id = got.wear, w = WEAR[id], dup = S.owned.includes(id); label = w.name;
+    if (dup) { S.coins += DUP_REFUND; refund = DUP_REFUND; } else S.owned.push(id);
+    // v10.1：着てみたところを見せる（コスチュームを着ていると 頭・服 が見えないので、頭・服・手 のときは ぬいで見せる）
+    const tryEq = Object.assign({}, S.cat.equip, { [w.slot]: id }, w.slot === 'suit' ? {} : { suit: 'suit_none' });
+    body = `<div class="g-stage ${rar}"><span class="g-rays"></span><div class="g-cat">${petCatHTML({ breed: S.cat.breed, idx: S.cat.idx, equip: tryEq })}</div><span class="g-badge">${wearIcon(id)}</span></div><span class="rar ${rar}">${rar}</span>
       <div style="font-weight:900;font-size:20px">${esc(w.name)}</div><div class="hint">${SLOT_NAME[w.slot]}のきせかえ${w.bonus ? '　' + Object.entries(w.bonus).map(([k, v]) => `${STAT_NAME[k]}+${v}`).join(' ') : ''}</div>
       ${dup ? `<p style="margin:0;font-weight:900">もう持っていたので ${DUP_REFUND}コインに交換しました</p>` : `<button class="btn block" id="equipNow" data-slot="${w.slot}" data-id="${id}">さっそく着る</button>`}`;
   }
-  save(); se(rar === 'SR' ? 'get' : 'coin'); buzz(rar === 'SR' ? [60, 40, 60] : 40);
-  openModal(`<h2 id="modalTitle">${rar === 'SR' ? '大当たり！' : 'でたよ！'}</h2><div class="reveal">${body}
-    <div class="gacha-pity">${pityHTML()}</div>
-    <button class="btn white block" id="againG">もう1回（${GACHA_COST}コイン）</button></div>`, root => {
-    const eq = root.querySelector('#equipNow'); if (eq) eq.onclick = () => { S.cat.equip[eq.dataset.slot] = eq.dataset.id; guideHit('wear'); save(); closeModal(); toast('着がえました'); };
+  save(); renderShop();   // 結果は ここで保存ずみ（演出の途中で閉じても なくならない）。うしろの残高も へらしておく
+  // v10.1：福袋がゆれて光る（fx.js の gachaOpen）→ 結果。レア度で光りかたが変わる（N なし・R 青・SR 金＋紙ふぶき）
+  gachaOpen(rar, root => {
+    se(rar === 'SR' ? 'get' : 'coin'); buzz(rar === 'SR' ? [60, 40, 60] : 40);
+    root.innerHTML = `<h2 id="modalTitle">${rar === 'SR' ? '大当たり！' : 'でたよ！'}</h2><div class="reveal g-res ${rar}">${rar === 'SR' ? confettiHTML() : ''}${body}
+      <div class="gacha-pity">${pityHTML()}</div>
+      <button class="btn white block" id="againG">もう1回（${GACHA_COST}コイン）</button></div>`;
+    const eq = root.querySelector('#equipNow'); if (eq) eq.onclick = () => { S.cat.equip[eq.dataset.slot] = eq.dataset.id; if (eq.dataset.slot !== 'suit') S.cat.equip.suit = 'suit_none'; guideHit('wear'); save(); closeModal(); toast('着がえました'); };
     root.querySelector('#againG').onclick = () => { closeModal(); confirmGacha(); };
-  });
+    if (refund) setTimeout(() => coinFx(refund, root.querySelector('.g-stage')), 450);
+  }, label);
 }

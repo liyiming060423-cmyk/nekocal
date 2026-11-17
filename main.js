@@ -8,7 +8,7 @@
    ========================================================= */
 function setTab(t) {
   UI.tab = t;
-  ['home', 'shop', 'train', 'history', 'settings'].forEach(k => { $('tab-' + k).hidden = k !== t; });
+  ['home', 'shop', 'train', 'history', 'cat', 'settings'].forEach(k => { $('tab-' + k).hidden = k !== t; });   // v10.1：ねこ（cat）を追加。せっていは下のメニューにはない（ホームの ⚙ から）
   document.querySelectorAll('.tabbar button').forEach(b => { if (b.dataset.tab === t) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   window.scrollTo(0, 0);
   renderAll();
@@ -19,10 +19,11 @@ function renderAll() {
   if (UI.tab === 'shop') renderShop();
   if (UI.tab === 'train') renderTrain();
   if (UI.tab === 'history') renderHistory();
+  if (UI.tab === 'cat') renderCat();
   if (UI.tab === 'settings') renderSettings();
 }
 document.querySelector('.tabbar').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; se('tap'); buzz(10); setTab(b.dataset.tab); });
-$('tiShop').innerHTML = I.bag; $('tiTrain').innerHTML = I.dumb; $('tiHome').innerHTML = I.house; $('tiHistory').innerHTML = I.cal; $('tiSettings').innerHTML = I.gear;
+$('tiShop').innerHTML = I.bag; $('tiTrain').innerHTML = I.pad; $('tiHome').innerHTML = I.house; $('tiHistory').innerHTML = I.cal; $('tiCat').innerHTML = I.paw;
 
 rollover();
 if (S.onboarded) askPersist();

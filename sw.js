@@ -1,7 +1,7 @@
 // にゃんカロ service worker
 // アプリ本体はキャッシュしてオフラインでも起動できるようにする。
 // 更新したら VERSION の数字を上げると、利用者のスマホに新しい版が届く。
-const VERSION = '10.0';   // index.html などの ?v= と同じ数字にする
+const VERSION = '10.1';   // index.html などの ?v= と同じ数字にする
 const CACHE = 'nekocal-v' + VERSION;
 const V = '?v=' + VERSION;
 // ↓ ここは bump.py が自動で書く（フォルダの中のファイルから作る。手で直さなくてよい）
@@ -20,6 +20,7 @@ const APP_FILES = [
   './cat.js' + V,
   './daily.js' + V,
   './data.js' + V,
+  './fx.js' + V,
   './grey-body.webp',
   './grey-gloves.webp',
   './grey-shirt.webp',
@@ -38,6 +39,7 @@ const APP_FILES = [
   './longwhite-shirt.webp',
   './longwhite-tail.webp',
   './main.js' + V,
+  './neko.js' + V,
   './petcat.css' + V,
   './petcat.js' + V,
   './rules.js' + V,

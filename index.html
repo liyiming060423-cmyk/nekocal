@@ -16,10 +16,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <!-- ?v= はアプリの版。更新したら全部の ?v= と sw.js の VERSION、data.js の APP_VER を同じ数字に上げる（古いキャッシュと混ざらないように） -->
-<link rel="stylesheet" href="style.css?v=10.0">
-<link rel="stylesheet" href="petcat.css?v=10.0">
-<link rel="stylesheet" href="battle.css?v=10.0">
-<link rel="stylesheet" href="walk.css?v=10.0">
+<link rel="stylesheet" href="style.css?v=10.1">
+<link rel="stylesheet" href="petcat.css?v=10.1">
+<link rel="stylesheet" href="battle.css?v=10.1">
+<link rel="stylesheet" href="walk.css?v=10.1">
 </head>
 <body>
 <!-- ===== タイトル画面（毎回はじめに出る） ===== -->
@@ -39,8 +39,7 @@
     <header class="h-top">
       <button class="coin-chip" id="pillCoins" aria-label="肉球コイン（ショップへ）"></button>
       <button class="name-chip" id="btnUser" aria-label="プロフィールを編集"></button>
-      <button id="btnLogin" class="icon-btn" aria-label="ログボ・プレゼント"><span class="dot" id="dotLogin" hidden></span></button>
-      <button id="btnMission" class="icon-btn" aria-label="ミッション"><span class="dot" id="dotMission" hidden></span></button>
+      <button id="btnSettings" class="icon-btn" aria-label="せってい"></button>
     </header>
     <div class="h-row2">
       <button class="kcal-card" id="kcalCard" aria-label="今日のカロリー">
@@ -57,6 +56,11 @@
       <div class="bubble" id="bubble"></div>
       <div class="cat-wrap" id="catWrap"></div>
       <div class="h-left">
+        <!-- v10.1：ログボとミッションは ここ（上の列は コイン・名前・せってい だけにして、名前が切れないように） -->
+        <div class="h-quick">
+          <button id="btnLogin" class="icon-btn" aria-label="ログボ・プレゼント"><span class="dot" id="dotLogin" hidden></span></button>
+          <button id="btnMission" class="icon-btn" aria-label="ミッション"><span class="dot" id="dotMission" hidden></span></button>
+        </div>
         <div class="meter-card" role="meter" aria-label="スタミナ" aria-valuemin="0" aria-valuemax="100" id="stamMeter">
           <span class="mc-head"><span class="mc-ico" id="stamIco"></span>スタミナ</span><b class="mc-val" id="stamVal">0%</b>
           <span class="mc-bar"><i id="stamFill"></i></span>
@@ -88,36 +92,45 @@
     <div id="shopBody"></div>
   </section>
 
-  <!-- ===== トレーニング＆ミニゲーム ===== -->
-  <section id="tab-train" class="tab" aria-label="トレーニング" hidden>
-    <div class="page-head"><h1>トレーニング</h1><div class="balance" id="trainBalance"></div></div>
+  <!-- ===== あそぶ（ジム・ミニゲーム。v10.1：更衣室は「ねこ」へ） ===== -->
+  <section id="tab-train" class="tab" aria-label="あそぶ" hidden>
+    <div class="page-head"><h1>あそぶ</h1><div class="balance" id="trainBalance"></div></div>
     <div class="seg" role="tablist" id="trainSeg">
       <button role="tab" data-v="gym">ジム</button>
       <button role="tab" data-v="mini">ミニゲーム</button>
-      <button role="tab" data-v="locker">更衣室</button>
     </div>
     <div id="trainBody"></div>
   </section>
 
-  <!-- ===== りれき ===== -->
-  <section id="tab-history" class="tab" aria-label="りれき" hidden>
-    <div class="page-head"><span class="date-note" id="histDate"></span><h1>記録</h1></div>
+  <!-- ===== きろく（1週間のきろく。v10.1：ステータスは「ねこ」へ） ===== -->
+  <section id="tab-history" class="tab" aria-label="きろく" hidden>
+    <div class="page-head"><span class="date-note" id="histDate"></span><h1>きろく</h1></div>
     <div id="histBody"></div>
   </section>
 
-  <!-- ===== せってい ===== -->
+  <!-- ===== ねこ（v10.1：ステータス・きせかえ） ===== -->
+  <section id="tab-cat" class="tab" aria-label="ねこ" hidden>
+    <div class="page-head"><h1>ねこ</h1></div>
+    <div class="seg" role="tablist" id="catSeg">
+      <button role="tab" data-v="status">ステータス</button>
+      <button role="tab" data-v="wear">きせかえ</button>
+    </div>
+    <div id="catBody"></div>
+  </section>
+
+  <!-- ===== せってい（v10.1：ホームの右上の ⚙ からひらく） ===== -->
   <section id="tab-settings" class="tab" aria-label="せってい" hidden>
-    <div class="page-head"><h1>せってい</h1></div>
+    <div class="page-head"><button type="button" class="back-btn" id="setBack">‹ ホームへ</button><h1>せってい</h1></div>
     <div id="setBody"></div>
   </section>
 </div>
 
 <nav class="tabbar" aria-label="メニュー">
   <button data-tab="shop"><span class="ti" id="tiShop"></span><span>ショップ</span></button>
-  <button data-tab="train"><span class="ti" id="tiTrain"></span><span>トレーニング</span></button>
+  <button data-tab="train"><span class="ti" id="tiTrain"></span><span>あそぶ</span></button>
   <button data-tab="home" class="home-tab"><span class="ti" id="tiHome"></span><span>ホーム</span></button>
-  <button data-tab="history"><span class="ti" id="tiHistory"></span><span>りれき</span></button>
-  <button data-tab="settings"><span class="ti" id="tiSettings"></span><span>せってい</span></button>
+  <button data-tab="history"><span class="ti" id="tiHistory"></span><span>きろく</span></button>
+  <button data-tab="cat"><span class="ti" id="tiCat"></span><span>ねこ</span></button>
 </nav>
 
 <div class="modal" id="modal" hidden>
@@ -129,25 +142,27 @@
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <input type="file" id="photoInput" accept="image/*" hidden>
 
-<script src="data.js?v=10.0"></script>
-<script src="cat.js?v=10.0"></script>
-<script src="petcat.js?v=10.0"></script>
-<script src="battle.js?v=10.0"></script>
-<script src="walk.js?v=10.0"></script>
-<!-- v10.0：app.js を役割ごとに分けた。上から順番に読みこむ（順番を変えない。main.js は いちばん最後） -->
-<script src="storage.js?v=10.0"></script>
-<script src="util.js?v=10.0"></script>
-<script src="state.js?v=10.0"></script>
-<script src="rules.js?v=10.0"></script>
-<script src="sound.js?v=10.0"></script>
-<script src="ui.js?v=10.0"></script>
-<script src="daily.js?v=10.0"></script>
-<script src="home.js?v=10.0"></script>
-<script src="shop.js?v=10.0"></script>
-<script src="train.js?v=10.0"></script>
-<script src="history.js?v=10.0"></script>
-<script src="settings.js?v=10.0"></script>
-<script src="main.js?v=10.0"></script>
+<script src="data.js?v=10.1"></script>
+<script src="cat.js?v=10.1"></script>
+<script src="petcat.js?v=10.1"></script>
+<script src="battle.js?v=10.1"></script>
+<script src="walk.js?v=10.1"></script>
+<!-- v10.0：app.js を役割ごとに分けた。上から順番に読みこむ（順番を変えない。main.js は いちばん最後）。v10.1：fx.js（ごほうびの演出）・neko.js（ねこタブ）を追加 -->
+<script src="storage.js?v=10.1"></script>
+<script src="util.js?v=10.1"></script>
+<script src="state.js?v=10.1"></script>
+<script src="rules.js?v=10.1"></script>
+<script src="sound.js?v=10.1"></script>
+<script src="fx.js?v=10.1"></script>
+<script src="ui.js?v=10.1"></script>
+<script src="daily.js?v=10.1"></script>
+<script src="home.js?v=10.1"></script>
+<script src="shop.js?v=10.1"></script>
+<script src="train.js?v=10.1"></script>
+<script src="history.js?v=10.1"></script>
+<script src="neko.js?v=10.1"></script>
+<script src="settings.js?v=10.1"></script>
+<script src="main.js?v=10.1"></script>
 <script>
 // service worker の登録（v9.8：新しい版が来たら app.js の swWaiting でお知らせ → タップで入れかえ）
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {

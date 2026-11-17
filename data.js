@@ -1,5 +1,6 @@
 // アプリの版。index.html の ?v= と sw.js の VERSION もこれにそろえる
-const APP_VER = '10.0';
+const APP_VER = '10.1';
+const APP_NEWS = '10.1';   // この版で「メニューが変わりました」のお知らせを出した（ui.js の showNews。次にメニューを大きく変えたら、数字をその版にする）
 
 // にゃんカロ データ定義
 // アイテム・ショップ・トレーニング・ミッションなど「数字や名前」はここだけで管理する。
@@ -146,6 +147,18 @@ const TRAININGS = [
   { id: 'weight', name: 'ウェイトトレーニング', cost: 25, stat: 'pow', gain: [5, 9], exp: 25, coin: 0,  label: 'ちからUP' }
 ];
 const STAT_NAME = { pow: 'ちから', spd: 'すばやさ', sta: 'たいりょく' };
+// v10.1 レベルアップ：1つ上がるごとに coin コイン。every レベルごとに 称号と ごほうび（アイテムとコイン）
+// rewards にないレベル（20・25…）は、いちばん近い下のレベル（15）と同じごほうび。称号は、そのレベル以上でいちばん上のもの
+const LEVEL_UP = {
+  coin: 50,
+  every: 5,
+  titles: { 0: 'みならい', 5: 'かけだしファイター', 10: 'ジムのエース', 15: 'まちのチャンピオン', 20: 'でんせつの猫', 30: 'ねこの神さま' },
+  rewards: {
+    5:  { coins: 100, items: { drink: 2 } },
+    10: { coins: 200, items: { protein: 2 } },
+    15: { coins: 300, items: { goldbag: 1 } }
+  }
+};
 
 // 回復・報酬のルール
 const RULE = {
@@ -233,21 +246,21 @@ const GUIDE = {
   bonus: 200,      // ぜんぶクリアのボーナス
   tasks: [
     { id: 'meal',  name: 'ごはんを記録する',       how: 'ホームのカメラのボタン',       check: (s, h) => Object.values(s.days).some(d => (d.meals || []).length > 0) },
-    { id: 'train', name: 'ジムでトレーニングする', how: 'トレーニング → ジム',          check: (s, h) => Object.values(s.days).some(d => d.trains > 0) },
-    { id: 'mini',  name: 'ミニゲームをあそぶ',     how: 'トレーニング → ミニゲーム',    check: (s, h) => Object.values(s.days).some(d => d.minis > 0) },
+    { id: 'train', name: 'ジムでトレーニングする', how: 'あそぶ → ジム',                check: (s, h) => Object.values(s.days).some(d => d.trains > 0) },
+    { id: 'mini',  name: 'ミニゲームをあそぶ',     how: 'あそぶ → ミニゲーム',          check: (s, h) => Object.values(s.days).some(d => d.minis > 0) },
     { id: 'walk',  name: 'さんぽを開いてみる',     how: 'ホームの歩数のカード',         check: (s, h) => h.includes('walk') },
     { id: 'gacha', name: '福袋を引く',             how: 'ショップ → ガチャ',            check: (s, h) => h.includes('gacha') },
-    { id: 'wear',  name: 'きせかえで着がえる',     how: 'トレーニング → 更衣室',        check: (s, h) => h.includes('wear') }
+    { id: 'wear',  name: 'きせかえで着がえる',     how: 'ねこ → きせかえ',              check: (s, h) => h.includes('wear') }
   ]
 };
 // ホームの案内（v9.1）：上から順に、sel の場所を照らして猫が説明する。{cat} は猫の名前
 const TOUR = [
   { sel: ['#bodyPill'],               text: 'これが{cat}の体型だニャ。目標カロリーに近いごはんだと元気、食べすぎると太って、少なすぎるとやせちゃうニャ。' },
   { sel: ['#btnCamera'],              text: 'ごはんはここで記録するニャ。写真をとるとAIがカロリーを調べてくれて、スタミナも回復するニャ。' },
-  { sel: ['.h-left'],                 text: 'スタミナはジムのトレーニングで使うニャ。ごきげんは{cat}をなでたり、ごはんを記録すると上がるニャ。' },
+  { sel: ['#stamMeter', '#moodMeter'], text: 'スタミナはジムのトレーニングで使うニャ。ごきげんは{cat}をなでたり、ごはんを記録すると上がるニャ。' },
   { sel: ['#pillSteps'],              text: 'ここからさんぽに行けるニャ。歩くとコインとスタミナがもらえて、地図のお宝も拾えるニャ。' },
   { sel: ['#btnLogin', '#btnMission'], text: '毎日のログインボーナスとミッションはここ。コインのもらい忘れに気をつけてニャ。' },
-  { sel: ['.tabbar'],                 text: 'トレーニングには ジム・ミニゲーム・対戦・更衣室、ショップには福袋があるニャ。' },
+  { sel: ['.tabbar'],                 text: 'あそぶ には ジム・ミニゲーム・対戦、ねこ には きせかえ、ショップ には福袋があるニャ。せっていは 右上の ⚙ ニャ。' },
   { sel: ['#eventBanner'],            text: 'さいごに「はじめてガイド」をやってみてニャ！ クリアするとコインがもらえるニャ。' }
 ];
 

@@ -156,7 +156,33 @@ function checkCrisis() {
 }
 function addExp(n) {
   S.cat.exp += n;
-  while (S.cat.exp >= expNeed(S.cat.level)) { S.cat.exp -= expNeed(S.cat.level); S.cat.level++; S.coins += 50; setTimeout(() => { toast(`猫レベル ${S.cat.level} にアップ！ コイン +50`); se('get'); }, 700); }
+  const from = S.cat.level; let coins = 0;
+  while (S.cat.exp >= expNeed(S.cat.level)) { S.cat.exp -= expNeed(S.cat.level); S.cat.level++; S.coins += LEVEL_UP.coin; coins += LEVEL_UP.coin; }
+  if (S.cat.level > from) levelUpQueue(from, S.cat.level, coins);   // v10.1：お知らせは fx.js のレベルアップ画面（前はトースト）
+}
+// v10.1 レベルの称号と、every レベルごとのごほうび（数字は data.js の LEVEL_UP）
+const levelTitle = lv => { let t = ''; for (const k of Object.keys(LEVEL_UP.titles).map(Number).sort((a, b) => a - b)) if (lv >= k) t = LEVEL_UP.titles[k]; return t; };
+const nextMilestone = lv => (Math.floor(lv / LEVEL_UP.every) + 1) * LEVEL_UP.every;
+function levelReward(m) {
+  const ks = Object.keys(LEVEL_UP.rewards).map(Number).filter(k => k <= m);
+  return ks.length ? LEVEL_UP.rewards[Math.max(...ks)] : null;
+}
+function levelRewardText(m) {
+  const r = levelReward(m); if (!r) return '';
+  const items = Object.entries(r.items || {}).map(([k, n]) => `${(SHOP_ITEMS.find(x => x.id === k) || {}).name || k} ×${n}`);
+  return [LEVEL_UP.titles[m] ? `称号「${LEVEL_UP.titles[m]}」` : '', ...items, r.coins ? `コイン +${fmt(r.coins)}` : ''].filter(Boolean).join('・');
+}
+// まだ受けとっていない節目（5・10…）のごほうびを渡して、渡した一覧を返す。S.lvRw＝どのレベルまで渡したか
+// （前の版から遊んでいる人は S.lvRw がないので、もう こえている節目のぶんを まとめて受けとる）
+function claimLevelRewards() {
+  const out = [], ev = LEVEL_UP.every;
+  for (let m = (Math.floor((S.lvRw || 0) / ev) + 1) * ev; m <= S.cat.level; m += ev) {
+    const r = levelReward(m); S.lvRw = m; if (!r) continue;
+    S.coins += r.coins || 0;
+    for (const [k, n] of Object.entries(r.items || {})) S.items[k] = (S.items[k] || 0) + n;
+    out.push({ lv: m, coins: r.coins || 0, text: levelRewardText(m) });
+  }
+  return out;
 }
 function addStamina(n) { S.stamina = clamp(S.stamina + n, 0, 100); }
 function addMood(n) { S.mood = clamp((S.mood ?? RULE.moodStart) + n, 0, 100); }

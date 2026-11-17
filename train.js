@@ -1,5 +1,5 @@
-// にゃんカロ トレーニング・ミニゲーム・更衣室
-// ジム・ミニゲームの一覧と、組員作ミニゲームとのつなぎ（window.nyankaloMini）・クイズ・連打・更衣室
+// にゃんカロ あそぶ（トレーニング・ミニゲーム）
+// ジム・ミニゲームの一覧と、組員作ミニゲームとのつなぎ（window.nyankaloMini）・クイズ・連打（v10.1：更衣室は neko.js へ）
 // （v10.0 で app.js から分けた。読みこむ順番は index.html。ほかのファイルの関数・変数はそのまま使える）
 'use strict';
 
@@ -8,6 +8,7 @@
    ========================================================= */
 function renderTrain() {
   $('trainBalance').innerHTML = `<span class="pill" style="padding-left:10px">スタミナ <b class="num">${S.stamina}%</b></span>${balanceHTML()}`;
+  if (UI.trainTab !== 'mini') UI.trainTab = 'gym';   // v10.1：更衣室は「ねこ」タブへ
   $('trainSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === UI.trainTab));
   const d = day();
   if (UI.trainTab === 'gym') {
@@ -20,7 +21,7 @@ function renderTrain() {
       <div class="section-title">もちもの</div>
       <div class="list">${SHOP_ITEMS.filter(it => it.shop !== false || (S.items[it.id] || 0) > 0).map(it => `<div class="card row"><span style="width:40px;height:40px;flex:none">${I[it.id]}</span><div class="grow"><div class="name">${esc(it.name)} ×${S.items[it.id] || 0}</div><div class="hint">${esc(it.desc)}</div></div><button class="btn small yellow" data-use="${it.id}" ${(S.items[it.id] || 0) > 0 ? '' : 'disabled'}>使う</button></div>`).join('')}</div>
       <p class="hint" style="margin-top:10px">スタミナは、ごはんを記録したり歩いたりすると回復します。</p>`;
-  } else if (UI.trainTab === 'mini') {
+  } else {
     const left = miniLeft(), pb = Math.min(RULE.photoBonusMax, d.photoBonus || 0);
     $('trainBody').innerHTML = `<div class="card" style="padding:10px 14px;margin-bottom:10px;font-weight:900;text-align:center">今日の報酬つきプレイ　のこり ${left}回<div class="hint" style="font-weight:700">写真つきでごはんを記録すると +1回（今日 ${pb}/${RULE.photoBonusMax}）</div></div>
       <div class="list">
@@ -31,36 +32,7 @@ function renderTrain() {
         <div class="card gym-card"><div class="ico" style="background:#DDEBFF;font-size:30px">⚾</div><div><div style="font-weight:900">にゃんこバッティング</div><div class="hint">犬のピッチャーの10球を打ちかえせ！（最大${RULE.miniRewardMax}コイン）</div></div><button class="btn small" data-mini="baseball">あそぶ</button></div>
         <div class="card gym-card"><div class="ico" style="background:#EBDDFF;font-size:30px">🎰</div><div><div style="font-weight:900">にゃんこスロット</div><div class="hint">アプリのコインをかけて目押し！（1日のもうけ上限 ${RULE.slotNetMax}コイン・回数に数えません）</div></div><button class="btn small" data-mini="slot">あそぶ</button></div>
       </div><p class="hint" style="margin-top:10px">ミニゲームはスタミナを使いません。カロリーは一般的な目安です。</p>`;
-  } else {
-    const eq = S.cat.equip;
-    $('trainBody').innerHTML = `<div class="locker"><div class="card preview">${petCatHTML({ breed: S.cat.breed, idx: S.cat.idx, equip: eq, dead: S.cat.dead })}</div>
-      <div class="card stats"><div style="font-weight:900">${esc(S.cat.name)}　Lv.${S.cat.level}</div>${statRows()}</div></div>
-      ${lockerHTML(eq)}
-      <p class="hint" style="margin-top:10px">ガチャで新しいきせかえが手に入ります。</p>`;
   }
-}
-// 更衣室（v9.4）：部位のタブ＋図鑑。持っていないものは「？」で出す
-const LOCKER_SLOTS = ['head', 'top', 'hand', 'suit'];
-const RAR_ORDER = { N: 0, R: 1, SR: 2 };
-function lockerHTML(eq) {
-  const sl = LOCKER_SLOTS.includes(UI.lockerSlot) ? UI.lockerSlot : 'head';
-  const isNone = k => /_none$/.test(k);
-  const all = Object.keys(WEAR).filter(k => !isNone(k)), got = all.filter(k => S.owned.includes(k)).length;
-  const cnt = x => { const ks = all.filter(k => WEAR[k].slot === x); return `${ks.filter(k => S.owned.includes(k)).length}/${ks.length}`; };
-  const list = Object.keys(WEAR).filter(k => WEAR[k].slot === sl)
-    .sort((a, b) => (isNone(b) - isNone(a)) || (RAR_ORDER[WEAR[a].rar] - RAR_ORDER[WEAR[b].rar]));
-  const cell = k => S.owned.includes(k)
-    ? `<button class="wear" data-wear="${k}" aria-pressed="${eq[sl] === k}">${wearIcon(k)}<span>${esc(WEAR[k].name)}</span><span class="rar ${WEAR[k].rar}">${WEAR[k].rar}</span></button>`
-    : `<div class="wear locked" aria-label="まだ持っていない ${WEAR[k].rar} のきせかえ"><span class="q">？</span><span>？？？</span><span class="rar ${WEAR[k].rar}">${WEAR[k].rar}</span></div>`;
-  return `<div class="card zukan"><div class="zk-top"><b>きせかえ図鑑</b><span>集めた <b class="num">${got}</b> / ${all.length}</span></div><div class="prog"><i style="width:${got / all.length * 100}%"></i></div></div>
-    <div class="seg locker-seg" role="tablist">${LOCKER_SLOTS.map(x => `<button role="tab" data-lslot="${x}" aria-selected="${x === sl}">${SLOT_NAME[x]}<small>${cnt(x)}</small></button>`).join('')}</div>
-    ${sl === 'suit' ? '<p class="hint" style="margin:0 0 8px;text-align:center">着ている間は 頭・服 が見えません（能力のボーナスはそのまま）</p>' : ''}
-    <div class="wear-grid">${list.map(cell).join('')}</div>`;
-}
-function statRows() {
-  const col = { pow: 'var(--red)', spd: 'var(--blue)', sta: 'var(--green)' };
-  return ['pow', 'spd', 'sta'].map(k => { const v = statWithBonus(k), bonus = v - S.cat.stats[k]; return `<div class="stat-row"><span>${STAT_NAME[k]}</span><span class="bar"><i style="width:${Math.min(100, v / 3)}%;background:${col[k]}"></i></span><b class="num">${v}${bonus ? `<small style="color:var(--orange-d)">+${bonus}</small>` : ''}</b></div>`; }).join('') +
-    `<div class="stat-row"><span>EXP</span><span class="bar"><i style="width:${S.cat.exp / expNeed(S.cat.level) * 100}%;background:var(--yellow)"></i></span><b class="num" style="font-size:12px">${S.cat.exp}/${expNeed(S.cat.level)}</b></div>`;
 }
 $('trainSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; UI.trainTab = b.dataset.v; se('tap'); renderTrain(); bgmUpdate(); });
 $('trainBody').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-battle]')) { e.preventDefault(); openBattleLobby(); } });
@@ -78,8 +50,6 @@ $('trainBody').addEventListener('click', e => {
   else if (t.dataset.mini === 'quiz') playQuiz();
   else if (t.dataset.mini === 'tap') playTap();
   else if (MINI_PAGES[t.dataset.mini]) openMiniPage(t.dataset.mini);
-  else if (t.dataset.lslot) { UI.lockerSlot = t.dataset.lslot; se('tap'); renderTrain(); }
-  else if (t.dataset.wear) { const k = t.dataset.wear; S.cat.equip[WEAR[k].slot] = k; guideHit('wear'); save(); se('tap'); renderAll(); }
 });
 function doTraining(t) {
   if (S.cat.hospital) { toast('入院中はトレーニングできません（ミニゲームはできます）'); return; }
@@ -98,6 +68,7 @@ function doTraining(t) {
     const f = document.createElement('span'); f.className = 'gc-float';
     f.innerHTML = `${STAT_NAME[t.stat]} +${g}${mult > 1 ? ' ×' + mult : ''}<small>EXP +${t.exp}${t.coin ? '・コイン +' + t.coin : ''}</small>`;
     card.appendChild(f); setTimeout(() => f.remove(), 1300);
+    if (t.coin) coinFx(t.coin, card);
   }
 }
 // 今日の報酬つきプレイの回数（写真つきの記録で最大+3）
@@ -106,7 +77,7 @@ const miniLeft = () => Math.max(0, miniLimit() - day().miniRewards);
 function miniReward(coins) {
   const d = day(); d.minis++;
   if (d.miniRewards >= miniLimit()) return '今日の報酬はもう受けとりました';
-  d.miniRewards++; S.coins += coins; se('coin'); return `コイン +${coins}`;
+  d.miniRewards++; S.coins += coins; se('coin'); coinFx(coins); return `コイン +${coins}`;
 }
 // 組員作のミニゲーム（別ページ）を全画面で開く。
 // ゲームの中からは window.parent.nyankaloMini を通してコインなどを読み書きする。
@@ -155,7 +126,7 @@ function openMiniPage(k) {
 }
 function closeMiniPage() {
   const w = $('miniFrame'); if (!w) return;
-  w.remove(); document.body.classList.remove('mini-open'); renderAll();
+  w.remove(); document.body.classList.remove('mini-open'); renderAll(); setTimeout(levelUpTry, 400);
 }
 function playQuiz() {
   let q = 0, ok = 0;

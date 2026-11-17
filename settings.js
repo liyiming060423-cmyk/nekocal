@@ -110,6 +110,7 @@ function checkBackupNag() {
    11. せってい
    ========================================================= */
 let resetArmed = false;
+$('setBack').addEventListener('click', () => { se('tap'); setTab('home'); });   // v10.1：せっていは ホームの ⚙ からひらく
 function renderSettings() {
   const s = S.settings, sw = (id, on, label) => `<button class="switch" role="switch" id="${id}" aria-checked="${on}" aria-label="${label}"></button>`;
   const perm = ('Notification' in window) ? Notification.permission : 'unsupported';

@@ -1,5 +1,5 @@
-// にゃんカロ りれき
-// 1週間のきろく（前の週も）・ごはんを直す・予想カード・ステータス
+// にゃんカロ きろく
+// 1週間のきろく（前の週も）・ごはんを直す・予想カード（v10.1：ステータスは neko.js へ）
 // （v10.0 で app.js から分けた。読みこむ順番は index.html。ほかのファイルの関数・変数はそのまま使える）
 'use strict';
 
@@ -60,8 +60,7 @@ function predHTML(d) {
 function renderHistory() {
   const t = todayStr(), dt = parseYmd(t);
   $('histDate').textContent = `Date ${dt.getMonth() + 1}/${dt.getDate()}（${WEEK[dt.getDay()]}）`;
-  const tabs = `<div class="hist-seg" role="tablist"><button role="tab" data-h="status" aria-selected="${UI.histTab === 'status'}">ステータス</button><button role="tab" data-h="week" aria-selected="${UI.histTab === 'week'}">1週間の<br>きろく</button></div>`;
-  if (UI.histTab === 'week') {
+  {
     const off = clamp(UI.histWeek || 0, -WEEKS_BACK, 0), dates = weekDates(off);
     if (!dates.includes(UI.histDate) || UI.histDate > t) UI.histDate = off === 0 ? t : dates[6];
     const sel = UI.histDate, sd = S.days[sel] || { meals: [] }, sdt = parseYmd(sel), edit = canEditDay(sel);
@@ -80,31 +79,14 @@ function renderHistory() {
     $('histBody').innerHTML = `<div class="hist-week"><button class="btn small white" data-wk="-1" ${off <= -WEEKS_BACK ? 'disabled' : ''} aria-label="前の週">◀ 前の週</button><b>${off === 0 ? '今週' : `${mdw(dates[0])}〜`}</b><button class="btn small white" data-wk="1" ${off >= 0 ? 'disabled' : ''} aria-label="次の週">次の週 ▶</button></div>
       <div class="card chart-card" style="margin-top:8px">${chartSVG(dates)}</div>
       <div class="chips hist-days">${dates.map(d => `<button class="chip" data-day="${d}" ${d > t ? 'disabled' : ''} style="${d === sel ? 'background:var(--yellow)' : ''}" aria-label="${mdw(d)} ${intake(d) ? fmt(intake(d)) + 'kcal' : '記録なし'}"><b>${WEEK[parseYmd(d).getDay()]}</b><span class="num">${intake(d) ? fmt(intake(d)) : '-'}</span></button>`).join('')}</div>
-      ${tabs}
       <div class="section-title">${sel === t ? '本日' : `${sdt.getMonth() + 1}/${sdt.getDate()}（${WEEK[sdt.getDay()]}）`}</div>
       <div class="meals3">${cards}</div>
       <div class="card" style="margin-top:12px;padding:10px 14px;display:flex;justify-content:space-between;font-weight:900"><span>合計</span><span class="num">${fmt(intake(sel))} / ${fmt(target(S.user))} kcal</span></div>${edit ? predHTML(sel) : ''}${pfcCard(sd.meals)}${list}${add}`;
-  } else {
-    const st = bodyState(S.cat.idx), recDays = Object.values(S.days).filter(d => d.meals.length).length;
-    const meals = Object.values(S.days).reduce((a, d) => a + d.meals.length, 0), steps = Object.values(S.days).reduce((a, d) => a + (d.steps || 0), 0);
-    $('histBody').innerHTML = `${tabs}
-      <div class="locker" style="margin-top:12px"><div class="card preview">${petCatHTML({ breed: S.cat.breed, idx: S.cat.idx, equip: S.cat.equip, dead: S.cat.dead })}</div>
-      <div class="card stats"><div style="font-weight:900">${esc(S.cat.name)}　Lv.${S.cat.level}</div>${statRows()}</div></div>
-      <div class="section-title">体型</div>
-      <div class="card" style="padding:12px 14px"><div style="display:flex;justify-content:space-between;font-weight:900;margin-bottom:8px"><span>${st[0]}</span><span class="num">${S.cat.idx > 0 ? '+' : ''}${S.cat.idx}</span></div>
-        <div class="body-meter"><i style="left:${(S.cat.idx + 100) / 2}%"></i></div><div class="body-labels"><span>骸骨</span><span>ちょうどいい</span><span>爆発</span></div>
-        <p class="hint" style="margin-top:8px">その日の「食べた量 − 目標」で体型が変わります。しめるのは つぎの日の${RULE.closeHour}時（「これでしめる」を押せば すぐ）。目標±100kcalなら、ちょうどいいに少しもどります。朝・昼・夜の記録が少ない日は、やせる変化を小さくします。</p></div>
-      ${S.cat.hospital ? `<div class="card hosp-note" style="margin-top:10px;padding:10px 14px;font-weight:900;border:2.5px solid var(--ink);border-radius:14px">🏥 入院中　退院まで あと${Math.max(1, daysBetween(t, S.cat.hospital.until))}日（バランスのいい日 ${S.cat.hospital.good || 0}/${HOSPITAL.goodDays}）</div>` : ''}
-      <div class="card streak-card"><span>🔥 連続記録</span><span><b class="num">${S.streak.n}</b>日　<small class="muted">今週のおやすみ券 ${S.streak.pass === weekMon(t) ? 0 : STREAK.passPerWeek}/${STREAK.passPerWeek}</small></span></div>
-      <div class="section-title">これまで</div>
-      <div class="totals"><div class="card"><b class="num">${recDays}</b><span>記録した日</span></div><div class="card"><b class="num">${meals}</b><span>ごはんの記録</span></div><div class="card"><b class="num">${fmt(steps)}</b><span>歩いた歩数</span></div></div>
-      <div class="card" style="margin-top:10px;padding:10px 14px;font-size:14px">基礎代謝 <b>${fmt(bmr(S.user))}</b> kcal　→　1日の目標 <b>${fmt(target(S.user))}</b> kcal</div>`;
   }
 }
 $('histBody').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.h) { UI.histTab = b.dataset.h; se('tap'); renderHistory(); }
-  else if (b.dataset.day) { UI.histDate = b.dataset.day; renderHistory(); }
+  if (b.dataset.day) { UI.histDate = b.dataset.day; renderHistory(); }
   else if (b.dataset.wk) { UI.histWeek = clamp((UI.histWeek || 0) + +b.dataset.wk, -WEEKS_BACK, 0); UI.histDate = null; se('tap'); renderHistory(); }
   else if (b.dataset.edit) openMealEdit(UI.histDate, b.dataset.edit);
   else if (b.dataset.addmeal) { if (UI.histDate === todayStr()) openCapture(); else openCapture({ date: UI.histDate }); }
