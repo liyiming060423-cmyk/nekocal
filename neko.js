@@ -9,13 +9,15 @@ const RAR_ORDER = { N: 0, R: 1, SR: 2 };
 function lockerHTML(eq) {
   const sl = LOCKER_SLOTS.includes(UI.lockerSlot) ? UI.lockerSlot : 'head';
   const isNone = k => /_none$/.test(k);
-  const all = Object.keys(WEAR).filter(k => !isNone(k)), got = all.filter(k => S.owned.includes(k)).length;
+  const all = zukanKeys(), got = zukanGot();   // v10.3：図鑑の数は 福袋のきせかえだけ（実績のきせかえは べつ）
   const cnt = x => { const ks = all.filter(k => WEAR[k].slot === x); return `${ks.filter(k => S.owned.includes(k)).length}/${ks.length}`; };
   const list = Object.keys(WEAR).filter(k => WEAR[k].slot === sl)
-    .sort((a, b) => (isNone(b) - isNone(a)) || (RAR_ORDER[WEAR[a].rar] - RAR_ORDER[WEAR[b].rar]));
+    .sort((a, b) => (isNone(b) - isNone(a)) || (!!WEAR[a].ach - !!WEAR[b].ach) || (RAR_ORDER[WEAR[a].rar] - RAR_ORDER[WEAR[b].rar]));
+  const tag = k => WEAR[k].ach ? '<span class="rar ach">実績</span>' : `<span class="rar ${WEAR[k].rar}">${WEAR[k].rar}</span>`;
   const cell = k => S.owned.includes(k)
-    ? `<button class="wear" data-wear="${k}" aria-pressed="${eq[sl] === k}">${wearIcon(k)}<span>${esc(WEAR[k].name)}</span><span class="rar ${WEAR[k].rar}">${WEAR[k].rar}</span></button>`
-    : `<div class="wear locked" aria-label="まだ持っていない ${WEAR[k].rar} のきせかえ"><span class="q">？</span><span>？？？</span><span class="rar ${WEAR[k].rar}">${WEAR[k].rar}</span></div>`;
+    ? `<button class="wear" data-wear="${k}" aria-pressed="${eq[sl] === k}">${wearIcon(k)}<span>${esc(WEAR[k].name)}</span>${tag(k)}</button>`
+    : WEAR[k].ach ? `<div class="wear locked" aria-label="ずっとミッションでもらえるきせかえ"><span class="q">？</span><span>ずっとミッションでもらえる</span>${tag(k)}</div>`
+    : `<div class="wear locked" aria-label="まだ持っていない ${WEAR[k].rar} のきせかえ"><span class="q">？</span><span>？？？</span>${tag(k)}</div>`;
   return `<div class="card zukan"><div class="zk-top"><b>きせかえ図鑑</b><span>集めた <b class="num">${got}</b> / ${all.length}</span></div><div class="prog"><i style="width:${got / all.length * 100}%"></i></div></div>
     <div class="seg locker-seg" role="tablist">${LOCKER_SLOTS.map(x => `<button role="tab" data-lslot="${x}" aria-selected="${x === sl}">${SLOT_NAME[x]}<small>${cnt(x)}</small></button>`).join('')}</div>
     ${sl === 'suit' ? '<p class="hint" style="margin:0 0 8px;text-align:center">着ている間は 頭・服 が見えません（能力のボーナスはそのまま）</p>' : ''}
@@ -28,10 +30,13 @@ function statRows() {
 }
 
 function renderCat() {
-  if (UI.catTab !== 'wear') UI.catTab = 'status';
+  if (UI.catTab !== 'wear' && UI.catTab !== 'memo') UI.catTab = 'status';
   $('catSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === UI.catTab));
   const t = todayStr();
-  if (UI.catTab === 'wear') {
+  if (UI.catTab === 'memo') {
+    if (S.memoNew) { S.memoNew = 0; save(); renderHome(); }   // 見たので ねこ の赤い点を消す
+    $('catBody').innerHTML = memoHTML();
+  } else if (UI.catTab === 'wear') {
     const eq = S.cat.equip;
     $('catBody').innerHTML = `<div class="locker"><div class="card preview">${petCatHTML({ breed: S.cat.breed, idx: S.cat.idx, equip: eq, dead: S.cat.dead })}</div>
       <div class="card stats"><div style="font-weight:900">${esc(S.cat.name)}　Lv.${S.cat.level}</div>${statRows()}</div></div>
@@ -42,7 +47,7 @@ function renderCat() {
     const meals = Object.values(S.days).reduce((a, d) => a + d.meals.length, 0), steps = Object.values(S.days).reduce((a, d) => a + (d.steps || 0), 0);
     const nx = nextMilestone(S.cat.level);
     $('catBody').innerHTML = `<div class="locker"><div class="card preview">${petCatHTML({ breed: S.cat.breed, idx: S.cat.idx, equip: S.cat.equip, dead: S.cat.dead })}</div>
-      <div class="card stats"><div style="font-weight:900">${esc(S.cat.name)}　Lv.${S.cat.level}</div><div class="lv-title">🎖 ${esc(levelTitle(S.cat.level))}</div>${statRows()}</div></div>
+      <div class="card stats"><div style="font-weight:900">${esc(S.cat.name)}　Lv.${S.cat.level}</div><button type="button" class="lv-title t-pick" id="ncTitle" aria-label="称号をえらぶ（いまは ${esc(curTitle())}）">🎖 ${esc(curTitle())}<span aria-hidden="true"> ›</span></button>${statRows()}</div></div>
       <div class="card lv-next">つぎのレベルのごほうび：<b>Lv.${nx}</b>（あと${nx - S.cat.level}レベル）<small>${esc(levelRewardText(nx))}</small></div>
       <div class="section-title">体型</div>
       <div class="card" style="padding:12px 14px"><div style="display:flex;justify-content:space-between;font-weight:900;margin-bottom:8px"><span>${st[0]}</span><span class="num">${S.cat.idx > 0 ? '+' : ''}${S.cat.idx}</span></div>
@@ -62,4 +67,43 @@ $('catBody').addEventListener('click', e => {
   if (t.dataset.lslot) { UI.lockerSlot = t.dataset.lslot; se('tap'); renderCat(); }
   else if (t.dataset.wear) { const k = t.dataset.wear; S.cat.equip[WEAR[k].slot] = k; guideHit('wear'); save(); se('tap'); renderAll(); }
   else if (t.id === 'ncBreed') openCatPicker();
+  else if (t.id === 'ncTitle') openTitlePicker();
+  else if (t.dataset.memo != null) openMemo(+t.dataset.memo);
 });
+
+/* ---------- おもいで（v10.3） ---------- */
+const memoDate = d => { if (!d) return 'これまで'; const x = parseYmd(d); return `${x.getFullYear()}/${x.getMonth() + 1}/${x.getDate()}（${WEEK[x.getDay()]}）`; };
+function memoCard(m) {
+  const i = S.memo.indexOf(m), ic = (MEMO[m.k] || {}).icon || '📖';
+  return `<button type="button" class="card memo-card" data-memo="${i}" aria-label="${esc(memoDate(m.d))} ${esc(memoTitle(m))}">
+    <span class="memo-cat" aria-hidden="true">${petCatHTML({ breed: m.cat.breed, idx: m.cat.idx, equip: m.cat.equip })}</span>
+    <span class="memo-txt"><small>${esc(memoDate(m.d))}${m.old ? '' : `　Lv.${m.cat.level}`}</small><b><span aria-hidden="true">${ic}</span> ${esc(memoTitle(m))}</b><span>${esc(memoText(m))}</span></span></button>`;
+}
+function memoHTML() {
+  const { dated, old } = memoSorted(), n = S.memo.length;
+  if (!n) return `<div class="card memo-empty"><b>まだ おもいでがないにゃ</b><p>はじめてのごはん・はじめての1,000歩・Lv.5・はじめての SR・7日連続の記録・対戦ではじめて勝つ…など、とくべつな日を ここに のこすにゃ。</p></div>`;
+  return `<div class="card memo-head"><b>${esc(S.cat.name)}の おもいで</b><span><b class="num">${n}</b>こ</span></div>
+    <div class="list memo-list">${dated.map(memoCard).join('')}</div>
+    ${old.length ? `<div class="section-title">これまでの思い出</div><p class="hint" style="margin:-4px 4px 8px">前の版から遊んでいる人の、日付がわからない思い出です</p><div class="list memo-list">${old.map(memoCard).join('')}</div>` : ''}`;
+}
+function openMemo(i) {
+  const m = S.memo[i]; if (!m) return;
+  openModal(`<h2 id="modalTitle">${esc(memoTitle(m))}<small>${esc(memoDate(m.d))}</small></h2><div class="stack memo-big">
+    <div class="memo-big-cat">${petCatHTML({ breed: m.cat.breed, idx: m.cat.idx, equip: m.cat.equip })}</div>
+    <p class="memo-diary">${esc(memoText(m))}</p>
+    <p class="hint" style="margin:0;text-align:center">${m.old ? `前の版のデータから作った おもいでです（${esc(S.cat.name)}は いまの すがた）` : `このときの ${esc(S.cat.name)}：Lv.${m.cat.level}・${esc(bodyState(m.cat.idx)[0])}`}</p>
+    <button class="btn block" id="mmOk">とじる</button></div>`, root => { root.querySelector('#mmOk').onclick = closeModal; });
+}
+// 称号をえらぶ（v10.3）：とどいたレベルの称号と、ずっとミッションでもらった称号
+function openTitlePicker() {
+  const list = titleList(), cur = curTitle();
+  openModal(`<h2 id="modalTitle">称号をえらぶ</h2><div class="stack">
+    <div class="list title-list">${list.map(x => `<button type="button" class="card row title-opt" data-title="${esc(x)}" aria-pressed="${x === cur}"><span class="grow">🎖 ${esc(x)}</span><small class="muted">${(S.titles || []).includes(x) ? 'ずっとミッション' : 'レベル'}</small></button>`).join('')}</div>
+    <p class="hint" style="margin:0">ずっとミッションをクリアすると、称号がふえます。</p></div>`, root => {
+    root.addEventListener('click', e => {
+      const b = e.target.closest('[data-title]'); if (!b) return;
+      const v = b.dataset.title; S.title = v === levelTitle(S.cat.level) && !(S.titles || []).includes(v) ? '' : v;   // レベルの称号をえらんだら「自動」にもどす
+      save(); se('tap'); closeModal(); toast(`称号「${v}」をつけました`);
+    });
+  });
+}

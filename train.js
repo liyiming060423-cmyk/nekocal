@@ -58,7 +58,7 @@ function doTraining(t) {
   const gold = (S.goldbag || 0) > 0;
   const mult = (S.protein ? 1.5 : 1) * (gold ? 2 : 1), g = Math.round(rand(t.gain[0], t.gain[1]) * mult);
   S.cat.stats[t.stat] += g; S.protein = false; if (gold) S.goldbag--;
-  S.coins += t.coin; day().trains++; addExp(t.exp); addMood(RULE.moodPerTrain); save();
+  S.coins += t.coin; day().trains++; tallyAdd('trains'); addExp(t.exp); addMood(RULE.moodPerTrain); save();
   se('get'); buzz(25); petSound(t.id === 'bag' ? 'punch' : 'pop');
   // 結果は画面の上にふわっと出すだけ（続けて押せる）
   renderAll();
@@ -75,7 +75,7 @@ function doTraining(t) {
 const miniLimit = () => RULE.miniPlaysPerDay + Math.min(RULE.photoBonusMax, day().photoBonus || 0);
 const miniLeft = () => Math.max(0, miniLimit() - day().miniRewards);
 function miniReward(coins) {
-  const d = day(); d.minis++;
+  const d = day(); bumpMini(d);   // v10.3：ずっとの回数も（d.minis++ はみんな bumpMini に）
   if (d.miniRewards >= miniLimit()) return '今日の報酬はもう受けとりました';
   d.miniRewards++; S.coins += coins; se('coin'); coinFx(coins); return `コイン +${coins}`;
 }
@@ -99,20 +99,20 @@ window.nyankaloMini = {
   // 報酬つきプレイ1回ぶん：コインは上限 miniRewardMax まで。回数が残っていなければ0
   reward: n => {
     n = Math.max(0, Math.round(n || 0));
-    const d = day(); d.minis++;
+    const d = day(); bumpMini(d);
     if (n <= 0) { save(); return { ok: false, given: 0, msg: '' }; }
     if (d.miniRewards >= miniLimit()) { save(); return { ok: false, given: 0, msg: '今日の報酬はもう受けとりました' }; }
     const g = Math.min(n, RULE.miniRewardMax);
     d.miniRewards++; S.coins += g; save();
     return { ok: true, given: g, msg: g < n ? `アプリに +${g}コイン（1回の上限 ${RULE.miniRewardMax}）` : `アプリに +${g}コイン` };
   },
-  played: () => { day().minis++; save(); },
+  played: () => { bumpMini(day()); save(); },
   // 記録（ゲームごと）
   getRec: k => (S.miniRec || {})[k] || null,
   setRec: (k, v) => { S.miniRec = S.miniRec || {}; S.miniRec[k] = v; save(); },
   // スロット：アプリのコインをかける。1日のもうけ（勝ち−かけ）は slotNetMax まで
   slotInfo: () => ({ coins: S.coins, net: day().slotNet || 0, max: RULE.slotNetMax }),
-  slotBet: n => { const d = day(); if (S.coins < n) return { ok: false, coins: S.coins }; if (!d.slotPlayed) { d.slotPlayed = true; d.minis++; } S.coins -= n; d.slotNet = (d.slotNet || 0) - n; save(); return { ok: true, coins: S.coins, net: d.slotNet }; },
+  slotBet: n => { const d = day(); if (S.coins < n) return { ok: false, coins: S.coins }; if (!d.slotPlayed) { d.slotPlayed = true; bumpMini(d); } S.coins -= n; d.slotNet = (d.slotNet || 0) - n; save(); return { ok: true, coins: S.coins, net: d.slotNet }; },
   slotWin: n => { const d = day(), net = d.slotNet || 0; const g = Math.max(0, Math.min(n, RULE.slotNetMax - net)); S.coins += g; d.slotNet = net + g; save(); return { given: g, capped: g < n, coins: S.coins, net: d.slotNet }; },
   close: () => closeMiniPage()
 };

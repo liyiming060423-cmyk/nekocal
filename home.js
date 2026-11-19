@@ -98,7 +98,8 @@ function renderHome() {
   $('bodyPill').style.background = st[1];
   $('tab-home').classList.toggle('hosp', !!S.cat.hospital);
   $('dotLogin').hidden = S.login.last === t;
-  $('dotMission').hidden = !MISSIONS.some(m => m.check(d) >= m.goal && !claimedToday().includes(m.id));
+  $('dotMission').hidden = !MISSIONS.some(m => m.check(d) >= m.goal && !claimedToday().includes(m.id)) && !achAnyCan();   // v10.3：ずっとミッションも
+  $('dotCat').hidden = !S.memoNew; $('dotMemo').hidden = !S.memoNew;
   coinSync();   // v10.1：コインの数字がふえた・へったら動かす（fx.js）
 }
 function claimedToday() { if (S.claimed.date !== todayStr()) S.claimed = { date: todayStr(), ids: [] }; return S.claimed.ids; }
@@ -131,7 +132,10 @@ function normSteps(d) {
 // 歩数を決めなおして、ふえた 1000歩ごとに ごほうび。ふえたぶんの回数を返す
 function applySteps(d) {
   normSteps(d);
+  const before = d.steps || 0;
   d.steps = Math.max(d.stepsManual, d.stepsGps);
+  if (d.steps > before) tallyAdd('steps', d.steps - before);   // v10.3：ずっとの歩数
+  if (d.steps >= RULE.stepsUnit) memoAdd('walk1k');
   const units = Math.floor(d.steps / RULE.stepsUnit), add = units - (d.stepUnits || 0);
   if (add <= 0) return 0;
   d.stepUnits = units; addStamina(add * RULE.staminaPerUnit); S.coins += add * RULE.coinPerUnit;
@@ -144,12 +148,15 @@ function openLogin() {
   const nextStreak = can ? (S.login.last === addDays(t, -1) ? S.login.streak + 1 : 1) : S.login.streak;
   const pos = (nextStreak - 1) % 7;
   openModal(`<h2 id="modalTitle">ログインボーナス</h2><div class="stack">
-    <div class="stamp-grid">${LOGIN_REWARDS.map((r, i) => `<div class="stamp ${i < pos || (!can && i === pos) ? 'done' : ''} ${i === pos && can ? 'today' : ''}"><span>${i + 1}日目</span>${I.coin.replace('width="24" height="24"', 'width="20" height="20"')}<span>${r}</span></div>`).join('')}</div>
-    <p class="hint">毎日ひらくとコインがもらえます。7日目は ${LOGIN_REWARDS[6]} コイン。</p>
-    <button class="btn block" id="loginClaim" ${can ? '' : 'disabled'}>${can ? `${LOGIN_REWARDS[pos]}コインを受けとる` : '今日はもう受けとりました'}</button></div>`, root => {
+    <div class="stamp-grid">${LOGIN_REWARDS.map((r, i) => `<div class="stamp ${i < pos || (!can && i === pos) ? 'done' : ''} ${i === pos && can ? 'today' : ''}"><span>${i + 1}日目</span>${I.coin.replace('width="24" height="24"', 'width="20" height="20"')}<span>${r}</span>${i === 6 ? `<small class="stamp-stone">💎${STONE.login}</small>` : ''}</div>`).join('')}</div>
+    <p class="hint">毎日ひらくとコインがもらえます。7日目は ${LOGIN_REWARDS[6]} コイン＋ダイヤ ${STONE.login}こ。</p>
+    <button class="btn block" id="loginClaim" ${can ? '' : 'disabled'}>${can ? `${LOGIN_REWARDS[pos]}コイン${pos === 6 ? `＋💎${STONE.login}` : ''}を受けとる` : '今日はもう受けとりました'}</button></div>`, root => {
     root.querySelector('#loginClaim').onclick = () => {
       if (S.login.last === todayStr()) return;
-      S.login = { last: t, streak: nextStreak }; S.coins += LOGIN_REWARDS[pos]; save(); se('coin'); buzz(); coinFx(LOGIN_REWARDS[pos], root.querySelector('#loginClaim')); closeModal();
+      S.login = { last: t, streak: nextStreak }; S.coins += LOGIN_REWARDS[pos];
+      if (pos === 6) S.stones = (S.stones || 0) + STONE.login;   // v10.3：7日目はダイヤも
+      save(); se('coin'); buzz(); coinFx(LOGIN_REWARDS[pos], root.querySelector('#loginClaim')); closeModal();
+      if (pos === 6) setTimeout(() => toast(`ダイヤ +${STONE.login}（ショップでコインに交換できます）`), 900);
     };
   });
 }
@@ -250,17 +257,48 @@ function endTour() {
   if (first) setTimeout(maybeShowDaily, 600);
 }
 
+// ミッション（v10.3：「きょう」＝毎日のミッション、「ずっと」＝実績。数字は data.js の MISSIONS・ACHIEVE）
 function openMissions() {
-  const draw = () => {
+  const today = () => {
     const d = day(), cl = claimedToday();
-    return `<h2 id="modalTitle">今日のミッション</h2><div class="list">${MISSIONS.map(m => {
+    return `<div class="list">${MISSIONS.map(m => {
       const p = Math.min(m.check(d), m.goal), done = p >= m.goal, got = cl.includes(m.id);
       return `<div class="card mission"><div class="grow"><div style="font-weight:900">${esc(m.name)}</div><div class="hint">${fmt(p)} / ${fmt(m.goal)}　報酬 ${m.reward}コイン</div><div class="prog"><i style="width:${p / m.goal * 100}%"></i></div></div>
       ${got ? '<span class="hint" style="font-weight:900">受けとり済み</span>' : `<button class="btn small ${done ? 'yellow' : 'white'}" data-m="${m.id}" ${done ? '' : 'disabled'}>受けとる</button>`}</div>`;
     }).join('')}</div><p class="hint" style="margin-top:10px">ミッションは毎日0時に新しくなります。</p>`;
   };
+  const ever = () => {
+    const order = a => (achCan(a) ? 0 : achStep(a) < a.goals.length ? 1 : 2);
+    const list = ACHIEVE.slice().sort((a, b) => order(a) - order(b));
+    return `<div class="list">${list.map(a => {
+      const i = achStep(a), all = i >= a.goals.length, v = achValue(a), goal = a.goals[Math.min(i, a.goals.length - 1)], can = achCan(a);
+      const stars = a.goals.map((_, j) => `<i class="${j < i ? 'on' : ''}" aria-hidden="true">★</i>`).join('');
+      return `<div class="card mission ach${all ? ' all' : ''}"><div class="grow"><div class="ach-name"><span aria-hidden="true">${a.icon}</span>${esc(a.name)}<span class="ach-stars" aria-label="${i}/${a.goals.length}段階">${stars}</span></div>
+        <div class="hint">${all ? `コンプリート！（${fmt(goal)}${a.unit}）` : `<span class="num">${fmt(Math.min(v, goal))}</span> / ${fmt(goal)}${a.unit}　ほうび ${esc(achRwText(a, i))}`}</div>
+        ${all ? '' : `<div class="prog"><i style="width:${Math.min(100, v / goal * 100)}%"></i></div>`}</div>
+        ${all ? '<span class="ach-done" aria-label="コンプリート">✅</span>' : `<button class="btn small ${can ? 'yellow' : 'white'}" data-a="${a.id}" ${can ? '' : 'disabled'}>受けとる</button>`}</div>`;
+    }).join('')}</div><p class="hint" style="margin-top:10px">ずっとミッションは なくなりません。能力は上がりませんが、コイン・アイテム・きせかえ・称号・ダイヤがもらえます。</p>`;
+  };
+  const draw = () => {
+    const tab = UI.misTab === 'ever' ? 'ever' : 'today', dEver = achAnyCan(), d = day(), cl = claimedToday();
+    const dToday = MISSIONS.some(m => m.check(d) >= m.goal && !cl.includes(m.id));
+    return `<h2 id="modalTitle">ミッション</h2>
+      <div class="seg mis-seg" role="tablist"><button role="tab" data-mt="today" aria-selected="${tab === 'today'}">きょう${dToday ? '<span class="dot seg-dot"></span>' : ''}</button><button role="tab" data-mt="ever" aria-selected="${tab === 'ever'}">ずっと${dEver ? '<span class="dot seg-dot"></span>' : ''}</button></div>
+      ${tab === 'today' ? today() : ever()}`;
+  };
   openModal(draw(), root => {
     root.addEventListener('click', e => {
+      const tb = e.target.closest('[data-mt]');
+      if (tb) { UI.misTab = tb.dataset.mt; se('tap'); root.innerHTML = draw(); const f = root.querySelector(`[data-mt="${UI.misTab}"]`); if (f) f.focus({ preventScroll: true }); return; }
+      const ab = e.target.closest('[data-a]');
+      if (ab) {
+        const a = ACHIEVE.find(x => x.id === ab.dataset.a), i = achStep(a), r = a.rw[i] || {}, coins = achClaim(a.id);
+        if (coins < 0) return;
+        se('get'); buzz([40, 30, 60]); if (coins) coinFx(coins, ab);
+        const extra = [r.wear ? `「${WEAR[r.wear].name}」をもらった！（ねこ → きせかえ）` : '', r.title ? `称号「${r.title}」をもらった！（ねこ → ステータスでつけられる）` : '', a.stones[i] ? `ダイヤ +${a.stones[i]}` : ''].filter(Boolean);
+        if (extra.length) toast(extra.join('　'));
+        root.innerHTML = draw(); renderHome(); return;
+      }
       const b = e.target.closest('[data-m]'); if (!b) return;
       const m = MISSIONS.find(x => x.id === b.dataset.m); const cl = claimedToday();
       if (cl.includes(m.id) || m.check(day()) < m.goal) return;
@@ -324,11 +362,14 @@ function openCapture(opt = {}) {
       const pc = g('#capC'), pp = g('#capP'), pf = g('#capF');
       if (pc != null || pp != null || pf != null) Object.assign(meal, { carbs: pc || 0, protein: pp || 0, fat: pf || 0 });
       d.meals.push(meal);
+      tallyAdd('meals'); if (cap) tallyAdd('photos'); memoAdd('meal1', null, date);   // v10.3：ずっとの回数・おもいで
       let msg = `${name}（${kcal} kcal）を記録`;
       if (past) { saved = true; save(); se('coin'); closeModal(); toast(msg + '（きのうの分）'); return; }   // v9.9：あとから足した分は ごほうびなし
-      if (d.mealRewards < 5) { d.mealRewards++; addStamina(RULE.staminaPerMeal); addExp(RULE.expPerMeal); addMood(RULE.moodPerMeal); msg += `・スタミナ +${RULE.staminaPerMeal}`; }
+      // v10.3：もらったごほうびを記録に残す（消したときに もどすため。rw＝ごほうびの回数を使った・st＝本当にふえたスタミナ・pb＝ミニゲーム +1）
+      meal.rw = 0; meal.st = 0; meal.pb = 0;
+      if (d.mealRewards < 5) { const s0 = S.stamina; d.mealRewards++; addStamina(RULE.staminaPerMeal); meal.rw = 1; meal.st = S.stamina - s0; addExp(RULE.expPerMeal); addMood(RULE.moodPerMeal); msg += `・スタミナ +${RULE.staminaPerMeal}`; }
       // 写真つきの記録：ミニゲームの報酬つきプレイ +1（1日 photoBonusMax 回まで）
-      if (cap && (d.photoBonus || 0) < RULE.photoBonusMax) { d.photoBonus = (d.photoBonus || 0) + 1; msg += '・ミニゲーム +1回'; }
+      if (cap && (d.photoBonus || 0) < RULE.photoBonusMax) { d.photoBonus = (d.photoBonus || 0) + 1; meal.pb = 1; msg += '・ミニゲーム +1回'; }
       save(); se('get'); buzz(40); setTimeout(() => { if (homeCat) homeCat.react('head'); }, 400);
       saved = true; closeModal(); toast(msg); setTimeout(checkCrisis, 2800);
     };

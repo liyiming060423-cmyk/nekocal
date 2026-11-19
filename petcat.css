@@ -120,3 +120,6 @@
 .gear-bob { animation: gearBob 2.4s ease-in-out infinite; }
 @keyframes gearBob { 50% { transform: translateY(-6px); } }
 @media (prefers-reduced-motion: reduce) { .gear-bob { animation: none; } }
+/* v10.3 ずっとミッションのきせかえ（服はオレンジ・手袋は茶色の絵の色をかえる） */
+.wear-tee_diary { filter: hue-rotate(150deg) saturate(.42) brightness(1.75); }
+.wear-gloves_paw { filter: saturate(2.2) brightness(1.75) hue-rotate(245deg); }

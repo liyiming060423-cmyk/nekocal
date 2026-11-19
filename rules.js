@@ -87,6 +87,8 @@ function settleDay(d) {
   const st = S.streak; let coins = 0, pass = false;
   if (r.n) {
     st.n++; coins = STREAK.perDay + (STREAK.bonus[st.n] || (st.n > 30 && st.n % 30 === 0 ? STREAK.bonus[30] : 0));
+    if (S.tally) S.tally.bestStreak = Math.max(S.tally.bestStreak || 0, st.n);   // v10.3：いちばん長い連続記録・おもいで
+    if (st.n >= 7) memoAdd('streak7', null, d); if (st.n >= 30) memoAdd('streak30', null, d);
   } else if (st.n > 0 && STREAK.passPerWeek > 0 && st.pass !== weekMon(d)) { st.pass = weekMon(d); pass = true; }
   else st.n = 0;
   S.coins += coins;
@@ -111,6 +113,7 @@ function checkDischarge() {
   const from = S.cat.idx;
   if (Math.abs(S.cat.idx) > HOSPITAL.leaveIdx) S.cat.idx = Math.sign(S.cat.idx) * HOSPITAL.leaveIdx;
   S.cat.hospital = null; S.cat.alert = { hi: 0, lo: 0 };
+  memoAdd('leave');   // v10.3：おもいで（はじめての退院）
   S.resultQ.push({ event: 'leave', from, to: S.cat.idx, early: todayStr() < h.until });
   return true;
 }
@@ -158,7 +161,7 @@ function addExp(n) {
   S.cat.exp += n;
   const from = S.cat.level; let coins = 0;
   while (S.cat.exp >= expNeed(S.cat.level)) { S.cat.exp -= expNeed(S.cat.level); S.cat.level++; S.coins += LEVEL_UP.coin; coins += LEVEL_UP.coin; }
-  if (S.cat.level > from) levelUpQueue(from, S.cat.level, coins);   // v10.1：お知らせは fx.js のレベルアップ画面（前はトースト）
+  if (S.cat.level > from) { memoLevel(from, S.cat.level); levelUpQueue(from, S.cat.level, coins); }   // v10.3：節目のレベルは おもいでに   // v10.1：お知らせは fx.js のレベルアップ画面（前はトースト）
 }
 // v10.1 レベルの称号と、every レベルごとのごほうび（数字は data.js の LEVEL_UP）
 const levelTitle = lv => { let t = ''; for (const k of Object.keys(LEVEL_UP.titles).map(Number).sort((a, b) => a - b)) if (lv >= k) t = LEVEL_UP.titles[k]; return t; };

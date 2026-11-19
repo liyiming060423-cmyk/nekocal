@@ -195,13 +195,17 @@ function openProfile(first) {
 
 /* ---------- メニューが変わったお知らせ（v10.1。前から遊んでいる人に1回だけ） ---------- */
 function showNews() {
-  S.news = APP_NEWS; save();
-  openModal(`<h2 id="modalTitle">メニューが かわったよ</h2><div class="stack">
-    <div class="card news-list"><div><b>ねこ</b><span>ステータスと きせかえ（前の更衣室）は ここ</span></div>
+  const from = S.news; S.news = APP_NEWS; save();
+  const menu = verNum(from) < verNum('10.1');   // verNum は settings.js   // v10.1 より前から：メニューが変わったことも知らせる
+  const v103 = `<div><b>📖</b><span>ねこ →「おもいで」に とくべつな日が のこる</span></div>
+      <div><b>📋</b><span>ミッションに「ずっと」。称号・ダイヤがもらえる</span></div>
+      <div><b>💎</b><span>ダイヤは ショップで コインに交換できる</span></div>`;
+  openModal(`<h2 id="modalTitle">${menu ? 'メニューが かわったよ' : 'あたらしくなったよ'}</h2><div class="stack">
+    <div class="card news-list">${menu ? `<div><b>ねこ</b><span>ステータスと きせかえ（前の更衣室）は ここ</span></div>
       <div><b>あそぶ</b><span>ジム・ミニゲーム・対戦（前のトレーニング）</span></div>
       <div><b>きろく</b><span>1週間のごはんの記録（前のりれき）</span></div>
-      <div><b>⚙</b><span>せってい は ホームの右上</span></div></div>
-    <p class="hint" style="margin:0">ログボとミッションは、ホームの左（スタミナの上）に うつりました。</p>
+      <div><b>⚙</b><span>せってい は ホームの右上</span></div>` : ''}${v103}</div>
+    ${menu ? '<p class="hint" style="margin:0">ログボとミッションは、ホームの左（スタミナの上）に うつりました。</p>' : ''}
     <button class="btn block" id="nwOk">OK</button></div>`, root => { root.querySelector('#nwOk').onclick = closeModal; }, () => setTimeout(maybeShowDaily, 300));
 }
 

@@ -1,7 +1,7 @@
 // にゃんカロ service worker
 // アプリ本体はキャッシュしてオフラインでも起動できるようにする。
 // 更新したら VERSION の数字を上げると、利用者のスマホに新しい版が届く。
-const VERSION = '10.2';   // index.html などの ?v= と同じ数字にする
+const VERSION = '10.3';   // index.html などの ?v= と同じ数字にする
 const CACHE = 'nekocal-v' + VERSION;
 const V = '?v=' + VERSION;
 // ↓ ここは bump.py が自動で書く（フォルダの中のファイルから作る。手で直さなくてよい）
@@ -14,6 +14,7 @@ const APP_FILES = [
   './dash.html',
   './slot.html',
   './baseball.html',
+  './achieve.js' + V,
   './apple-touch-icon.png',
   './battle.css' + V,
   './battle.js' + V,

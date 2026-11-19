@@ -199,7 +199,7 @@ function walkTrPick(t) {
   let msg;
   if (lt.coin) { const n = lt.coin[0] + Math.floor(Math.random() * (lt.coin[1] - lt.coin[0] + 1)); S.coins += n; msg = `コイン +${n}`; }
   else { S.items[lt.item] = (S.items[lt.item] || 0) + 1; msg = `${(SHOP_ITEMS.find(i => i.id === lt.item) || {}).name || lt.item} ×1`; }
-  d.treasures = (d.treasures || 0) + 1; W.got++;
+  d.treasures = (d.treasures || 0) + 1; W.got++; tallyAdd('treasures'); memoAdd('treasure1');   // v10.3
   save(); W.dirty = false; W.savedAt = Date.now();
   if (t.mk) { const e = t.mk.getElement(); if (e) e.classList.add('got'); setTimeout(() => t.mk && t.mk.remove(), 500); }
   W.tr = W.tr.filter(x => x !== t);

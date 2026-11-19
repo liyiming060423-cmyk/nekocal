@@ -24,6 +24,11 @@ function defaultState() {
     claimed: { date: t, ids: [] },
     settings: { sound: true, bgm: true, vibrate: true, notify: false, lang: 'ja', remind: ['12:00', '19:00'] },
     news: APP_NEWS,                   // v10.1 どの版のお知らせまで見たか（はじめての人には出さない）
+    // v10.3 ずっとミッション・おもいで（achieve.js）。tally＝ずっと数える回数（S.days は60日で消えるので別に持つ）
+    tally: { meals: 0, photos: 0, steps: 0, treasures: 0, trains: 0, minis: 0, wins: 0, bestStreak: 0 },
+    ach: {},                          // v10.3 実績：{ 種類: 受けとった段階の数 }
+    titles: [], title: '',            // v10.3 実績でもらった称号・つけている称号（'' ＝ レベルの称号）
+    memo: [], memoNew: 0,             // v10.3 おもいで・まだ見ていない数
     onboarded: false
   };
 }
@@ -45,6 +50,11 @@ function load() {
     if (!s.settled) st.settled = addDays(st.last || todayStr(), -1);
     st.streak = Object.assign({ n: 0, pass: '' }, s.streak);
     if (!Array.isArray(st.resultQ)) st.resultQ = [];
+    // v10.3：前の版のデータは、今までの記録から 数（tally）と おもいで を作る（achieve.js の achMigrate）
+    if (!s.tally) st.tally = null; else st.tally = Object.assign(d.tally, s.tally);
+    if (!Array.isArray(st.memo)) st.memo = [];
+    if (!Array.isArray(st.titles)) st.titles = [];
+    if (!st.ach || typeof st.ach !== 'object') st.ach = {};
     if (s.news === undefined) st.news = '';   // v10.1：前の版のデータ → メニューが変わったお知らせを1回出す
     // 前の版で骸骨・爆発になっていた猫は、今日から入院（入院費はとらない）
     if (st.cat.dead) {

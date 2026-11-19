@@ -6,17 +6,31 @@
 /* =========================================================
    8. ショップ
    ========================================================= */
-// v9.8：石（💎）は手に入れる方法も使い道もないので表示をやめた（S.stones はデータに残す）
+// v9.8：石（💎）は手に入れる方法も使い道もないので表示をやめた → v10.3：ダイヤとして もどした（ずっとミッション・ログボで手に入り、コインに交換できる）
 function balanceHTML() { return `<span class="pill coin-target">${I.coin}<span class="num coin-num">${coinText()}</span></span>`; }   // v10.1：coin-num＝数字が動く、coin-target＝コインが飛んでくる所（fx.js）
 const shopQty = { drink: 1, protein: 1, goldbag: 1 };
+let stoneQty = 1;
+// v10.3：ダイヤ（D27）。ずっとミッション・ログボ7日目でもらえて、コインに交換できる。パックは見本（押してもお金はかからない・ダイヤも出ない）
+function stoneHTML() {
+  const have = S.stones || 0, max = Math.max(1, Math.floor(have / STONE.rate)), q = clamp(stoneQty, 1, max), ok = have >= STONE.rate * q;
+  stoneQty = q;
+  return `<div class="section-title">ダイヤ</div>
+    <div class="card stone-ex"><div class="sx-row"><span class="sx-have">💎 <b class="num">${fmt(have)}</b></span><span class="sx-rate">💎${STONE.rate} → ${I.coin.replace('width="24" height="24"', 'width="18" height="18" style="vertical-align:-3px"')}${STONE.coins}</span></div>
+      <div class="buy-row"><span class="stepper"><button type="button" data-sdec="1" aria-label="へらす">−</button><output>${q}</output><button type="button" data-sinc="1" aria-label="ふやす">＋</button></span>
+        <button class="btn small" id="stoneGo" ${ok ? '' : 'disabled'}>💎${STONE.rate * q} → ${fmt(STONE.coins * q)}コインに交換</button></div>
+      <p class="hint" style="margin:6px 0 0">ダイヤは ずっとミッション（ミッション →「ずっと」）と、ログボの7日目でもらえます。</p></div>
+    <div class="section-title">ダイヤパック<span class="sample-tag">見本</span></div>
+    <div class="stone-packs">${STONE_PACKS.map((pk, i) => `<button type="button" class="card stone-pack" data-pack="${i}" aria-label="ダイヤ ${pk.n}こ ${pk.yen}円（見本）"><span class="sp-gem" aria-hidden="true">💎</span><b class="num">${pk.n}</b><span class="sp-yen num">¥${fmt(pk.yen)}</span></button>`).join('')}</div>
+    <p class="hint" style="margin:6px 4px 0">学校の作品なので、本当に買うことはできません（見本）。</p>`;
+}
 function renderShop() {
-  $('shopBalance').innerHTML = balanceHTML();
+  $('shopBalance').innerHTML = `<span class="pill stone-pill" aria-label="ダイヤ ${fmt(S.stones || 0)}こ">💎<span class="num">${fmt(S.stones || 0)}</span></span>${balanceHTML()}`;
   $('shopSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === UI.shopTab));
   if (UI.shopTab === 'shop') {
     $('shopBody').innerHTML = `
       <div class="section-title">アイテム</div>
       <div class="list">${SHOP_ITEMS.filter(it => it.shop !== false).map(it => `<div class="card shop-item"><div class="ico">${I[it.id]}</div><div><div class="name" style="font-weight:900">${esc(it.name)}</div><div class="hint">${esc(it.desc)}　もっている：${S.items[it.id] || 0}</div><div class="price">${I.coin.replace('width="24" height="24"', 'width="18" height="18" style="vertical-align:-3px"')} ${fmt(it.price)}</div></div>
-        <div class="buy-row"><span class="stepper"><button type="button" data-dec="${it.id}" aria-label="へらす">−</button><output>${shopQty[it.id]}</output><button type="button" data-inc="${it.id}" aria-label="ふやす">＋</button></span><button class="btn small" data-buy="${it.id}">購入</button></div></div>`).join('')}</div>`;
+        <div class="buy-row"><span class="stepper"><button type="button" data-dec="${it.id}" aria-label="へらす">−</button><output>${shopQty[it.id]}</output><button type="button" data-inc="${it.id}" aria-label="ふやす">＋</button></span><button class="btn small" data-buy="${it.id}">購入</button></div></div>`).join('')}</div>${stoneHTML()}`;
   } else {
     $('shopBody').innerHTML = `<div class="scene shop-scene">
       <img src="shop-bg.webp" alt="猫の店員がいる福袋ガチャのお店の絵" width="900" height="762">
@@ -37,6 +51,21 @@ $('shopBody').addEventListener('click', e => {
     const it = SHOP_ITEMS.find(x => x.id === t.dataset.buy), n = shopQty[it.id], cost = it.price * n;
     if (S.coins < cost) { toast(`コインが ${fmt(cost - S.coins)} 足りません`); se('bad'); return; }
     S.coins -= cost; S.items[it.id] = (S.items[it.id] || 0) + n; shopQty[it.id] = 1; save(); se('coin'); buzz(); toast(`${it.name} ×${n} を買いました`); renderAll();
+  }
+  else if (t.dataset.sinc) { stoneQty++; renderShop(); }
+  else if (t.dataset.sdec) { stoneQty = Math.max(1, stoneQty - 1); renderShop(); }
+  else if (t.id === 'stoneGo') {
+    const n = stoneExchange(stoneQty);
+    if (!n) { toast(`ダイヤが足りません（${STONE.rate}こで ${STONE.coins}コイン）`); se('bad'); return; }
+    stoneQty = 1; se('coin'); buzz(); toast(`${fmt(n)}コインに交換しました`); renderShop(); coinFx(n, $('stoneGo'));
+  }
+  else if (t.dataset.pack) {
+    const pk = STONE_PACKS[+t.dataset.pack]; se('tap');
+    openModal(`<h2 id="modalTitle">ダイヤパック（見本）</h2><div class="stack" style="text-align:center">
+      <div class="sp-big" aria-hidden="true">💎</div><b>ダイヤ ${pk.n}こ　¥${fmt(pk.yen)}</b>
+      <p style="margin:0;font-weight:900">これは見本です。実際にお金はかかりません。</p>
+      <p class="hint" style="margin:0">ダイヤは ずっとミッションと ログボの7日目でもらえます。</p>
+      <button class="btn block" id="spOk">OK</button></div>`, root => { root.querySelector('#spOk').onclick = closeModal; });
   }
   else if (t.dataset.bag) { t.classList.add('picked'); setTimeout(() => confirmGacha(+t.dataset.bag), 300); }
 });
@@ -65,7 +94,8 @@ function pullGacha() {
   const since = (S.pity || 0) + 1, r = Math.random() * 100;
   const rar = r < GACHA_RATE.SR || since >= GACHA_PITY ? 'SR' : r < GACHA_RATE.SR + GACHA_RATE.R ? 'R' : 'N';
   S.pity = rar === 'SR' ? 0 : since;
-  let wears = Object.keys(WEAR).filter(k => WEAR[k].rar === rar && k !== 'band_none' && k !== 'suit_none');
+  if (rar === 'SR') memoAdd('sr1');   // v10.3：はじめての SR は おもいでに
+  let wears = Object.keys(WEAR).filter(k => WEAR[k].rar === rar && k !== 'band_none' && k !== 'suit_none' && !WEAR[k].ach);   // v10.3：実績のきせかえは出ない
   // まだ持っていないきせかえから先に出す（v9.4 から N・R も）。SR はそのあいだ金のサンドバッグも出ない
   // N・R はアイテム（ドリンク・プロテイン）はそのまま出る。ぜんぶ持っていたら、かぶり（コインに交換）もあり
   const hasNew = wears.some(k => !S.owned.includes(k)), srNew = rar === 'SR' && hasNew;
@@ -82,7 +112,7 @@ function pullGacha() {
       <p style="margin:0;font-weight:900">「あそぶ」→ ジム の「もちもの」に入りました</p>`;
   } else {
     const id = got.wear, w = WEAR[id], dup = S.owned.includes(id); label = w.name;
-    if (dup) { S.coins += DUP_REFUND; refund = DUP_REFUND; } else S.owned.push(id);
+    if (dup) { S.coins += DUP_REFUND; refund = DUP_REFUND; } else { S.owned.push(id); memoZukan(); }   // v10.3：図鑑 25・50 は おもいでに
     // v10.1：着てみたところを見せる（コスチュームを着ていると 頭・服 が見えないので、頭・服・手 のときは ぬいで見せる）
     const tryEq = Object.assign({}, S.cat.equip, { [w.slot]: id }, w.slot === 'suit' ? {} : { suit: 'suit_none' });
     body = `<div class="g-stage ${rar}"><span class="g-rays"></span><div class="g-cat">${petCatHTML({ breed: S.cat.breed, idx: S.cat.idx, equip: tryEq })}</div><span class="g-badge">${wearIcon(id)}</span></div><span class="rar ${rar}">${rar}</span>

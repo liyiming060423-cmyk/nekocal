@@ -121,7 +121,31 @@ function openMealEdit(date, id) {
     };
     root.querySelector('#edDel').onclick = e => {
       if (!armed) { armed = true; e.target.textContent = 'もう一度押すと消えます'; e.target.classList.add('red'); return; }
-      dd.meals = dd.meals.filter(x => x.id !== id); save(); closeModal(); toast('消しました');
+      const back = mealRefund(date, m);   // v10.3：その記録でふえたスタミナなどを もどす（D30）
+      dd.meals = dd.meals.filter(x => x.id !== id); save(); closeModal(); toast(back ? `消しました（スタミナ −${back}）` : '消しました'); setTimeout(checkCrisis, 600);
     };
   });
+}
+// v10.3：記録を消すとき、その記録でもらったごほうびをもどす。もどしたスタミナを返す
+//   今日の記録だけ（きのうの分は あとから足した分で、もともと ごほうびなし）。スタミナは 0 より下にしない
+//   v10.3 からの記録は m.rw（ごほうびの回数を使った）・m.st（本当にふえたスタミナ）・m.pb（ミニゲーム +1）を見る
+//   それより前の記録は のこっていないので、ルールで考える：その日の「あとから」でない古い記録を順に、ごほうびの回数ぶんが +スタミナ
+//   EXP と ごきげん は もどさない（D34）
+function mealRefund(date, m) {
+  const dd = S.days[date];
+  if (!dd || date !== todayStr() || m.time === 'あとから') { tallyAdd('meals', -1); if (m.photo || m.pb) tallyAdd('photos', -1); return 0; }
+  tallyAdd('meals', -1); if (m.photo || m.pb) tallyAdd('photos', -1);
+  let rw = !!m.rw, st = m.st || 0, pb = !!m.pb;
+  if (m.rw == null) {   // 前の版の記録
+    const olds = dd.meals.filter(x => x.rw == null && x.time !== 'あとから');
+    const oldRw = (dd.mealRewards || 0) - dd.meals.filter(x => x.rw).length;
+    rw = olds.indexOf(m) < oldRw; st = rw ? RULE.staminaPerMeal : 0;
+    const oldPhotos = olds.filter(x => x.photo), oldPb = (dd.photoBonus || 0) - dd.meals.filter(x => x.pb).length;
+    pb = !!m.photo && oldPhotos.indexOf(m) < oldPb;
+  }
+  if (rw) dd.mealRewards = Math.max(0, (dd.mealRewards || 0) - 1);
+  if (pb) dd.photoBonus = Math.max(0, (dd.photoBonus || 0) - 1);
+  const back = Math.min(S.stamina, st);
+  S.stamina -= back;
+  return back;
 }

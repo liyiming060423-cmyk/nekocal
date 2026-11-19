@@ -7,7 +7,7 @@
   python test_nyankalo.py --shots shots        … スクショを shots/ に保存（なしなら保存しない）
   python test_nyankalo.py --browser webkit     … Safari と同じエンジン（python -m playwright install webkit が必要）
   python test_nyankalo.py --app <フォルダ>      … ほかのフォルダのアプリを調べる
-グループ：home tabs tour gacha level coin daily first battle slot sagase font a11y manifest
+グループ：home tabs tour gacha level coin daily first battle slot sagase font a11y manifest memo migrate achieve stone meal-delete（v10.3 で 後ろの5つを追加）
 ※ bump.py は .py をアプリのファイル一覧に入れないので、このファイルを置いたままでよい
 """
 import sys, os, re, json, asyncio, functools, http.server, socketserver, threading, traceback, argparse, tempfile
@@ -354,6 +354,10 @@ async def t_font(b):
         for tab in ['home', 'shop', 'train', 'history', 'cat']:
             await pg.click(f'.tabbar [data-tab="{tab}"]'); await pg.wait_for_timeout(250)
             texts.append(await pg.evaluate("document.body.innerText"))
+        await pg.click('#catSeg [data-v="memo"]'); await pg.wait_for_timeout(250); texts.append(await pg.evaluate("document.body.innerText"))
+        await pg.click('.tabbar [data-tab="home"]'); await pg.click('#btnMission'); await pg.click('[data-mt="ever"]'); await pg.wait_for_timeout(250)
+        texts.append(await pg.evaluate("document.body.innerText")); await pg.click('#modalClose'); await pg.wait_for_timeout(300)
+        texts.append(await pg.evaluate("Object.values(MEMO).map(m=>m.t+m.s.join('')).join('')+ACHIEVE.map(a=>a.name+a.goals.map((_,i)=>achRwText(a,i)).join('')).join('')"))
         await pg.click('.tabbar [data-tab="home"]'); await pg.click('#btnSettings'); await pg.wait_for_timeout(300)
         texts.append(await pg.evaluate("document.body.innerText"))
         ok = await pg.evaluate("document.fonts.ready.then(()=>['500','700','900'].map(w=>document.fonts.check(w+' 16px \"Zen Maru Gothic\"','あ')))")
@@ -441,8 +445,298 @@ async def t_manifest(b):
     check('メニューが かわったよ' in t, '?go=camera：閉じたあと いつものお知らせ')
     await ctx.close()
 
+
+# ===================== v10.3 =====================
+import base64, io
+def png_bytes():
+    from PIL import Image
+    b = io.BytesIO(); Image.new('RGB', (64, 64), (230, 140, 60)).save(b, 'PNG'); return b.getvalue()
+SAVED = "JSON.parse(localStorage.getItem('nyankalo-v1'))"
+def meal(i, slot='noon', time='12:00', **kw):
+    return {"id": i, "slot": slot, "name": "カレーライス", "kcal": 750, "photo": None, "time": time, **kw}
+def dayrec(meals=(), **kw):
+    d = {"meals": list(meals), "steps": 0, "stepUnits": 0, "trains": 0, "minis": 0, "miniRewards": 0, "mealRewards": 0, "photoBonus": 0, "slotNet": 0}
+    d.update(kw); return d
+TALLY0 = {"meals": 0, "photos": 0, "steps": 0, "treasures": 0, "trains": 0, "minis": 0, "wins": 0, "bestStreak": 0}
+def b103(**kw):
+    # v10.3 のデータ（tally あり＝ 前の版からの作りなおしをしない）
+    s = base(tally=dict(TALLY0), ach={}, titles=[], title='', memo=[], memoNew=0)
+    for k, v in kw.items():
+        if k == 'tally': s['tally'].update(v)
+        elif '.' in k: a, c = k.split('.'); s[a][c] = v
+        else: s[k] = v
+    return s
+
+async def record(pg, name='おにぎり', kcal=180, photo=False):
+    await pg.click('#btnCamera'); await pg.wait_for_timeout(300)
+    if photo:
+        await pg.set_input_files('#photoInput', files=[{'name': 'a.png', 'mimeType': 'image/png', 'buffer': png_bytes()}]); await pg.wait_for_timeout(500)
+    await pg.fill('#capName', name); await pg.fill('#capKcal', str(kcal)); await pg.click('#capSave'); await pg.wait_for_timeout(400)
+
+async def t_memo(b):
+    for dev in DEV:
+        ctx, pg = await page(b, dev, b103())
+        await start(pg)
+        await record(pg)
+        await pg.wait_for_timeout(3200)
+        s = await pg.evaluate(f"(()=>{{const s={SAVED};return {{m:s.memo.map(x=>x.k+':'+x.d), n:s.memoNew, dot:!document.getElementById('dotCat').hidden, toast:document.getElementById('toast').innerText}}}})()")
+        check(s['m'] == ['meal1:2026-11-17'] and s['n'] == 1 and s['dot'], f'{dev} おもいで：はじめてのごはん → ねこに赤い点（{s}）')
+        check('おもいで' in s['toast'], f'{dev} おもいで：トーストで知らせる（{s["toast"]!r}）')
+        await record(pg, 'みそしる', 40); await pg.wait_for_timeout(200)
+        check(await pg.evaluate(f"{SAVED}.memo.length") == 1, f'{dev} おもいで：同じものは1回だけ')
+        # ほかの おもいで（レベル・さんぽ・SR・連続記録・退院・図鑑）
+        await pg.evaluate("""(()=>{S.cat.level=4;S.cat.exp=expNeed(4)-1;addExp(5);
+          const d=day();normSteps(d);d.stepsGps=1200;applySteps(d);
+          S.streak.n=6;S.days['2026-11-16']={meals:[{id:'y',slot:'noon',name:'うどん',kcal:300,photo:null,time:'12:00'}],steps:0,stepUnits:0,trains:0,minis:0,miniRewards:0,mealRewards:1,photoBonus:0,slotNet:0};S.settled='2026-11-15';settleDue(true);
+          S.cat.hospital={from:'2026-11-14',until:'2026-11-17',reason:'skel',good:0};checkDischarge();
+          save();})()""")
+        await pg.wait_for_timeout(900)
+        if (await pg.evaluate("!document.getElementById('modal').hidden")):
+            for _ in range(4):
+                for sel in ['#lvGo', '#resOk', '#lvOk']:
+                    if await pg.evaluate(f"!!document.querySelector('{sel}')"): await pg.click(sel); await pg.wait_for_timeout(700)
+        ks = await pg.evaluate(f"{SAVED}.memo.map(x=>x.k+(x.v?x.v:'')+':'+x.d)")
+        for want in ['lv5:2026-11-17', 'walk1k:2026-11-17', 'streak7:2026-11-16', 'leave:2026-11-17']:
+            check(want in ks, f'{dev} おもいで：{want}（{ks}）')
+        # SR（福袋）と 図鑑 25
+        await pg.evaluate("S.coins=2000;S.owned=S.owned.concat(zukanKeys().filter(k=>WEAR[k].rar!=='SR').slice(0,24));save();renderAll()")
+        await pg.click('.tabbar [data-tab="shop"]'); await pg.wait_for_timeout(300); await pg.click('[data-v="gacha"]'); await pg.wait_for_timeout(300)
+        await pg.click('.bag-hit.b1'); await pg.wait_for_timeout(500)
+        await pg.evaluate("seq => { let i = 0; const r = Math.random; Math.random = () => i < seq.length ? seq[i++] : r(); }", [0.01, 0.1])
+        await pg.click('#gYes'); await pg.wait_for_timeout(1800); await pg.click('#modalClose'); await pg.wait_for_timeout(400)
+        ks = await pg.evaluate(f"{SAVED}.memo.map(x=>x.k)")
+        check('sr1' in ks and 'zukan25' in ks, f'{dev} おもいで：はじめての SR・図鑑25（{ks}）')
+        # ねこ → おもいで
+        await pg.click('.tabbar [data-tab="cat"]'); await pg.wait_for_timeout(300)
+        await pg.click('#catSeg [data-v="memo"]'); await pg.wait_for_timeout(500)
+        r = await pg.evaluate(f"(()=>({{cards:document.querySelectorAll('.memo-card').length, n:{SAVED}.memoNew, dot:!document.getElementById('dotCat').hidden, over:document.documentElement.scrollWidth>innerWidth+1, first:document.querySelector('.memo-card').innerText}}))()")
+        check(r['cards'] == 7 and r['n'] == 0 and not r['dot'] and not r['over'], f'{dev} おもいで：7まい・見たら赤い点が消える・はみ出さない（{r}）')
+        check(r['first'].startswith('2026/11/17'), f'{dev} おもいで：新しい順（{r["first"][:30]!r}）')
+        await shot(pg, f'memo-{dev}-list')
+        await pg.click('.memo-card'); await pg.wait_for_timeout(400)
+        t = await pg.evaluate("document.getElementById('modalBody').innerText")
+        check('とじる' in t and 'Lv.' in t, f'{dev} おもいで：タップで大きく（{t[:40]!r}）')
+        await shot(pg, f'memo-{dev}-big')
+        await pg.click('#mmOk'); await pg.wait_for_timeout(300)
+        check(not pg.errs, f'{dev} おもいで エラーなし {pg.errs[:2]}')
+        await ctx.close()
+    # まだない
+    ctx, pg = await page(b, 'se', b103())
+    await start(pg); await pg.click('.tabbar [data-tab="cat"]'); await pg.click('#catSeg [data-v="memo"]'); await pg.wait_for_timeout(300)
+    check(await pg.evaluate("!!document.querySelector('.memo-empty')"), 'おもいで：ないときの説明')
+    await shot(pg, 'memo-se-empty'); await ctx.close()
+
+async def t_migrate(b):
+    # v10.2 のデータ（tally・memo・ach なし、news 10.1）
+    st = base(news='10.1', tally=None, coins=850, owned=["band_none", "tee_orange", "gloves_brown", "suit_none", "crown", "ribbon"], lvRw=10)
+    st['cat']['level'] = 12; st['streak'] = {"n": 8, "pass": ""}
+    st['days'] = {'2026-11-12': dayrec([meal('a'), meal('b', 'night', '19:00', photo='data:image/jpeg;base64,AA')], photoBonus=1, trains=2, minis=1),
+                  '2026-11-13': dayrec([meal('c')], steps=1500, stepUnits=1, treasures=2, minis=3),
+                  '2026-11-16': dayrec([meal('d')], steps=800, trains=1)}
+    st['history'] = [{"date": "2026-11-05", "intake": 1800, "target": 2000, "diff": -200, "change": 0, "idx": 0}]
+    st['battle'] = {"log": [{"opp": "x", "win": True, "delta": 10, "practice": False, "at": 1794632400000}, {"opp": "y", "win": True, "practice": True, "at": 1794718800000}]}
+    ctx, pg = await page(b, 'ip13', st)
+    await start(pg); await pg.wait_for_timeout(500)
+    t = await pg.evaluate("document.getElementById('modalBody').innerText")
+    check('あたらしくなったよ' in t and 'おもいで' in t and 'ダイヤ' in t and 'メニューが' not in t, f'移行：10.1 の人には v10.3 のお知らせだけ（{t[:40]!r}）')
+    await shot(pg, 'migrate-ip13-news')
+    await pg.click('#nwOk'); await pg.wait_for_timeout(600)
+    s = await pg.evaluate(f"(()=>{{const s={SAVED};return {{t:s.tally, m:s.memo.map(x=>x.k+(x.v?x.v:'')+':'+x.d).sort(), news:s.news, ach:s.ach}}}})()")
+    check(s['t'] == {"meals": 4, "photos": 1, "steps": 2300, "treasures": 2, "trains": 3, "minis": 4, "wins": 1, "bestStreak": 8}, f'移行：数（tally）を記録から作る（{s["t"]}）')
+    want = sorted(['meal1:2026-11-05', 'walk1k:2026-11-13', 'treasure1:2026-11-13', 'lv5:null', 'lv10:null', 'sr1:null', 'streak7:null', 'win1:2026-11-14'])
+    check(s['m'] == want, f'移行：おもいで（{s["m"]}）')
+    check(s['news'] == APP_NEWS and s['ach'] == {}, f'移行：news・ach（{s["news"]} {s["ach"]}）')
+    await pg.click('.tabbar [data-tab="cat"]'); await pg.click('#catSeg [data-v="memo"]'); await pg.wait_for_timeout(400)
+    r = await pg.evaluate("({sec:[...document.querySelectorAll('.section-title')].map(e=>e.textContent), cards:document.querySelectorAll('.memo-card').length, dot:!document.getElementById('dotCat').hidden})")
+    check('これまでの思い出' in r['sec'] and r['cards'] == 8, f'移行：「これまでの思い出」がある（{r}）')
+    await shot(pg, 'migrate-ip13-memo')
+    await pg.reload(); await pg.wait_for_timeout(500); await start(pg); await pg.wait_for_timeout(400)
+    n = await pg.evaluate(f"{SAVED}.memo.length")
+    check(n == 8 and await pg.evaluate("document.getElementById('modal').hidden"), f'移行：2回目は作りなおさない・お知らせも出ない（{n}）')
+    check(not pg.errs, f'移行 エラーなし {pg.errs[:2]}')
+    await ctx.close()
+    # v10.0 のデータ（news なし）：メニューのお知らせ＋ v10.3
+    ctx, pg = await page(b, 'se', base(news=None))
+    await start(pg); await pg.wait_for_timeout(400)
+    t = await pg.evaluate("document.getElementById('modalBody').innerText")
+    check('メニューが かわったよ' in t and 'おもいで' in t, f'移行：10.0 の人には メニュー＋v10.3（{t[:30]!r}）')
+    btn = await pg.evaluate("document.getElementById('nwOk').getBoundingClientRect().bottom <= innerHeight")
+    check(btn, '移行：SE でも OK ボタンが見える')
+    await shot(pg, 'migrate-se-news')
+    await ctx.close()
+    # バックアップ（v10.2 の形）から復元しても作りなおす
+    ctx, pg = await page(b, 'ip13', b103())
+    await start(pg)
+    old = base(tally=None, coins=777); old['days'] = {'2026-11-12': dayrec([meal('a')], trains=5)}
+    ok = await pg.evaluate("""o => { localStorage.setItem('nyankalo-v1', JSON.stringify(o)); return true; }""", old)
+    await pg.reload(); await pg.wait_for_timeout(500)
+    s = await pg.evaluate(f"{SAVED}.tally")
+    check(s['meals'] == 1 and s['trains'] == 5, f'移行：復元したデータも 数を作る（{s}）')
+    await ctx.close()
+
+async def t_achieve(b):
+    for dev in DEV:
+        ctx, pg = await page(b, dev, b103(tally={"meals": 30, "steps": 13100, "trains": 29}, stones=0))
+        await start(pg)
+        check(await pg.evaluate("!document.getElementById('dotMission').hidden"), f'{dev} 実績：受けとれると 📋 に赤い点')
+        await pg.click('#btnMission'); await pg.wait_for_timeout(300)
+        await pg.click('[data-mt="ever"]'); await pg.wait_for_timeout(300)
+        r = await pg.evaluate("({n:document.querySelectorAll('.ach').length, first:document.querySelector('.ach').innerText, over:document.querySelector('.sheet').scrollWidth>document.querySelector('.sheet').clientWidth+1})")
+        check(r['n'] == 9 and not r['over'], f'{dev} 実績：9つ・はみ出さない（{r["n"]}）')
+        check('ごはん' in r['first'] or 'さんぽ' in r['first'], f'{dev} 実績：受けとれるものが上（{r["first"][:20]!r}）')
+        await shot(pg, f'achieve-{dev}-ever')
+        c0 = await pg.evaluate("S.coins")
+        await pg.click('[data-a="meals"]'); await pg.wait_for_timeout(300)
+        await pg.click('[data-a="walk"]'); await pg.wait_for_timeout(300)
+        s = await pg.evaluate(f"(()=>{{const s={SAVED};return {{c:s.coins-{c0}, st:s.stones, ach:s.ach}}}})()")
+        check(s == {'c': 300, 'st': 10, 'ach': {'meals': 1, 'walk': 1}}, f'{dev} 実績：ごはん30・さんぽ10km（{s}）')
+        t = await pg.evaluate("document.querySelector('[data-a=\"meals\"]').closest('.ach').innerText")
+        check('30 / 100' in t and 'ごはん日記Tシャツ' in t, f'{dev} 実績：つぎの段階（{t!r}）')
+        check(await pg.evaluate("document.querySelector('[data-a=\"trains\"]').disabled"), f'{dev} 実績：とどいていないと押せない')
+        await shot(pg, f'achieve-{dev}-claimed')
+        # ジム1回で 30 → 受けとれる
+        await pg.click('#modalClose'); await pg.wait_for_timeout(1500)
+        await pg.click('.tabbar [data-tab="train"]'); await pg.click('[data-train="bag"]'); await pg.wait_for_timeout(500)
+        check(await pg.evaluate(f"{SAVED}.tally.trains") == 30, f'{dev} 実績：ジムで数がふえる')
+        await pg.evaluate("S.tally.meals=100; save(); renderAll()")
+        await pg.click('.tabbar [data-tab="home"]'); await pg.click('#btnMission'); await pg.wait_for_timeout(300)
+        check(await pg.evaluate("UI.misTab === 'ever'"), f'{dev} 実績：さっきのタブを覚えている')
+        await pg.click('[data-a="trains"]'); await pg.click('[data-a="meals"]'); await pg.wait_for_timeout(300)
+        s = await pg.evaluate(f"(()=>{{const s={SAVED};return {{p:s.items.protein, o:s.owned.includes('tee_diary')}}}})()")
+        check(s == {'p': 2, 'o': True}, f'{dev} 実績：プロテイン・きせかえ（{s}）')
+        await pg.click('#modalClose'); await pg.wait_for_timeout(1500)
+        await pg.click('.tabbar [data-tab="cat"]'); await pg.click('#catSeg [data-v="wear"]'); await pg.click('[data-lslot="top"]'); await pg.wait_for_timeout(300)
+        z = await pg.evaluate("({z:document.querySelector('.zk-top').innerText, has:!!document.querySelector('[data-wear=\"tee_diary\"] .rar.ach')})")
+        check('/ 50' in z['z'] and z['has'], f'{dev} 実績：きせかえは「実績」・図鑑は 50 のまま（{z}）')
+        await pg.click('[data-wear="tee_diary"]'); await pg.wait_for_timeout(300)
+        await shot(pg, f'achieve-{dev}-tee')
+        # 称号
+        await pg.evaluate("S.tally.meals=300; save()")
+        await pg.click('.tabbar [data-tab="home"]'); await pg.click('#btnMission'); await pg.wait_for_timeout(300); await pg.click('[data-a="meals"]'); await pg.wait_for_timeout(300)
+        t = await pg.evaluate("document.querySelector('[data-a=\"meals\"]') ? 'still' : document.getElementById('modalBody').innerText")
+        check('コンプリート' in t, f'{dev} 実績：ごはん コンプリート')
+        await pg.click('#modalClose'); await pg.wait_for_timeout(1300)
+        await pg.click('.tabbar [data-tab="cat"]'); await pg.click('#catSeg [data-v="status"]'); await pg.wait_for_timeout(300)
+        await pg.click('#ncTitle'); await pg.wait_for_timeout(300)
+        opts = await pg.evaluate("[...document.querySelectorAll('[data-title]')].map(b=>b.dataset.title)")
+        check(opts == ['みならい', 'ごはん記録の達人'], f'{dev} 称号：えらべる称号（{opts}）')
+        await shot(pg, f'achieve-{dev}-title')
+        await pg.click('[data-title="ごはん記録の達人"]'); await pg.wait_for_timeout(300)
+        t = await pg.evaluate("document.getElementById('ncTitle').innerText")
+        check('ごはん記録の達人' in t, f'{dev} 称号：つけた称号を出す（{t!r}）')
+        check(not pg.errs, f'{dev} 実績 エラーなし {pg.errs[:2]}')
+        await ctx.close()
+    # 回数がふえる・消すとへる（ミニゲーム・ごはん・写真）
+    ctx, pg = await page(b, 'ip13', b103())
+    await start(pg)
+    await record(pg, photo=True); await record(pg, 'みそしる', 40)
+    await pg.evaluate("miniReward(5); nyankaloMini.played(); save()")
+    s = await pg.evaluate(f"{SAVED}.tally")
+    check(s['meals'] == 2 and s['photos'] == 1 and s['minis'] == 2, f'実績：ごはん・写真・ミニゲームの数（{s}）')
+    ms = await pg.evaluate(f"{SAVED}.days['2026-11-17'].meals.map(m=>m.id)")
+    await pg.click('.tabbar [data-tab="history"]'); await pg.wait_for_timeout(300)
+    await pg.click(f'[data-edit="{ms[0]}"]'); await pg.wait_for_timeout(300); await pg.click('#edDel'); await pg.click('#edDel'); await pg.wait_for_timeout(300)
+    s = await pg.evaluate(f"{SAVED}.tally")
+    check(s['meals'] == 1 and s['photos'] == 0, f'実績：消したら へる（{s}）')
+    check(not pg.errs, f'実績 数 エラーなし {pg.errs[:2]}')
+    await ctx.close()
+
+async def t_stone(b):
+    for dev in DEV:
+        ctx, pg = await page(b, dev, b103(stones=25, coins=850))
+        await start(pg)
+        await pg.click('.tabbar [data-tab="shop"]'); await pg.wait_for_timeout(300)
+        r = await pg.evaluate("({bal:document.getElementById('shopBalance').innerText, packs:document.querySelectorAll('.stone-pack').length, over:document.documentElement.scrollWidth>innerWidth+1})")
+        check('25' in r['bal'] and r['packs'] == 3 and not r['over'], f'{dev} ダイヤ：残高・パック（{r}）')
+        await pg.evaluate("document.querySelector('.stone-ex').scrollIntoView({block:'center'})"); await shot(pg, f'stone-{dev}-shop')
+        await pg.click('[data-sinc]'); await pg.click('[data-sinc]'); await pg.wait_for_timeout(200)
+        q = await pg.evaluate("document.querySelector('.stone-ex output').textContent")
+        check(q == '2', f'{dev} ダイヤ：持っている分まで（{q}）')
+        await pg.click('#stoneGo'); await pg.wait_for_timeout(1800)
+        s = await pg.evaluate(f"(()=>{{const s={SAVED};return {{c:s.coins, st:s.stones, dis:document.getElementById('stoneGo').disabled}}}})()")
+        check(s == {'c': 1050, 'st': 5, 'dis': True}, f'{dev} ダイヤ：20 → 200コイン・足りないと押せない（{s}）')
+        await pg.click('[data-pack="0"]'); await pg.wait_for_timeout(300)
+        t = await pg.evaluate("document.getElementById('modalBody').innerText")
+        check('これは見本です' in t and '¥120' in t, f'{dev} ダイヤ：パックは見本（{t[:40]!r}）')
+        await shot(pg, f'stone-{dev}-sample')
+        await pg.click('#spOk'); await pg.wait_for_timeout(200)
+        check(await pg.evaluate(f"{SAVED}.stones") == 5, f'{dev} ダイヤ：見本はダイヤを出さない')
+        check(not pg.errs, f'{dev} ダイヤ エラーなし {pg.errs[:2]}')
+        await ctx.close()
+    # ログボ7日目
+    ctx, pg = await page(b, 'se', b103(stones=0, coins=850, login={"last": "2026-11-16", "streak": 6}))
+    await start(pg); await pg.click('#btnLogin'); await pg.wait_for_timeout(300)
+    t = await pg.evaluate("document.getElementById('loginClaim').innerText")
+    check('💎5' in t, f'ダイヤ：ログボ7日目のボタン（{t!r}）')
+    await shot(pg, 'stone-se-login')
+    await pg.click('#loginClaim'); await pg.wait_for_timeout(300)
+    s = await pg.evaluate(f"(()=>{{const s={SAVED};return {{c:s.coins, st:s.stones}}}})()")
+    check(s == {'c': 1150, 'st': 5}, f'ダイヤ：ログボ7日目 +300コイン・+5ダイヤ（{s}）')
+    await ctx.close()
+
+async def del_meal(pg, mid, date=None):
+    await pg.click('.tabbar [data-tab="history"]'); await pg.wait_for_timeout(300)
+    if date: await pg.click(f'[data-day="{date}"]'); await pg.wait_for_timeout(200)
+    await pg.click(f'[data-edit="{mid}"]'); await pg.wait_for_timeout(300); await pg.click('#edDel'); await pg.click('#edDel'); await pg.wait_for_timeout(400)
+    await pg.click('.tabbar [data-tab="home"]'); await pg.wait_for_timeout(200)
+
+async def t_mealdel(b):
+    ST = f"(()=>{{const s={SAVED}, d=s.days[todayStr()]||{{}};return {{st:s.stamina, rw:d.mealRewards, pb:d.photoBonus||0, n:(d.meals||[]).length}}}})()"
+    # 新しい記録：ふえた分だけ もどす
+    ctx, pg = await page(b, 'ip13', b103(stamina=80))
+    await start(pg)
+    await record(pg); s = await pg.evaluate(ST)
+    check(s['st'] == 95 and s['rw'] == 1, f'消す：記録で +15（{s}）')
+    mid = await pg.evaluate(f"{SAVED}.days[todayStr()].meals[0].id")
+    await del_meal(pg, mid); s = await pg.evaluate(ST)
+    t = await pg.evaluate("document.getElementById('toast').innerText")
+    check(s['st'] == 80 and s['rw'] == 0 and s['n'] == 0, f'消す：スタミナ −15・ごほうびの回数ももどる（{s}）')
+    check('スタミナ −15' in t, f'消す：トーストで知らせる（{t!r}）')
+    await shot(pg, 'mealdel-ip13-toast')
+    # 満タン近く：本当にふえた分だけ
+    await pg.evaluate("S.stamina = 95; save(); renderAll()")
+    await record(pg); mid = await pg.evaluate(f"{SAVED}.days[todayStr()].meals[0].id")
+    check(await pg.evaluate(f"{SAVED}.days[todayStr()].meals[0].st") == 5, '消す：満タンのときは ふえた分（+5）を覚える')
+    await del_meal(pg, mid); s = await pg.evaluate(ST)
+    check(s['st'] == 95, f'消す：満タン近くは −5（{s}）')
+    # 使ったあと：0 より下にしない
+    await record(pg); mid = await pg.evaluate(f"{SAVED}.days[todayStr()].meals[0].id")
+    await pg.evaluate("S.stamina = 3; save(); renderAll()")
+    await del_meal(pg, mid); s = await pg.evaluate(ST)
+    check(s['st'] == 0, f'消す：スタミナは 0 より下にならない（{s}）')
+    # 写真つき：ミニゲーム +1 も もどす
+    await pg.evaluate("S.stamina = 50; save(); renderAll()")
+    await record(pg, photo=True); s = await pg.evaluate(ST)
+    check(s['pb'] == 1, f'消す：写真つきで ミニゲーム +1（{s}）')
+    mid = await pg.evaluate(f"{SAVED}.days[todayStr()].meals[0].id")
+    await del_meal(pg, mid); s = await pg.evaluate(ST)
+    check(s['pb'] == 0 and s['st'] == 50, f'消す：写真の +1回 も もどす（{s}）')
+    check(not pg.errs, f'消す エラーなし {pg.errs[:2]}')
+    await ctx.close()
+    # 前の版の記録（st がない）：ルールで考える（ごほうびの回数ぶん、古い順に +15）
+    st = b103(stamina=50)
+    st['days'] = {'2026-11-17': dayrec([meal('a', 'morning', '08:00'), meal('b', 'noon', '12:00'), meal('c', 'snack', '15:00', photo='data:image/jpeg;base64,AA')], mealRewards=2, photoBonus=1)}
+    ctx, pg = await page(b, 'se', st)
+    await start(pg)
+    await del_meal(pg, 'c'); s = await pg.evaluate(ST)
+    check(s['st'] == 50 and s['rw'] == 2 and s['pb'] == 0, f'消す（前の版）：3つめは ごほうびなし・写真の +1 は もどす（{s}）')
+    await del_meal(pg, 'b'); s = await pg.evaluate(ST)
+    check(s['st'] == 35 and s['rw'] == 1, f'消す（前の版）：2つめは −15（{s}）')
+    check(not pg.errs, f'消す（前の版） エラーなし {pg.errs[:2]}')
+    await ctx.close()
+    # きのう（まだ しめていない）の「あとから」の記録：ごほうびはないので もどさない
+    st = b103(stamina=50, settled='2026-11-15', closeAsk='2026-11-16')
+    st['days'] = {'2026-11-16': dayrec([meal('y', time='あとから')])}
+    ctx, pg = await page(b, 'ip13', st, '2026-11-17T11:00:00+09:00')
+    await start(pg)
+    await del_meal(pg, 'y', '2026-11-16'); s = await pg.evaluate(f"(()=>{{const s={SAVED};return {{st:s.stamina, n:s.days['2026-11-16'].meals.length}}}})()")
+    check(s == {'st': 50, 'n': 0}, f'消す：きのうの分は スタミナを もどさない（{s}）')
+    check(not pg.errs, f'消す（きのう） エラーなし {pg.errs[:2]}')
+    await ctx.close()
+
 GROUPS = [('home', t_home), ('tabs', t_tabs), ('tour', t_tour), ('gacha', t_gacha), ('level', t_level), ('coin', t_coin), ('daily', t_daily), ('first', t_first),
-          ('battle', t_battle), ('slot', t_slot), ('sagase', t_sagase), ('font', t_font), ('a11y', t_a11y), ('manifest', t_manifest)]
+          ('battle', t_battle), ('slot', t_slot), ('sagase', t_sagase), ('font', t_font), ('a11y', t_a11y), ('manifest', t_manifest),
+          ('memo', t_memo), ('migrate', t_migrate), ('achieve', t_achieve), ('stone', t_stone), ('meal-delete', t_mealdel)]
 
 async def main():
     async with async_playwright() as p:

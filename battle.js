@@ -236,6 +236,8 @@ async function bFinish() {
   if (r.status === 200) {
     delta = r.delta; S.battle.me = r.me;
     if (!r.practice) { coin = win ? BATTLE.winCoin : BATTLE.loseCoin; S.coins += coin; }
+    if (!r.practice && win) { tallyAdd('wins'); memoAdd('win1'); }   // v10.3：ずっとミッション・おもいで（練習試合は数えない）
+    if (S.tally && r.me && r.me.wins > S.tally.wins) S.tally.wins = r.me.wins;
     rateTxt = r.practice ? '練習試合（レートは変わりません）' : `レート ${r.me.rating}（${delta >= 0 ? '+' : ''}${delta}）　${r.me.rank}位`;
   } else rateTxt = `結果を送れませんでした（${esc(bErr(r))}）。次の対戦のときに「負け」あつかいになります`;
   S.battle.log = [{ opp: op.name + (op.cpu ? '（CPU）' : `（${op.owner}）`), win, delta, practice: B.practice, at: Date.now() }, ...(S.battle.log || [])].slice(0, 20);
