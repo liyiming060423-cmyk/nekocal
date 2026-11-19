@@ -1,0 +1,72 @@
+/* にゃんカロ イベントのミニゲーム（v10.4）共通の見た目 */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; width: 100%; height: 100%; height: 100dvh; overflow: hidden; background: #FFF6E6; color: #4A2A1A;
+  font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", sans-serif; user-select: none; -webkit-user-select: none; touch-action: none; }
+.eg { position: relative; width: 100%; height: 100%; overflow: hidden; --c: #F48FB1; --c2: #FFE3EE; }
+#egCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.eg-sprites { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.eg-cat { position: absolute; left: 0; top: 0; width: 100px; transform-origin: 50% 100%; will-change: transform; }
+.eg-cat .pc { cursor: default; }
+.eg-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+button { font: inherit; color: inherit; }
+
+/* 遊んでいるあいだ */
+.eg-hud { position: absolute; left: 0; right: 0; top: 0; padding: max(8px, env(safe-area-inset-top)) 10px 0; display: grid; grid-template-columns: 44px 1fr auto; gap: 8px; align-items: center; pointer-events: none; z-index: 3; }
+.eg-hud > * { pointer-events: auto; }
+.eg-round { width: 44px; height: 44px; border-radius: 50%; border: 3px solid #4A2A1A; background: #FFFFFF; font-weight: 900; font-size: 16px; box-shadow: 0 3px 0 #4A2A1A; }
+.eg-round:active { transform: translateY(2px); box-shadow: 0 1px 0 #4A2A1A; }
+.eg-score { justify-self: center; min-width: 120px; text-align: center; background: rgba(255, 255, 255, .92); border: 3px solid #4A2A1A; border-radius: 16px; padding: 0 14px 2px; line-height: 1.1; }
+.eg-score small { display: block; font-size: 11px; font-weight: 900; color: #7E6150; padding-top: 3px; }
+.eg-score b { font-size: 24px; font-variant-numeric: tabular-nums; }
+.eg-info { justify-self: end; min-width: 44px; min-height: 44px; display: flex; align-items: center; gap: 2px; background: rgba(255, 255, 255, .92); border: 3px solid #4A2A1A; border-radius: 14px; padding: 2px 8px; font-weight: 900; font-size: 15px; white-space: nowrap; }
+.eg-info:empty { visibility: hidden; }
+.eg-timebar { grid-column: 1 / -1; height: 12px; border: 2.5px solid #4A2A1A; border-radius: 99px; background: rgba(255, 255, 255, .9); overflow: hidden; }
+.eg-timebar i { display: block; height: 100%; width: 100%; background: var(--c); transform-origin: 0 50%; }
+.eg-timebar.low i { background: #E0573F; }
+.eg-timebar[hidden] { display: none; }
+.eg-combo { position: absolute; left: 50%; top: calc(max(8px, env(safe-area-inset-top)) + 84px); transform: translateX(-50%); font-weight: 900; font-size: 22px; color: #FFFFFF; text-shadow: 0 2px 0 #4A2A1A, 2px 0 0 #4A2A1A, -2px 0 0 #4A2A1A, 0 -2px 0 #4A2A1A; pointer-events: none; z-index: 3; white-space: nowrap; }
+.eg-combo.pop { animation: egPop .35s ease; }
+@keyframes egPop { 0% { transform: translateX(-50%) scale(1.5); } 100% { transform: translateX(-50%) scale(1); } }
+.eg-count { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); font-size: 96px; font-weight: 900; color: #FFFFFF; text-shadow: 0 4px 0 #4A2A1A, 4px 0 0 #4A2A1A, -4px 0 0 #4A2A1A, 0 -4px 0 #4A2A1A; pointer-events: none; z-index: 4; }
+.eg-count.go { font-size: 72px; color: #FFE07A; }
+
+/* パネル（はじめ・いちじていし・けっか） */
+.eg-panel { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; overflow-y: auto; padding: max(12px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom)); background: linear-gradient(180deg, rgba(255, 246, 230, .2), rgba(255, 246, 230, .7)), var(--bgimg, none) center / cover no-repeat, #FFF6E6; touch-action: pan-y; }
+.eg-panel[hidden] { display: none; }
+.eg-panel.dim { background: rgba(74, 42, 26, .55); justify-content: center; }
+.eg-card { width: 100%; max-width: 420px; background: rgba(255, 255, 255, .96); border: 3px solid #4A2A1A; border-radius: 22px; box-shadow: 0 5px 0 #4A2A1A; padding: 14px; display: grid; gap: 10px; }
+.eg-top { width: 100%; max-width: 420px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.eg-back { min-height: 44px; padding: 0 14px 0 10px; border: 2.5px solid #4A2A1A; border-radius: 999px; background: #FFFFFF; font-weight: 900; font-size: 14px; box-shadow: 0 3px 0 #4A2A1A; }
+.eg-snd { width: 44px; height: 44px; border-radius: 50%; border: 2.5px solid #4A2A1A; background: #FFFFFF; font-size: 18px; box-shadow: 0 3px 0 #4A2A1A; }
+.eg-banner { display: block; width: 100%; max-width: 380px; height: auto; margin: 0 auto 4px; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .25)); }
+.eg-title { margin: 0; text-align: center; font-size: 24px; font-weight: 900; }
+.eg-desc { margin: 0; text-align: center; font-size: 13.5px; font-weight: 700; color: #7E6150; }
+.eg-how { margin: 0; padding: 10px 12px; list-style: none; background: var(--c2); border-radius: 14px; display: grid; gap: 4px; font-size: 14px; font-weight: 700; }
+.eg-how li { display: flex; gap: 6px; }
+.eg-how li::before { content: "●"; color: var(--c); font-size: 10px; margin-top: 5px; }
+.eg-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.eg-stats div { background: #FFF6E6; border: 2px solid #F1E1C4; border-radius: 12px; padding: 6px 4px; text-align: center; line-height: 1.25; }
+.eg-stats small { display: block; font-size: 11px; font-weight: 900; color: #7E6150; }
+.eg-stats b { font-size: 16px; }
+.eg-catbox { position: relative; width: 104px; margin: -6px auto -4px; }
+.eg-btn { min-height: 54px; border: 3px solid #4A2A1A; border-radius: 16px; background: var(--c); color: #FFFFFF; font-weight: 900; font-size: 20px; text-shadow: 0 1px 0 rgba(0, 0, 0, .35); box-shadow: 0 4px 0 #4A2A1A; letter-spacing: .06em; }
+.eg-btn.white { background: #FFFFFF; color: #4A2A1A; text-shadow: none; font-size: 17px; min-height: 48px; }
+.eg-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #4A2A1A; }
+.eg-note { margin: 0; font-size: 12px; color: #7E6150; text-align: center; font-weight: 700; }
+/* けっか */
+.eg-res-score { text-align: center; }
+.eg-res-score small { display: block; font-weight: 900; color: #7E6150; }
+.eg-res-score b { font-size: 48px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.eg-new { display: inline-block; margin-left: 6px; padding: 0 8px; border-radius: 8px; background: #E0573F; color: #FFFFFF; font-size: 13px; vertical-align: 14px; animation: egPop2 .8s ease infinite alternate; }
+@keyframes egPop2 { to { transform: scale(1.12); } }
+.eg-rows { display: grid; gap: 4px; }
+.eg-rows div { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; border-bottom: 2px dashed #F1E1C4; padding-bottom: 3px; }
+.eg-rows b.plus { color: #D9772B; }
+.eg-say { position: relative; background: #FFFFFF; border: 3px solid #4A2A1A; border-radius: 16px; padding: 8px 12px; font-weight: 900; text-align: center; }
+.eg-say::after { content: ""; position: absolute; left: 50%; bottom: -12px; width: 18px; height: 18px; background: #FFFFFF; border-right: 3px solid #4A2A1A; border-bottom: 3px solid #4A2A1A; transform: translateX(-50%) rotate(45deg); }
+.eg-clear { text-align: center; font-weight: 900; color: #FFFFFF; background: linear-gradient(90deg, #F7A21E, #F27B9E); border: 3px solid #4A2A1A; border-radius: 14px; padding: 6px; }
+.eg-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.eg-cat-jump .pc-idle { animation: egHop .6s ease-in-out infinite alternate; }
+@keyframes egHop { to { transform: translateY(-8%); } }
+@media (max-height: 600px) { .eg-catbox { width: 96px; } .eg-title { font-size: 20px; } .eg-how { font-size: 13px; padding: 8px 10px; } .eg-btn { min-height: 48px; } .eg-res-score b { font-size: 38px; } }
+@media (prefers-reduced-motion: reduce) { .eg-new, .eg-combo.pop, .eg-cat-jump .pc-idle { animation: none; } }
