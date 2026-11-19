@@ -22,13 +22,14 @@ function defaultState() {
     resultQ: [],                      // v9.9 まだ見せていない「きのうの結果」
     login: { last: '', streak: 0 },
     claimed: { date: t, ids: [] },
-    settings: { sound: true, bgm: true, vibrate: true, notify: false, lang: 'ja', remind: ['12:00', '19:00'] },
+    settings: { sound: true, bgm: true, vibrate: true, notify: false, lang: 'ja', remind: ['12:00', '19:00'], event: 'auto' },   // v10.4 event＝発表用にイベントを決める（'auto'＝ふつう）
     news: APP_NEWS,                   // v10.1 どの版のお知らせまで見たか（はじめての人には出さない）
     // v10.3 ずっとミッション・おもいで（achieve.js）。tally＝ずっと数える回数（S.days は60日で消えるので別に持つ）
     tally: { meals: 0, photos: 0, steps: 0, treasures: 0, trains: 0, minis: 0, wins: 0, bestStreak: 0 },
     ach: {},                          // v10.3 実績：{ 種類: 受けとった段階の数 }
     titles: [], title: '',            // v10.3 実績でもらった称号・つけている称号（'' ＝ レベルの称号）
     memo: [], memoNew: 0,             // v10.3 おもいで・まだ見ていない数
+    ev: { pick: '', best: {}, clear: {} },   // v10.4 イベント：pick＝いま開いているイベント（EVENT_MODE 'all' のとき）・best＝ミニゲームの いちばんの点・clear＝はじめてクリアした日
     onboarded: false
   };
 }
@@ -55,6 +56,8 @@ function load() {
     if (!Array.isArray(st.memo)) st.memo = [];
     if (!Array.isArray(st.titles)) st.titles = [];
     if (!st.ach || typeof st.ach !== 'object') st.ach = {};
+    // v10.4：イベント
+    st.ev = Object.assign({ pick: '', best: {}, clear: {} }, s.ev); st.ev.best = Object.assign({}, st.ev.best); st.ev.clear = Object.assign({}, st.ev.clear);
     if (s.news === undefined) st.news = '';   // v10.1：前の版のデータ → メニューが変わったお知らせを1回出す
     // 前の版で骸骨・爆発になっていた猫は、今日から入院（入院費はとらない）
     if (st.cat.dead) {
@@ -85,7 +88,7 @@ function save() {
   }
 }
 function day(d = todayStr()) {
-  if (!S.days[d]) S.days[d] = { meals: [], steps: 0, stepUnits: 0, trains: 0, minis: 0, miniRewards: 0, mealRewards: 0, photoBonus: 0, slotNet: 0 };
+  if (!S.days[d]) S.days[d] = { meals: [], steps: 0, stepUnits: 0, trains: 0, minis: 0, miniRewards: 0, mealRewards: 0, photoBonus: 0, slotNet: 0, evPlays: 0 };   // v10.4 evPlays＝イベントのミニゲームで コインをもらった回数
   return S.days[d];
 }
 const intake = d => (S.days[d] ? S.days[d].meals.reduce((a, m) => a + m.kcal, 0) : 0);

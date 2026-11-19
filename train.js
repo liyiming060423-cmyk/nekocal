@@ -24,7 +24,7 @@ function renderTrain() {
   } else {
     const left = miniLeft(), pb = Math.min(RULE.photoBonusMax, d.photoBonus || 0);
     $('trainBody').innerHTML = `<div class="card" style="padding:10px 14px;margin-bottom:10px;font-weight:900;text-align:center">今日の報酬つきプレイ　のこり ${left}回<div class="hint" style="font-weight:700">写真つきでごはんを記録すると +1回（今日 ${pb}/${RULE.photoBonusMax}）</div></div>
-      <div class="list">
+      ${evMiniCard()}<div class="list">
         <div class="card gym-card"><div class="ico" style="background:#FFE0EA;font-weight:900;font-size:30px;color:#C2335E">?</div><div><div style="font-weight:900">どっちが高い？</div><div class="hint">カロリーが高いほうを選ぶクイズ（5問）</div></div><button class="btn small" data-mini="quiz">あそぶ</button></div>
         <div class="card gym-card"><div class="ico">${I.sandbag}</div><div><div style="font-weight:900">サンドバッグ連打</div><div class="hint">10秒でできるだけタップ！</div></div><button class="btn small" data-mini="tap">あそぶ</button></div>
         <div class="card gym-card"><div class="ico" style="background:#E3F4E5;font-size:30px">🐱</div><div><div style="font-weight:900">お題の猫を探せ！</div><div class="hint">30秒でお題の猫をたくさんタップ！（最大${RULE.miniRewardMax}コイン）</div></div><button class="btn small" data-mini="sagase">あそぶ</button></div>
@@ -50,7 +50,16 @@ $('trainBody').addEventListener('click', e => {
   else if (t.dataset.mini === 'quiz') playQuiz();
   else if (t.dataset.mini === 'tap') playTap();
   else if (MINI_PAGES[t.dataset.mini]) openMiniPage(t.dataset.mini);
+  else if (t.dataset.evgame) openEvGame(t.dataset.evgame);   // v10.4
+  else if (t.dataset.evhub !== undefined) openEventHub();
 });
+// v10.4：ミニゲームの いちばん上に イベントのゲーム（コインの回数は ほかのミニゲームと べつ）
+function evMiniCard() {
+  const e = typeof eventNow === 'function' ? eventNow() : null; if (!e) return '';
+  return `<div class="card gym-card ev-mini" style="--c:${e.color};--c2:${e.color2}"><div class="ico"><img src="${evFile(e, 'bag.webp')}" alt="" width="48" height="48"></div>
+    <div><div style="font-weight:900"><span class="ev-tag">${e.icon} ${esc(e.name)}イベント</span>${esc(e.game)}</div><div class="hint">${esc(e.gameDesc)}（きょう コインは あと ${evPlaysLeft()}回・最大${EV_GAME.max}コイン）</div>
+    ${EVENT_MODE === 'all' ? '<button type="button" class="link-btn" data-evhub>ほかのイベントを えらぶ ›</button>' : ''}</div><button class="btn small" data-evgame="${e.id}">あそぶ</button></div>`;
+}
 function doTraining(t) {
   if (S.cat.hospital) { toast('入院中はトレーニングできません（ミニゲームはできます）'); return; }
   if (S.stamina < t.cost) { toast('スタミナが足りません。ごはんを記録するか歩こう'); se('bad'); return; }

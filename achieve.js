@@ -9,7 +9,7 @@ function tallyAdd(k, n = 1) { if (!S.tally) return; S.tally[k] = Math.max(0, (S.
 // ミニゲームを1回あそんだ（今日の回数と、ずっとの回数）
 function bumpMini(d) { d.minis = (d.minis || 0) + 1; tallyAdd('minis'); }
 // 図鑑：福袋から出るきせかえだけ数える（実績のきせかえ・「なし」は入れない）
-const zukanKeys = () => Object.keys(WEAR).filter(k => !/_none$/.test(k) && !WEAR[k].ach);
+const zukanKeys = () => Object.keys(WEAR).filter(k => !/_none$/.test(k) && !WEAR[k].ach && !WEAR[k].ev);   // v10.4：イベントのきせかえも入れない
 const zukanGot = () => zukanKeys().filter(k => S.owned.includes(k)).length;
 const walkKm = steps => steps * (S.user.height || 165) * RULE.strideRate / 100000;
 

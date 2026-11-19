@@ -1,6 +1,6 @@
 // アプリの版。index.html の ?v= と sw.js の VERSION もこれにそろえる
-const APP_VER = '10.3';
-const APP_NEWS = '10.3';   // この版のお知らせ（ui.js の showNews）まで見たか。10.1＝メニューが変わった、10.3＝おもいで・ずっとミッション・ダイヤ（次に大きく変えたら、数字をその版にする）
+const APP_VER = '10.4';
+const APP_NEWS = '10.4';   // この版のお知らせ（ui.js の showNews）まで見たか。10.1＝メニューが変わった、10.3＝おもいで・ずっとミッション・ダイヤ、10.4＝イベント（次に大きく変えたら、数字をその版にする）
 
 // にゃんカロ データ定義
 // アイテム・ショップ・トレーニング・ミッションなど「数字や名前」はここだけで管理する。
@@ -72,7 +72,33 @@ const WEAR = {
   pirate:      { slot: 'suit', name: '海賊',                 rar: 'R',  color: '#9A2E2E', body: '#9A2E2E', bonus: { pow: 3 } },
   baseball_uni:{ slot: 'suit', name: '野球のユニフォーム',   rar: 'R',  color: '#24346A', body: '#FFFFFF', bonus: { pow: 4 } },
   dragon_suit: { slot: 'suit', name: 'ドラゴン',             rar: 'SR', color: '#D9503A', body: '#D9503A', bonus: { pow: 8, spd: 6 } },
-  knight:      { slot: 'suit', name: '騎士',                 rar: 'SR', color: '#B8C4CE', body: '#B8C4CE', bonus: { pow: 6, sta: 8 } }
+  knight:      { slot: 'suit', name: '騎士',                 rar: 'SR', color: '#B8C4CE', body: '#B8C4CE', bonus: { pow: 6, sta: 8 } },
+  // v10.4 イベントのきせかえ（ev: イベントのid）。イベントガチャだけで出る・福袋には出ない・図鑑の 50 には入らない・能力のボーナスはなし（D40・D41）
+  // 絵は cat.js の suitHead（頭）・suitBack（体のうしろ）・suitFront（体の前：えり・ボタン・帯など）、服の色は petcat.css の .wear-suit-○○
+  ev_gakuran:   { slot: 'suit', name: '学ラン',               rar: 'N',  color: '#1F2433', body: '#1F2433', ev: 'school' },
+  ev_sailor:    { slot: 'suit', name: 'セーラー服',           rar: 'N',  color: '#F4F6FA', body: '#F4F6FA', ev: 'school' },
+  ev_randoseru: { slot: 'suit', name: 'ランドセル',           rar: 'R',  color: '#D8343F', body: '#F4F6FA', ev: 'school' },
+  ev_hakama:    { slot: 'suit', name: '卒業はかま',           rar: 'SR', color: '#7A3E8E', body: '#F2A7BE', ev: 'school' },
+  ev_teru:      { slot: 'suit', name: 'てるてる坊主',         rar: 'N',  color: '#FFFFFF', body: '#FFFFFF', ev: 'rainy' },
+  ev_snail:     { slot: 'suit', name: 'かたつむり',           rar: 'N',  color: '#C98A4B', body: '#9BC46A', ev: 'rainy' },
+  ev_ajisai:    { slot: 'suit', name: 'あじさい',             rar: 'R',  color: '#8C7BD8', body: '#7FA8E8', ev: 'rainy' },
+  ev_raijin:    { slot: 'suit', name: '雷さま',               rar: 'SR', color: '#F2C230', body: '#F2C230', ev: 'rainy' },
+  ev_suika:     { slot: 'suit', name: 'スイカの着ぐるみ',     rar: 'N',  color: '#3E9E4A', body: '#E84B4B', ev: 'summer' },
+  ev_aloha:     { slot: 'suit', name: 'アロハシャツ',         rar: 'N',  color: '#2FA7C8', body: '#2FA7C8', ev: 'summer' },
+  ev_yukata:    { slot: 'suit', name: '浴衣',                 rar: 'R',  color: '#2C4F9E', body: '#2C4F9E', ev: 'summer' },
+  ev_shark:     { slot: 'suit', name: 'サメの着ぐるみ',       rar: 'SR', color: '#5E8FB8', body: '#5E8FB8', ev: 'summer' },
+  ev_pumpkin:   { slot: 'suit', name: 'かぼちゃの着ぐるみ',   rar: 'N',  color: '#F0882A', body: '#F0882A', ev: 'halloween' },
+  ev_ghost:     { slot: 'suit', name: 'おばけ',               rar: 'N',  color: '#F7F4FF', body: '#F7F4FF', ev: 'halloween' },
+  ev_mummy:     { slot: 'suit', name: 'ミイラ',               rar: 'R',  color: '#EFE6CF', body: '#EFE6CF', ev: 'halloween' },
+  ev_dracula:   { slot: 'suit', name: 'ドラキュラ伯爵',       rar: 'SR', color: '#2A1F35', body: '#2A1F35', ev: 'halloween' },
+  ev_reindeer:  { slot: 'suit', name: 'トナカイ',             rar: 'N',  color: '#A8693E', body: '#A8693E', ev: 'xmas' },
+  ev_snowman:   { slot: 'suit', name: 'ゆきだるま',           rar: 'N',  color: '#FFFFFF', body: '#FFFFFF', ev: 'xmas' },
+  ev_xtree:     { slot: 'suit', name: 'クリスマスツリー',     rar: 'R',  color: '#2E8B4E', body: '#2E8B4E', ev: 'xmas' },
+  ev_snowqueen: { slot: 'suit', name: 'スノークイーン',       rar: 'SR', color: '#9FD3F2', body: '#DDF0FB', ev: 'xmas' },
+  ev_kagami:    { slot: 'suit', name: '鏡もちの着ぐるみ',     rar: 'N',  color: '#FBF7EE', body: '#FBF7EE', ev: 'newyear' },
+  ev_sheep:     { slot: 'suit', name: 'ひつじの着ぐるみ',     rar: 'N',  color: '#FFF8EC', body: '#FFF8EC', ev: 'newyear' },
+  ev_furisode:  { slot: 'suit', name: '振袖',                 rar: 'R',  color: '#D9334A', body: '#D9334A', ev: 'newyear' },
+  ev_shishi:    { slot: 'suit', name: '獅子舞',               rar: 'SR', color: '#C8302B', body: '#3E9A56', ev: 'newyear' }
 };
 const SLOT_NAME = { suit: 'コスチューム', head: '頭', top: '服', hand: '手' };
 
@@ -84,6 +110,7 @@ const SLOT_NAME = { suit: 'コスチューム', head: '頭', top: '服', hand: '
 const CATS = {
   tabby: {
     name: '茶トラ', desc: '元気いっぱいの茶トラ', w: 600, h: 813, x: 0,
+    fit: { neck: [272, 326], hem: [297, 512], hw: 176, cw: 130 },
     pivot: [487, 506], head: [241, 157, 186], hands: [[81, 325], [447, 254]],
     zones: [['tail', 541, 482, 62, 73], ['ear', 103, 68, 46, 49], ['ear', 344, 46, 46, 49],
       ['hand', 81, 319, 84, 89], ['hand', 447, 254, 79, 76], ['head', 238, 162, 187, 127],
@@ -91,6 +118,7 @@ const CATS = {
   },
   white: {
     name: '白猫', desc: 'まっしろでおっとり', w: 581, h: 813, x: -13,
+    fit: { neck: [268, 358], hem: [285, 526], hw: 168, cw: 125 },
     pivot: [488, 556], head: [254, 170, 178], hands: [[86, 339], [441, 298]],
     zones: [['tail', 524, 569, 56, 66], ['ear', 102, 87, 46, 49], ['ear', 341, 58, 46, 49],
       ['hand', 86, 339, 84, 76], ['hand', 441, 298, 87, 80], ['head', 254, 189, 180, 135],
@@ -98,6 +126,7 @@ const CATS = {
   },
   longwhite: {
     name: '白い長毛猫', desc: 'ふわふわのしっぽ自慢', w: 722, h: 813, x: -28,
+    fit: { neck: [305, 376], hem: [312, 532], hw: 188, cw: 140 },
     pivot: [534, 571], head: [269, 168, 185], hands: [[108, 343], [510, 278]],
     zones: [['tail', 640, 590, 80, 125], ['ear', 116, 87, 46, 49], ['ear', 370, 58, 46, 49],
       ['hand', 108, 343, 81, 75], ['hand', 510, 278, 72, 78], ['head', 269, 200, 190, 150],
@@ -105,12 +134,14 @@ const CATS = {
   },
   grey: {
     name: '灰色の長毛猫', desc: 'クールなボクサー', w: 580, h: 813, x: 9,
+    fit: { neck: [250, 330], hem: [280, 516], hw: 178, cw: 135 },
     pivot: [478, 474], head: [232, 165, 170], hands: [[87, 323], [445, 267]],
     zones: [['tail', 522, 411, 55, 95], ['ear', 65, 58, 45, 48], ['ear', 298, 44, 45, 48],
       ['hand', 87, 323, 70, 78], ['hand', 445, 267, 75, 90], ['head', 232, 170, 170, 130],
       ['foot', 87, 762, 85, 55], ['foot', 407, 768, 85, 55], ['belly', 283, 400, 170, 100], ['pants', 270, 585, 210, 85]]
   }
 };
+// v10.4 fit：コスチュームの「体の前」（cat-ev.js の suitFront）の目安。neck＝服のえりの まんなか、hem＝服のすその まんなか、hw＝すその はばの半分、cw＝むねの はばの半分（絵の座標）
 const CAT_KEYS = Object.keys(CATS);
 
 
@@ -147,6 +178,38 @@ const GACHA_ITEMS = {
 // ホームのイベントバナー（go: 'gacha' でガチャへ）
 const EVENT = { tag: '福袋', title: 'トレーニング<br>アイテム入り！', go: 'gacha' };
 const DUP_REFUND = 100;          // かぶったらコインに交換
+
+// ===== v10.4 イベント =====
+// EVENT_MODE：'all'＝6つ ぜんぶ同時に開く（テスト用。イベントページの上で えらぶ）／'rotate'＝1日1つ、下の順番で 0時に かわる（D38）
+const EVENT_MODE = 'all';
+const EVENT_BASE = '2026-11-19';   // rotate のとき、この日が EVENTS の1つめ（ここから日数 ÷ イベントの数 の あまりで決まる）
+// 絵・曲のファイルは id から決まる：ev-{id}-gacha.webp（ガチャの絵）・-home.webp（ホームの背景）・-banner.webp（タイトルの字）・-bag.webp（ホームのボタン）・-bgm.mp3
+// bags＝ガチャの絵の4つの福袋の場所（絵の幅・高さに対する %：左・上・幅・高さ）。on: false にすると そのイベントは出ない
+const EVENTS = [
+  { id: 'school',    name: '新学年',     gacha: '新学年ガチャ',       game: 'ねこの通学路',     gameDesc: '遅刻しないように、学校までの道を えらぼう', icon: '🌸', color: '#F48FB1', color2: '#FFE3EE', on: true,
+    bagNames: ['新学年の福袋', '入学の福袋', '進級の福袋', '卒業の福袋'], bags: [[4.4, 53, 22.3, 25], [27.5, 53, 21.1, 25], [51, 53, 21, 25], [73, 53, 22, 25]],
+    wears: ['ev_gakuran', 'ev_sailor', 'ev_randoseru', 'ev_hakama'] },
+  { id: 'rainy',     name: '梅雨',       gacha: '梅雨イベントガチャ', game: 'カエルぴょん',     gameDesc: 'おして ためて、はなして ジャンプ！ はっぱを わたろう', icon: '☔', color: '#7C8CE0', color2: '#E3E8FF', on: true,
+    bagNames: ['あじさいの福袋', 'てるてるの福袋', 'カエルの福袋', 'にじの福袋'], bags: [[8, 51, 20.9, 30], [30.3, 51, 20.1, 30], [52.6, 51, 19.4, 30], [74.5, 51, 20.1, 30]],
+    wears: ['ev_teru', 'ev_snail', 'ev_ajisai', 'ev_raijin'] },
+  { id: 'summer',    name: 'サマー',     gacha: 'スイカガチャ',       game: '金魚すくい',       gameDesc: 'ポイが やぶれる前に 金魚を すくおう', icon: '🍉', color: '#2FA7C8', color2: '#DDF4FA', on: true,
+    bagNames: ['緑のスイカ', '黄色のスイカ', '赤のスイカ', '黒のスイカ'], bags: [[8.8, 55, 19.1, 22.5], [29.5, 55, 19.1, 22.5], [50.2, 55, 18.8, 22.5], [71, 55, 19, 22.5]],
+    wears: ['ev_suika', 'ev_aloha', 'ev_yukata', 'ev_shark'] },
+  { id: 'halloween', name: 'ハロウィン', gacha: 'ハロウィンガチャ',   game: 'お菓子泥棒',       gameDesc: 'おばけを よけて、おかしを あつめよう', icon: '🎃', color: '#8A4FD0', color2: '#F0E4FF', on: true,
+    bagNames: ['むらさきリボンのかぼちゃ', 'しまリボンのかぼちゃ', 'ほしリボンのかぼちゃ', 'くろリボンのかぼちゃ'], bags: [[4.4, 57.5, 23, 21.5], [28, 57.5, 22, 21.5], [50.2, 57.5, 22, 21.5], [72.6, 57.5, 23.4, 21.5]],
+    wears: ['ev_pumpkin', 'ev_ghost', 'ev_mummy', 'ev_dracula'] },
+  { id: 'xmas',      name: 'クリスマス', gacha: 'クリスマスガチャ',   game: 'サンタのそり',     gameDesc: 'そりで 夜空を とんで、えんとつに プレゼント！', icon: '🎄', color: '#2E8B4E', color2: '#E2F4E6', on: true,
+    bagNames: ['緑のプレゼント', '黄色のプレゼント', '赤のオーナメント', '黒のオーナメント'], bags: [[9.3, 56.5, 18.5, 21], [29.8, 56.5, 19, 21], [50.3, 56.5, 19, 21], [70.8, 56.5, 19, 21]],
+    wears: ['ev_reindeer', 'ev_snowman', 'ev_xtree', 'ev_snowqueen'] },
+  { id: 'newyear',   name: 'お正月',     gacha: 'お正月ガチャ',       game: '鏡餅タワー',       gameDesc: 'おもちを まっすぐ たかく つみあげよう', icon: '🎍', color: '#D9334A', color2: '#FFE7DF', on: true,
+    bagNames: ['福の福袋', '麻の福袋', '幸の福袋', '財の福袋'], bags: [[8.3, 48, 20, 24], [30.8, 48, 20, 24], [52, 48, 20, 24], [74, 48, 19.7, 24]],
+    wears: ['ev_kagami', 'ev_sheep', 'ev_furisode', 'ev_shishi'] }
+];
+const EV_GACHA_COST = 500;     // イベントガチャ1回のコイン（いつも まだ持っていない きせかえが出る。4つ そろうと引けない）
+// いつもの福袋の絵（shop-bg.webp）の4つの福袋の場所（%）
+const BAGS_NORMAL = [[6.2, 47, 22, 31], [29.3, 47, 21, 31], [52.2, 47, 21, 31], [74.4, 47, 21.4, 31]];
+// イベントのミニゲーム：6つ ぜんぶ あわせて1日 plays 回まで コインがもらえる（1回 max まで）。はじめてクリアすると clear コイン（ゲームごとに1回）
+const EV_GAME = { plays: 3, max: 100, clear: 200 };
 
 // ジムのトレーニング（cost=使うスタミナ）
 // stat: pow=ちから / spd=すばやさ / sta=たいりょく
@@ -274,7 +337,14 @@ const MEMO = {
   streak7:   { icon: '🔥', t: '7日連続の記録', s: ['7日つづけて ごはんを記録できたにゃ！ えらいにゃ', '1週間 毎日 記録したにゃ。いい習慣が できてきたにゃ', '7日連続！ からだの調子も いい感じにゃ'] },
   streak30:  { icon: '🌟', t: '30日連続の記録', s: ['30日 つづけて記録できたにゃ！ もう 記録の名人にゃ', '1か月 毎日 いっしょだったにゃ。これからも よろしくにゃ', '30日連続！ こんなに つづくなんて すごいにゃ'] },
   leave:     { icon: '🏥', t: '退院した日', s: ['病院から 帰ってきたにゃ。おうちが いちばんにゃ', '退院できたにゃ！ これからは バランスよく食べるにゃ', 'お見舞い ありがとにゃ。元気になって もどったにゃ'] },
-  win1:      { icon: '⚔️', t: 'はじめての勝利', s: ['対戦で はじめて勝ったにゃ！ ねこパンチが きまったにゃ', 'はじめての勝ち！ ジムでの練習が 役に立ったにゃ', '勝ったにゃ！ きょうは ごほうびに いっぱい なでてほしいにゃ'] }
+  win1:      { icon: '⚔️', t: 'はじめての勝利', s: ['対戦で はじめて勝ったにゃ！ ねこパンチが きまったにゃ', 'はじめての勝ち！ ジムでの練習が 役に立ったにゃ', '勝ったにゃ！ きょうは ごほうびに いっぱい なでてほしいにゃ'] },
+  // v10.4 イベントで はじめて きせかえを もらった日（イベントごとに1つ）
+  ev_school:    { icon: '🌸', t: '新学年のきせかえ', s: ['新学年ガチャで きせかえを もらったにゃ！ ちょっとだけ おにいさんに なった気分にゃ', 'さくらの季節の きせかえにゃ。教室の においがするにゃ', 'あたらしい学年の きせかえ！ 通学路を あるいてみたいにゃ'] },
+  ev_rainy:     { icon: '☔', t: '梅雨のきせかえ', s: ['梅雨イベントで きせかえを もらったにゃ。雨の日も たのしくなりそうにゃ', 'あじさいの色の きせかえにゃ。カエルさんと おそろいにゃ', '雨の音を ききながら 着がえたにゃ。ぽつぽつ リズムが すきにゃ'] },
+  ev_summer:    { icon: '🍉', t: 'サマーのきせかえ', s: ['スイカガチャで きせかえを もらったにゃ！ 夏まつりに 行きたいにゃ', 'なつの きせかえにゃ。海の においが するにゃ', 'スイカを わったら きせかえが 出てきたにゃ…ってのは じょうだんにゃ'] },
+  ev_halloween: { icon: '🎃', t: 'ハロウィンのきせかえ', s: ['ハロウィンの きせかえを もらったにゃ！ トリック・オア・トリートにゃ', 'かぼちゃの においが するきせかえにゃ。おばけに なった気分にゃ', 'この すがたで おかしを もらいに行くにゃ。いたずらも ちょっとだけ…にゃ'] },
+  ev_xmas:      { icon: '🎄', t: 'クリスマスのきせかえ', s: ['クリスマスの きせかえを もらったにゃ！ サンタさん ありがとにゃ', 'ゆきの夜の きせかえにゃ。ほっぺが あったかいにゃ', 'プレゼントを あけたら きせかえだったにゃ。いちばん うれしい プレゼントにゃ'] },
+  ev_newyear:   { icon: '🎍', t: 'お正月のきせかえ', s: ['お正月の きせかえを もらったにゃ！ ことしも よろしくにゃ', 'おめでたい きせかえにゃ。おもちを たくさん 食べたく…いや、ほどほどにゃ', 'はつもうでに 着ていくにゃ。いい1年に なりますようににゃ'] },
 };
 
 // はじめてガイド（v9.1）：1回だけのミッション。ホームのバナーから開く

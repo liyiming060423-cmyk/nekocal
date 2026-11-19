@@ -259,6 +259,7 @@ const SUIT_HOLE = 'M70 140 a80 66 0 1 0 160 0 a80 66 0 1 0 -160 0 Z';
 const SUIT_HOOD = 'M36 214 C22 120 56 30 150 26 C244 30 278 120 264 214 Q150 236 36 214 Z';
 function suitHead(id) {
   const L = C.line;
+  if (/^ev_/.test(id)) return typeof evSuitHead === 'function' ? evSuitHead(id) : '';   // v10.4：イベントのきせかえは cat-ev.js
   const hood = (col, extra = '') => `<path d="${SUIT_HOOD} ${SUIT_HOLE}" fill="${col}" fill-rule="evenodd" stroke="${L}" stroke-width="5" stroke-linejoin="round"/>${extra}`;
   if (id === 'dino_hood') {
     let sp = '';
@@ -358,8 +359,11 @@ function suitHead(id) {
   }
   return '';
 }
+// v10.4 suitFront(id, cat)：体の前（服の上・手袋の下）。イベントのきせかえだけ（cat-ev.js）
+function suitFront(id, c) { return /^ev_/.test(id) && typeof evSuitFront === 'function' ? evSuitFront(id, c) : ''; }
 // suitBack(id, cat)：体のうしろに出す部分（マント・リュック）。cat は data.js の CATS の1匹。絵の座標で描く
 function suitBack(id, c) {
+  if (/^ev_/.test(id)) return typeof evSuitBack === 'function' ? evSuitBack(id, c) : '';   // v10.4
   const L = C.line, bz = (c.zones.find(z => z[0] === 'belly') || [0, 300, 410, 168, 97]), pz = (c.zones.find(z => z[0] === 'pants') || [0, 300, 600, 215, 85]);
   const [, bx, by, brx, bry] = bz, [, px, py, prx, pry] = pz;
   if (id === 'wizard') {

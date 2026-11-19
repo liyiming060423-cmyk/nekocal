@@ -68,6 +68,7 @@ function wearIcon(id) {
     return `<svg viewBox="14 -22 272 252" aria-hidden="true"><ellipse cx="150" cy="130" rx="97" ry="80" fill="#FBE3C6" stroke="${L}" stroke-width="5"/><circle cx="112" cy="124" r="8" fill="${L}"/><circle cx="188" cy="124" r="8" fill="${L}"/><path d="M140 150 q10 10 20 0" fill="none" stroke="${L}" stroke-width="4" stroke-linecap="round"/>${headGear(id, 97)}</svg>`;
   }
   if (w.slot === 'suit') {
+    if (w.ev && typeof evSuitIcon === 'function') { const ic = evSuitIcon(id); if (ic) return ic; }   // v10.4：イベントのきせかえ（cat-ev.js）
     if (id === 'suit_none') return `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="14" fill="none" stroke="#B9A48E" stroke-width="3" stroke-dasharray="4 4"/></svg>`;
     return `<svg viewBox="-20 -70 340 300" aria-hidden="true"><ellipse cx="150" cy="140" rx="84" ry="66" fill="#FBE3C6" stroke="${L}" stroke-width="5"/><circle cx="120" cy="135" r="7" fill="${L}"/><circle cx="180" cy="135" r="7" fill="${L}"/>${suitHead(id)}</svg>`;
   }

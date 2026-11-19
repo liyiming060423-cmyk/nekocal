@@ -89,7 +89,10 @@ function bgmUpdate() {
   }
   if (!want) { bgmEl.pause(); return; }
   // v9.8：mp3 には ?v= をつけない（版を上げるたびに大きな曲を全部ダウンロードしなおさないように。曲を変えるときはファイル名を変える）
-  if (want !== bgmCur) { bgmCur = want; bgmEl.src = BGM_FILES[want]; }
+  // v10.4：イベントのあいだは ホーム・ショップの曲が イベントの曲（ev-{id}-bgm.mp3）になる
+  const ev = (want === 'home' || want === 'shop') && typeof eventNow === 'function' ? eventNow() : null;
+  const src = ev ? `ev-${ev.id}-bgm.mp3` : BGM_FILES[want];
+  if (src !== bgmCur) { bgmCur = src; bgmEl.src = src; }
   if (actx && actx.state === 'suspended') actx.resume().catch(() => {});
   if (bgmEl.paused) { const p = bgmEl.play(); if (p && p.catch) p.catch(() => {}); }
 }

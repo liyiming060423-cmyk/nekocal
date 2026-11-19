@@ -123,3 +123,29 @@
 /* v10.3 ずっとミッションのきせかえ（服はオレンジ・手袋は茶色の絵の色をかえる） */
 .wear-tee_diary { filter: hue-rotate(150deg) saturate(.42) brightness(1.75); }
 .wear-gloves_paw { filter: saturate(2.2) brightness(1.75) hue-rotate(245deg); }
+
+/* v10.4 イベントのコスチューム（服の色。オレンジの服の絵を フィルターで その色にする） */
+.wear-suit-ev_gakuran { filter: hue-rotate(-151deg) saturate(0.32) brightness(0.28) contrast(1.01); }
+.wear-suit-ev_sailor { filter: grayscale(1.00) hue-rotate(44deg) saturate(2.14) brightness(1.90) contrast(0.93); }
+.wear-suit-ev_randoseru { filter: grayscale(1.00) hue-rotate(-157deg) saturate(1.15) brightness(1.89) contrast(0.92); }
+.wear-suit-ev_hakama { filter: hue-rotate(-28deg) saturate(0.29) brightness(1.40) contrast(0.94); }
+.wear-suit-ev_teru { filter: grayscale(1.00) hue-rotate(129deg) saturate(0.36) brightness(1.75) contrast(1.26); }
+.wear-suit-ev_snail { filter: hue-rotate(78deg) saturate(0.51) brightness(1.38) contrast(0.73); }
+.wear-suit-ev_ajisai { filter: hue-rotate(-150deg) saturate(0.54) brightness(1.14) contrast(0.99); }
+.wear-suit-ev_raijin { filter: grayscale(1.00) sepia(1.00) hue-rotate(13deg) saturate(2.84) brightness(1.11) contrast(1.18); }
+.wear-suit-ev_suika { filter: hue-rotate(-19deg) saturate(0.95) brightness(0.79) contrast(1.25); }
+.wear-suit-ev_aloha { filter: hue-rotate(173deg) saturate(1.20) brightness(1.02) contrast(0.74); }
+.wear-suit-ev_yukata { filter: hue-rotate(-153deg) saturate(0.95) brightness(0.63) contrast(1.13); }
+.wear-suit-ev_shark { filter: grayscale(1.00) sepia(1.00) hue-rotate(168deg) saturate(2.16) brightness(0.82) contrast(0.76); }
+.wear-suit-ev_pumpkin { filter: hue-rotate(19deg) saturate(1.24) brightness(1.10) contrast(0.79); }
+.wear-suit-ev_ghost { filter: grayscale(1.00) hue-rotate(-14deg) saturate(0.59) brightness(1.88) contrast(0.94); }
+.wear-suit-ev_mummy { filter: grayscale(1.00) sepia(1.00) hue-rotate(-13deg) saturate(0.45) brightness(1.44) contrast(0.85); }
+.wear-suit-ev_dracula { filter: grayscale(1.00) sepia(1.00) hue-rotate(-144deg) saturate(1.88) brightness(0.21) contrast(0.98); }
+.wear-suit-ev_reindeer { filter: hue-rotate(16deg) saturate(0.76) brightness(0.81) contrast(0.95); }
+.wear-suit-ev_snowman { filter: grayscale(1.00) hue-rotate(120deg) saturate(1.37) brightness(1.85) contrast(1.08); }
+.wear-suit-ev_xtree { filter: hue-rotate(134deg) saturate(1.96) brightness(0.60) contrast(0.63); }
+.wear-suit-ev_snowqueen { filter: grayscale(1.00) sepia(1.00) hue-rotate(171deg) saturate(0.63) brightness(1.35) contrast(1.04); }
+.wear-suit-ev_kagami { filter: grayscale(1.00) hue-rotate(84deg) saturate(1.68) brightness(1.89) contrast(0.93); }
+.wear-suit-ev_sheep { filter: grayscale(1.00) sepia(1.00) hue-rotate(13deg) saturate(0.39) brightness(1.48) contrast(1.05); }
+.wear-suit-ev_furisode { filter: hue-rotate(-26deg) saturate(0.98) brightness(0.76) contrast(1.23); }
+.wear-suit-ev_shishi { filter: hue-rotate(114deg) saturate(0.94) brightness(0.84) contrast(0.69); }

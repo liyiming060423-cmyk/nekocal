@@ -6,16 +6,19 @@
 // 更衣室（v9.4）：部位のタブ＋図鑑。持っていないものは「？」で出す
 const LOCKER_SLOTS = ['head', 'top', 'hand', 'suit'];
 const RAR_ORDER = { N: 0, R: 1, SR: 2 };
+const evOrder = k => WEAR[k].ev ? EVENTS.findIndex(e => e.id === WEAR[k].ev) : -1;   // v10.4
+const evName = k => (EVENTS.find(e => e.id === WEAR[k].ev) || {}).name || '';
 function lockerHTML(eq) {
   const sl = LOCKER_SLOTS.includes(UI.lockerSlot) ? UI.lockerSlot : 'head';
   const isNone = k => /_none$/.test(k);
   const all = zukanKeys(), got = zukanGot();   // v10.3：図鑑の数は 福袋のきせかえだけ（実績のきせかえは べつ）
   const cnt = x => { const ks = all.filter(k => WEAR[k].slot === x); return `${ks.filter(k => S.owned.includes(k)).length}/${ks.length}`; };
   const list = Object.keys(WEAR).filter(k => WEAR[k].slot === sl)
-    .sort((a, b) => (isNone(b) - isNone(a)) || (!!WEAR[a].ach - !!WEAR[b].ach) || (RAR_ORDER[WEAR[a].rar] - RAR_ORDER[WEAR[b].rar]));
-  const tag = k => WEAR[k].ach ? '<span class="rar ach">実績</span>' : `<span class="rar ${WEAR[k].rar}">${WEAR[k].rar}</span>`;
+    .sort((a, b) => (isNone(b) - isNone(a)) || (!!WEAR[a].ev - !!WEAR[b].ev) || (!!WEAR[a].ach - !!WEAR[b].ach) || (evOrder(a) - evOrder(b)) || (RAR_ORDER[WEAR[a].rar] - RAR_ORDER[WEAR[b].rar]));   // v10.4：イベントのきせかえは うしろ（イベントの順）
+  const tag = k => WEAR[k].ev ? `<span class="rar ev">イベント</span>` : WEAR[k].ach ? '<span class="rar ach">実績</span>' : `<span class="rar ${WEAR[k].rar}">${WEAR[k].rar}</span>`;
   const cell = k => S.owned.includes(k)
     ? `<button class="wear" data-wear="${k}" aria-pressed="${eq[sl] === k}">${wearIcon(k)}<span>${esc(WEAR[k].name)}</span>${tag(k)}</button>`
+    : WEAR[k].ev ? `<div class="wear locked" aria-label="${esc(evName(k))}イベントでもらえるきせかえ"><span class="q">？</span><span>${esc(evName(k))}イベントでもらえる</span>${tag(k)}</div>`
     : WEAR[k].ach ? `<div class="wear locked" aria-label="ずっとミッションでもらえるきせかえ"><span class="q">？</span><span>ずっとミッションでもらえる</span>${tag(k)}</div>`
     : `<div class="wear locked" aria-label="まだ持っていない ${WEAR[k].rar} のきせかえ"><span class="q">？</span><span>？？？</span>${tag(k)}</div>`;
   return `<div class="card zukan"><div class="zk-top"><b>きせかえ図鑑</b><span>集めた <b class="num">${got}</b> / ${all.length}</span></div><div class="prog"><i style="width:${got / all.length * 100}%"></i></div></div>

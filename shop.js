@@ -23,6 +23,32 @@ function stoneHTML() {
     <div class="stone-packs">${STONE_PACKS.map((pk, i) => `<button type="button" class="card stone-pack" data-pack="${i}" aria-label="ダイヤ ${pk.n}こ ${pk.yen}円（見本）"><span class="sp-gem" aria-hidden="true">💎</span><b class="num">${pk.n}</b><span class="sp-yen num">¥${fmt(pk.yen)}</span></button>`).join('')}</div>
     <p class="hint" style="margin:6px 4px 0">学校の作品なので、本当に買うことはできません（見本）。</p>`;
 }
+// ガチャのページ。v10.4：イベントのあいだは 上で「イベントガチャ｜いつもの福袋」を えらぶ（はじめは イベント）
+const bagHitStyle = b => `left:${b[0]}%;top:${b[1]}%;width:${b[2]}%;height:${b[3]}%`;
+function gachaHTML() {
+  const e = eventNow();
+  if (!e) UI.gachaMode = 'normal'; else if (UI.gachaMode !== 'normal') UI.gachaMode = 'ev';
+  const sw = e ? `<div class="seg gacha-seg" role="tablist" aria-label="ガチャのしゅるい"><button role="tab" data-gmode="ev" aria-selected="${UI.gachaMode === 'ev'}">${e.icon} ${esc(e.gacha)}</button><button role="tab" data-gmode="normal" aria-selected="${UI.gachaMode === 'normal'}">いつもの福袋</button></div>` : '';
+  if (UI.gachaMode === 'ev') {
+    const left = evLeft(e), done = !left.length;
+    return `${sw}${evChipsHTML(e, 'data-gpick')}<div class="scene shop-scene ev-scene${done ? ' done' : ''}">
+      <img src="${evFile(e, 'gacha.webp')}" alt="猫の店員がいる${esc(e.gacha)}のお店の絵" width="900" height="${e.id === 'rainy' ? 755 : 900}">
+      ${e.bagNames.map((n, i) => `<button class="bag-hit b${i}" style="${bagHitStyle(e.bags[i])}" data-evbag="${i}" aria-label="${esc(n)}をえらぶ（${EV_GACHA_COST}コイン）" ${done ? 'disabled' : ''}></button>`).join('')}
+      ${done ? '<span class="ev-stamp" aria-hidden="true">コンプリート</span>' : ''}
+    </div>
+    <div class="card gacha-info"><div class="gacha-cost">1回引く：<b class="num">${fmt(EV_GACHA_COST)}</b>コイン<span class="muted">　もっている ${fmt(S.coins)}</span></div>
+      <div class="gacha-pity">${done ? '<b>コンプリート！</b> ぜんぶ そろったよ' : `まだ持っていない きせかえが かならず出る（のこり <b class="num">${left.length}</b> / ${e.wears.length}）`}</div>
+      ${evWearsHTML(e)}
+      <p class="hint">${done ? 'もう引けません。きせかえは「ねこ」→ きせかえ → コスチューム で着られます。' : `福袋をタップすると引けます。${esc(e.name)}イベントの コスチューム（見た目だけ）が出ます。SR ${GACHA_RATE.SR}%・R ${GACHA_RATE.R}%・N ${GACHA_RATE.N}% の重みで、のこっているものから えらばれます。`}</p></div>`;
+  }
+  return `${sw}<div class="scene shop-scene">
+      <img src="shop-bg.webp" alt="猫の店員がいる福袋ガチャのお店の絵" width="900" height="772">
+      ${BAG_NAMES.map((n, i) => `<button class="bag-hit b${i}" style="${bagHitStyle(BAGS_NORMAL[i])}" data-bag="${i}" aria-label="${n}をえらぶ（${GACHA_COST}コイン）"></button>`).join('')}
+    </div>
+    <div class="card gacha-info"><div class="gacha-cost">1回引く：<b class="num">${GACHA_COST}</b>コイン<span class="muted">　もっている ${fmt(S.coins)}</span></div>
+      <div class="gacha-pity">${pityHTML()}</div>
+      <p class="hint">福袋をタップすると引けます。きせかえとトレーニングアイテムが出ます。SR ${GACHA_RATE.SR}%・R ${GACHA_RATE.R}%・N ${GACHA_RATE.N}%　${GACHA_PITY}回のうちに SR が必ず出ます（まだ持っていないきせかえから先に出ます）　かぶったら ${DUP_REFUND}コインに交換</p></div>`;
+}
 function renderShop() {
   $('shopBalance').innerHTML = `<span class="pill stone-pill" aria-label="ダイヤ ${fmt(S.stones || 0)}こ">💎<span class="num">${fmt(S.stones || 0)}</span></span>${balanceHTML()}`;
   $('shopSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === UI.shopTab));
@@ -31,16 +57,7 @@ function renderShop() {
       <div class="section-title">アイテム</div>
       <div class="list">${SHOP_ITEMS.filter(it => it.shop !== false).map(it => `<div class="card shop-item"><div class="ico">${I[it.id]}</div><div><div class="name" style="font-weight:900">${esc(it.name)}</div><div class="hint">${esc(it.desc)}　もっている：${S.items[it.id] || 0}</div><div class="price">${I.coin.replace('width="24" height="24"', 'width="18" height="18" style="vertical-align:-3px"')} ${fmt(it.price)}</div></div>
         <div class="buy-row"><span class="stepper"><button type="button" data-dec="${it.id}" aria-label="へらす">−</button><output>${shopQty[it.id]}</output><button type="button" data-inc="${it.id}" aria-label="ふやす">＋</button></span><button class="btn small" data-buy="${it.id}">購入</button></div></div>`).join('')}</div>${stoneHTML()}`;
-  } else {
-    $('shopBody').innerHTML = `<div class="scene shop-scene">
-      <img src="shop-bg.webp" alt="猫の店員がいる福袋ガチャのお店の絵" width="900" height="762">
-      <span class="shop-say">いらっしゃいだニャ！</span>
-      ${['緑の福袋', '麻の福袋', '赤の福袋', '白の福袋'].map((n, i) => `<button class="bag-hit b${i}" data-bag="${i}" aria-label="${n}をえらぶ（${GACHA_COST}コイン）"></button>`).join('')}
-    </div>
-    <div class="card gacha-info"><div class="gacha-cost">1回引く：<b class="num">${GACHA_COST}</b>コイン<span class="muted">　もっている ${fmt(S.coins)}</span></div>
-      <div class="gacha-pity">${pityHTML()}</div>
-      <p class="hint">福袋をタップすると引けます。きせかえとトレーニングアイテムが出ます。SR ${GACHA_RATE.SR}%・R ${GACHA_RATE.R}%・N ${GACHA_RATE.N}%　${GACHA_PITY}回のうちに SR が必ず出ます（まだ持っていないきせかえから先に出ます）　かぶったら ${DUP_REFUND}コインに交換</p></div>`;
-  }
+  } else { $('shopBody').innerHTML = gachaHTML(); evChipsScroll($('shopBody')); }
 }
 $('shopSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; UI.shopTab = b.dataset.v; se('tap'); renderShop(); });
 $('shopBody').addEventListener('click', e => {
@@ -68,6 +85,9 @@ $('shopBody').addEventListener('click', e => {
       <button class="btn block" id="spOk">OK</button></div>`, root => { root.querySelector('#spOk').onclick = closeModal; });
   }
   else if (t.dataset.bag) { t.classList.add('picked'); setTimeout(() => confirmGacha(+t.dataset.bag), 300); }
+  else if (t.dataset.gmode) { UI.gachaMode = t.dataset.gmode; se('tap'); renderShop(); const f = $('shopBody').querySelector(`[data-gmode="${t.dataset.gmode}"]`); if (f) f.focus({ preventScroll: true }); }
+  else if (t.dataset.gpick) { evPick(t.dataset.gpick); se('tap'); renderAll(); const f = $('shopBody').querySelector(`[data-gpick="${t.dataset.gpick}"]`); if (f) f.focus({ preventScroll: true }); }
+  else if (t.dataset.evbag) { const e = eventNow(); if (!e) return; t.classList.add('picked'); setTimeout(() => confirmEvGacha(e, +t.dataset.evbag), 300); }
 });
 const BAG_NAMES = ['緑の福袋', '麻の福袋', '赤の福袋', '白の福袋'];
 // 天井までの表示（あと何回で SR 確定か）
@@ -95,7 +115,7 @@ function pullGacha() {
   const rar = r < GACHA_RATE.SR || since >= GACHA_PITY ? 'SR' : r < GACHA_RATE.SR + GACHA_RATE.R ? 'R' : 'N';
   S.pity = rar === 'SR' ? 0 : since;
   if (rar === 'SR') memoAdd('sr1');   // v10.3：はじめての SR は おもいでに
-  let wears = Object.keys(WEAR).filter(k => WEAR[k].rar === rar && k !== 'band_none' && k !== 'suit_none' && !WEAR[k].ach);   // v10.3：実績のきせかえは出ない
+  let wears = Object.keys(WEAR).filter(k => WEAR[k].rar === rar && k !== 'band_none' && k !== 'suit_none' && !WEAR[k].ach && !WEAR[k].ev);   // v10.3：実績のきせかえは出ない。v10.4：イベントのきせかえも出ない
   // まだ持っていないきせかえから先に出す（v9.4 から N・R も）。SR はそのあいだ金のサンドバッグも出ない
   // N・R はアイテム（ドリンク・プロテイン）はそのまま出る。ぜんぶ持っていたら、かぶり（コインに交換）もあり
   const hasNew = wears.some(k => !S.owned.includes(k)), srNew = rar === 'SR' && hasNew;

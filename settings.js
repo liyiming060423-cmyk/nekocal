@@ -110,6 +110,15 @@ function checkBackupNag() {
    11. せってい
    ========================================================= */
 let resetArmed = false;
+// v10.4（D42）：イベント（発表用）。'all' のときは いま開くイベント、'rotate' のときは 自動（日がわり）か 固定
+function evSettingHTML() {
+  if (typeof EVENTS === 'undefined' || !evList().length) return '';
+  const rot = EVENT_MODE === 'rotate', cur = rot ? (S.settings.event || 'auto') : eventNow().id;
+  const opts = (rot ? [{ id: 'auto', name: '自動', icon: '📅' }] : []).concat(evList());
+  return `<div class="section-title">イベント（発表用）</div>
+    <div class="card set-group"><div class="set-row col"><div class="grow">いまのイベント<small>${rot ? '自動＝毎日 0時に 順番に かわる。えらぶと そのイベントに 固定' : 'テスト中は 6つ ぜんぶ 開いています。えらぶと ホームの背景・曲・ガチャが かわります'}</small></div>
+      <div class="ev-chips set-chips">${opts.map(o => `<button type="button" class="ev-chip" data-setev="${o.id}" aria-pressed="${o.id === cur}"${o.color ? ` style="--c:${o.color}"` : ''}><span aria-hidden="true">${o.icon}</span>${esc(o.name)}</button>`).join('')}</div></div></div>`;
+}
 $('setBack').addEventListener('click', () => { se('tap'); setTab('home'); });   // v10.1：せっていは ホームの ⚙ からひらく
 function renderSettings() {
   const s = S.settings, sw = (id, on, label) => `<button class="switch" role="switch" id="${id}" aria-checked="${on}" aria-label="${label}"></button>`;
@@ -130,6 +139,7 @@ function renderSettings() {
       <div class="set-row"><div class="grow">バックアップから復元<small>機種変更のときなど。今のデータは上書きされます</small></div><button class="btn small white" id="sRestore">えらぶ</button></div>
       <div class="set-row"><div class="grow">データの保護<small id="sPersist">しらべています…</small></div></div>
     </div>
+    ${evSettingHTML()}
     <div class="section-title">そのほか</div>
     <div class="card set-group">
       <div class="set-row"><div class="grow">猫の種類<small>いまは「${esc((CATS[S.cat.breed] || CATS.tabby).name)}」</small></div><button class="btn small white" id="sCat">かえる</button></div>
@@ -156,6 +166,10 @@ $('setBody').addEventListener('click', async e => {
   else if (b.id === 'sBackup') { doBackup(); return; }
   else if (b.id === 'sRestore') { openRestore(); return; }
   else if (b.id === 'sCat') { openCatPicker(); return; }
+  else if (b.dataset.setev) {   // v10.4：イベント（発表用）
+    if (EVENT_MODE === 'rotate') S.settings.event = b.dataset.setev; else S.ev.pick = b.dataset.setev;
+    se('tap'); save(); evTheme(); renderAll(); const f = $('setBody').querySelector(`[data-setev="${b.dataset.setev}"]`); if (f) f.focus({ preventScroll: true }); return;
+  }
   else if (b.id === 'sReset') {
     if (!resetArmed) { resetArmed = true; renderSettings(); setTimeout(() => { resetArmed = false; if (UI.tab === 'settings') renderSettings(); }, 4000); return; }
     store.remove(KEY); S = defaultState(); resetArmed = false; save(); setTab('home'); openWelcome(); return;

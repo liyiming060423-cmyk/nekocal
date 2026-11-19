@@ -7,7 +7,7 @@
   python test_nyankalo.py --shots shots        … スクショを shots/ に保存（なしなら保存しない）
   python test_nyankalo.py --browser webkit     … Safari と同じエンジン（python -m playwright install webkit が必要）
   python test_nyankalo.py --app <フォルダ>      … ほかのフォルダのアプリを調べる
-グループ：home tabs tour gacha level coin daily first battle slot sagase font a11y manifest memo migrate achieve stone meal-delete（v10.3 で 後ろの5つを追加）
+グループ：home tabs tour gacha level coin daily first battle slot sagase font a11y manifest memo migrate achieve stone meal-delete event（v10.3 で memo〜meal-delete、v10.4 で event を追加）
 ※ bump.py は .py をアプリのファイル一覧に入れないので、このファイルを置いたままでよい
 """
 import sys, os, re, json, asyncio, functools, http.server, socketserver, threading, traceback, argparse, tempfile
@@ -84,9 +84,9 @@ async def start(pg):
 async def shot(pg, name): await pg.screenshot(path=f'{OUT}/{name}.png')
 
 MEASURE = """()=>{const r=q=>{const e=document.querySelector(q);if(!e)return null;const b=e.getBoundingClientRect();return {l:b.left,t:b.top,r:b.right,b:b.bottom,w:b.width,h:b.height}};
- const nm=document.querySelector('.nc-name'), ev=document.querySelector('.ev-txt'), bn=document.querySelector('#eventBanner');
+ const nm=document.querySelector('.nc-name'), ev=document.querySelector('#eventBanner .ev-txt'), bn=document.querySelector('#eventBanner');   // v10.4：イベントのバナーは .ev-txt ではなく 絵
  return {vh:innerHeight, docH:document.documentElement.scrollHeight, tabbar:r('.tabbar'), bottom:r('.h-bottom'), left:r('.h-left'), right:r('.h-right'), bubble:r('#bubble'), cat:r('#catWrap'), stage:r('.h-stage'),
-  nameCut: nm.scrollWidth>nm.clientWidth+1, nameW: nm.clientWidth, evOver: ev.getBoundingClientRect().right > bn.getBoundingClientRect().right-3 || ev.scrollWidth>ev.clientWidth+1, evTxt: ev.innerText.replace(/\\n/g,'/'),
+  nameCut: nm.scrollWidth>nm.clientWidth+1, nameW: nm.clientWidth, evOver: ev ? (ev.getBoundingClientRect().right > bn.getBoundingClientRect().right-3 || ev.scrollWidth>ev.clientWidth+1) : bn.querySelector('img').getBoundingClientRect().right > bn.getBoundingClientRect().right+1, evTxt: ev ? ev.innerText : bn.getAttribute('aria-label').replace(/\\n/g,'/'),
   quick:r('.h-quick'), modal:!document.getElementById('modal').hidden}}"""
 
 async def t_home(b):
@@ -170,7 +170,7 @@ async def t_gacha(b):
     for dev, rar, seq in [('ip13', 'SR', [0.01, 0.1]), ('ip13', 'R', [0.2, 0.0]), ('se', 'N', [0.3, 0.0]), ('se', 'SR', [0.01, 0.5])]:
         ctx, pg = await page(b, dev, base(coins=2000))
         await start(pg)
-        await pg.click('#btnGacha'); await pg.wait_for_timeout(400)
+        await pg.evaluate("UI.shopTab='gacha';UI.gachaMode='normal';setTab('shop')"); await pg.wait_for_timeout(400)   # v10.4：右下のボタンは イベントへ。いつもの福袋は ショップ → ガチャ →「いつもの福袋」
         await pg.click('.bag-hit.b2'); await pg.wait_for_timeout(600)
         await pg.evaluate("seq => { let i = 0; const r = Math.random; Math.random = () => i < seq.length ? seq[i++] : r(); }", seq)
         await pg.click('#gYes'); await pg.wait_for_timeout(250)
@@ -191,7 +191,7 @@ async def t_gacha(b):
         await ctx.close()
     # 演出の途中で閉じても なくならない
     ctx, pg = await page(b, 'ip13', base(coins=2000))
-    await start(pg); await pg.click('#btnGacha'); await pg.wait_for_timeout(300); await pg.click('.bag-hit.b0'); await pg.wait_for_timeout(500)
+    await start(pg); await pg.evaluate("UI.shopTab='gacha';UI.gachaMode='normal';setTab('shop')"); await pg.wait_for_timeout(300); await pg.click('.bag-hit.b0'); await pg.wait_for_timeout(500)
     await pg.click('#gYes'); await pg.wait_for_timeout(300); await pg.click('#modalClose'); await pg.wait_for_timeout(300)
     st = await pg.evaluate("(()=>{const s=JSON.parse(localStorage.getItem('nyankalo-v1'));return {c:s.coins,o:s.owned.length,i:Object.values(s.items).reduce((a,b)=>a+b,0),toast:document.getElementById('toast').innerText}})()")
     check(st['c'] == 1500 and (st['o'] > 4 or st['i'] > 0), f'途中で閉じても結果は残る（{st}）')
@@ -501,6 +501,7 @@ async def t_memo(b):
         # SR（福袋）と 図鑑 25
         await pg.evaluate("S.coins=2000;S.owned=S.owned.concat(zukanKeys().filter(k=>WEAR[k].rar!=='SR').slice(0,24));save();renderAll()")
         await pg.click('.tabbar [data-tab="shop"]'); await pg.wait_for_timeout(300); await pg.click('[data-v="gacha"]'); await pg.wait_for_timeout(300)
+        await pg.click('[data-gmode="normal"]'); await pg.wait_for_timeout(300)   # v10.4：いつもの福袋
         await pg.click('.bag-hit.b1'); await pg.wait_for_timeout(500)
         await pg.evaluate("seq => { let i = 0; const r = Math.random; Math.random = () => i < seq.length ? seq[i++] : r(); }", [0.01, 0.1])
         await pg.click('#gYes'); await pg.wait_for_timeout(1800); await pg.click('#modalClose'); await pg.wait_for_timeout(400)
@@ -734,9 +735,142 @@ async def t_mealdel(b):
     check(not pg.errs, f'消す（きのう） エラーなし {pg.errs[:2]}')
     await ctx.close()
 
+# ===== v10.4 イベント =====
+EV_IDS = ['school', 'rainy', 'summer', 'halloween', 'xmas', 'newyear']
+async def t_event(b):
+    # 1) 日がわりの順番（EVENT_MODE 'rotate' のときの計算）
+    ctx, pg = await page(b, 'ip13', b103())
+    r = await pg.evaluate("['2026-11-18','2026-11-19','2026-11-20','2026-11-24','2026-11-25','2027-01-01'].map(d=>evRotate(d).id)")
+    check(r == ['newyear', 'school', 'rainy', 'newyear', 'school', 'rainy'], f'イベント：日がわりの順番（{r}）')
+    r = await pg.evaluate("({mode:EVENT_MODE, n:evList().length, now:eventNow().id, wears:EVENTS.every(e=>e.wears.length===4&&e.wears.every(k=>WEAR[k]&&WEAR[k].ev===e.id&&WEAR[k].slot==='suit'&&!WEAR[k].bonus)), zukan:zukanKeys().length})")
+    check(r == {'mode': 'all', 'n': 6, 'now': 'school', 'wears': True, 'zukan': 50}, f'イベント：6つ全部・きせかえ4つずつ・図鑑は50のまま（{r}）')
+    await ctx.close()
+    for dev in DEV:
+        # 2) ホーム：バナー・イベントのボタン・背景
+        ctx, pg = await page(b, dev, b103())
+        await start(pg)
+        r = await pg.evaluate("""(()=>{const bn=document.getElementById('eventBanner'), gb=document.getElementById('btnGacha'), r=e=>e.getBoundingClientRect();
+          return {ban:!!bn.querySelector('img[src="ev-school-banner.webp"]'), cls:bn.classList.contains('ev-b'), btn:gb.classList.contains('ev-btn')&&gb.innerText.includes('イベント'),
+            bg:document.getElementById('tab-home').style.backgroundImage.includes('ev-school-home'), title:document.getElementById('title').style.backgroundImage.includes('ev-school-home'),
+            inBan: r(bn.querySelector('img')).right <= r(bn).right+1 && r(bn.querySelector('img')).left >= r(bn).left-1, over:document.documentElement.scrollWidth>innerWidth+1}})()""")
+        check(all(v for k, v in r.items() if k != 'over') and not r['over'], f'{dev} イベント：ホームのバナー・ボタン・背景（{r}）')
+        await shot(pg, f'event-{dev}-home-school')
+        # 3) イベントページ → 6つ えらべる → ハロウィンにすると ホームも かわる
+        await pg.click('#btnGacha'); await pg.wait_for_timeout(500)
+        r = await pg.evaluate("({open:!!document.getElementById('evHub'), chips:document.querySelectorAll('#evHub [data-evpick]').length, inert:document.getElementById('app').inert, foc:document.getElementById('evHub').contains(document.activeElement)})")
+        check(r == {'open': True, 'chips': 6, 'inert': True, 'foc': True}, f'{dev} イベント：イベントページ（{r}）')
+        await shot(pg, f'event-{dev}-hub-school')
+        await pg.click('#evHub [data-evpick="halloween"]'); await pg.wait_for_timeout(300)
+        r = await pg.evaluate(f"({{now:eventNow().id, pick:{SAVED}.ev.pick, hero:!!document.querySelector('#evHub img[src=\"ev-halloween-banner.webp\"]'), bg:document.getElementById('tab-home').style.backgroundImage.includes('ev-halloween-home'), game:document.querySelector('#evHub [data-evgame]').dataset.evgame}})")
+        check(r == {'now': 'halloween', 'pick': 'halloween', 'hero': True, 'bg': True, 'game': 'halloween'}, f'{dev} イベント：えらぶと かわる（{r}）')
+        await shot(pg, f'event-{dev}-hub-halloween')
+        await pg.keyboard.press('Escape'); await pg.wait_for_timeout(300)
+        r = await pg.evaluate("({closed:!document.getElementById('evHub'), inert:document.getElementById('app').inert, foc:document.activeElement&&document.activeElement.id})")
+        check(r == {'closed': True, 'inert': False, 'foc': 'btnGacha'}, f'{dev} イベント：Esc で とじて ボタンに もどる（{r}）')
+        # 4) BGM：ホーム・ショップは イベントの曲
+        r = await pg.evaluate("(()=>{S.settings.bgm=true;bgmUnlocked=true;bgmUpdate();const a=bgmCur;setTab('shop');const b2=bgmCur;setTab('train');const c=bgmCur;setTab('home');S.settings.bgm=false;bgmUpdate();return [a,b2,c]})()")
+        check(r == ['ev-halloween-bgm.mp3', 'ev-halloween-bgm.mp3', 'bgm-train.mp3'], f'{dev} イベント：BGM（{r}）')
+        check(not pg.errs, f'{dev} イベント（ホーム）エラーなし {pg.errs[:2]}')
+        await ctx.close()
+    # 5) ショップ：イベントガチャ（必ず まだ持っていないもの・4回で コンプリート）・いつもの福袋
+    for dev in DEV:
+        ctx, pg = await page(b, dev, b103(coins=2600))
+        await start(pg)
+        await pg.click('.tabbar [data-tab="shop"]'); await pg.wait_for_timeout(200); await pg.click('#shopSeg [data-v="gacha"]'); await pg.wait_for_timeout(300)
+        r = await pg.evaluate("({ev:document.querySelector('[data-gmode=\"ev\"]').getAttribute('aria-selected'), img:!!document.querySelector('.shop-scene img[src=\"ev-school-gacha.webp\"]'), bags:document.querySelectorAll('[data-evbag]').length, say:!!document.querySelector('.shop-say'), over:document.documentElement.scrollWidth>innerWidth+1})")
+        check(r == {'ev': 'true', 'img': True, 'bags': 4, 'say': False, 'over': False}, f'{dev} イベントガチャ：はじめは イベント（{r}）')
+        await shot(pg, f'event-{dev}-gacha-school')
+        got = []
+        for i in range(4):
+            await pg.click(f'[data-evbag="{i}"]'); await pg.wait_for_timeout(500); await pg.click('#gYes'); await pg.wait_for_timeout(2600)
+            if i == 0: await shot(pg, f'event-{dev}-gacha-result')
+            got.append(await pg.evaluate(f"{SAVED}.owned.filter(k=>/^ev_/.test(k)).length"))
+            await pg.evaluate("closeModal()"); await pg.wait_for_timeout(300)
+        s = await pg.evaluate(f"(()=>{{const s={SAVED};return {{c:s.coins, ev:s.owned.filter(k=>/^ev_/.test(k)).sort(), memo:s.memo.filter(m=>m.k==='ev_school').length, dis:[...document.querySelectorAll('[data-evbag]')].every(b=>b.disabled), stamp:!!document.querySelector('.ev-stamp')}}}})()")
+        check(got == [1, 2, 3, 4] and s['c'] == 600 and s['ev'] == sorted(['ev_gakuran', 'ev_sailor', 'ev_randoseru', 'ev_hakama']) and s['memo'] == 1 and s['dis'] and s['stamp'], f'{dev} イベントガチャ：毎回 新しい・4回で コンプリート・おもいで1つ（{got} {s}）')
+        await shot(pg, f'event-{dev}-gacha-complete')
+        await pg.click('[data-gmode="normal"]'); await pg.wait_for_timeout(300)
+        r = await pg.evaluate("({img:!!document.querySelector('.shop-scene img[src=\"shop-bg.webp\"]'), bags:document.querySelectorAll('[data-bag]').length, say:!!document.querySelector('.shop-say')})")
+        check(r == {'img': True, 'bags': 4, 'say': False}, f'{dev} いつもの福袋：新しい絵・台詞は絵の中（{r}）')
+        await shot(pg, f'event-{dev}-gacha-normal')
+        # いつもの福袋からは イベントのきせかえが出ない
+        r = await pg.evaluate("(()=>{S.coins=99999;for(let i=0;i<24;i++){pullGacha();closeModal();}return S.owned.filter(k=>WEAR[k]&&WEAR[k].ev).length})()")
+        check(r == 4, f'{dev} いつもの福袋：イベントのきせかえは出ない（{r}）')
+        check(not pg.errs, f'{dev} イベントガチャ エラーなし {pg.errs[:2]}')
+        await ctx.close()
+    # 6) きせかえ：イベントの印・まだのものは「イベントでもらえる」・着た猫
+    ctx, pg = await page(b, 'ip13', b103(owned=["band_none", "tee_orange", "gloves_brown", "suit_none", "ev_hakama", "ev_shark"]))
+    await start(pg)
+    await pg.evaluate("UI.catTab='wear';UI.lockerSlot='suit';setTab('cat')"); await pg.wait_for_timeout(300)
+    r = await pg.evaluate("({tag:document.querySelectorAll('.wear .rar.ev').length, lock:[...document.querySelectorAll('.wear.locked')].filter(e=>e.innerText.includes('イベントでもらえる')).length, z:document.querySelector('.zk-top').innerText})")
+    check(r['tag'] == 24 and r['lock'] == 22 and '/ 50' in r['z'], f'イベントのきせかえ：更衣室（{r}）')
+    await pg.click('[data-wear="ev_hakama"]'); await pg.wait_for_timeout(300)
+    r = await pg.evaluate("({eq:S.cat.equip.suit, front:!!document.querySelector('#catBody .pc-front, .pc-front'), back:!!document.querySelector('.pc-back')})")
+    check(r['eq'] == 'ev_hakama' and r['front'] and r['back'], f'イベントのきせかえ：着る（体の前・うしろ）（{r}）')
+    await pg.evaluate("document.querySelector('.wear-grid').scrollIntoView({block:'end'})"); await shot(pg, 'event-ip13-wardrobe')
+    check(not pg.errs, f'イベントのきせかえ エラーなし {pg.errs[:2]}')
+    await ctx.close()
+    # 7) せってい（発表用）
+    ctx, pg = await page(b, 'se', b103())
+    await start(pg); await pg.click('#btnSettings'); await pg.wait_for_timeout(300)
+    n = await pg.evaluate("document.querySelectorAll('[data-setev]').length")
+    await pg.click('[data-setev="xmas"]'); await pg.wait_for_timeout(300)
+    r = await pg.evaluate(f"({{n:{n}, now:eventNow().id, pick:{SAVED}.ev.pick, pressed:document.querySelector('[data-setev=\"xmas\"]').getAttribute('aria-pressed')}})")
+    check(r == {'n': 6, 'now': 'xmas', 'pick': 'xmas', 'pressed': 'true'}, f'イベント：せっていで かえる（{r}）')
+    await pg.evaluate("document.querySelector('[data-setev]').scrollIntoView({block:'center'})"); await shot(pg, 'event-se-settings')
+    await pg.click('#setBack'); await pg.wait_for_timeout(300); await shot(pg, 'event-se-home-xmas')
+    await ctx.close()
+    # 8) コインの きまり（アプリ側）：1日3回まで・1回100まで・はじめてクリア1回
+    ctx, pg = await page(b, 'ip13', b103(coins=0))
+    r = await pg.evaluate("""(()=>{const m=window.nyankaloMini, o=[];
+      o.push(m.evResult('halloween', 3200, 91, true)); o.push(m.evResult('halloween', 100, 3, true)); o.push(m.evResult('xmas', 10, 250, false)); o.push(m.evResult('school', 900, 60, false));
+      return {o:o.map(x=>[x.given,x.bonus,x.plays]), coins:S.coins, best:S.ev.best.halloween, clear:!!S.ev.clear.halloween, minis:day().minis, ev:day().evPlays, mini:day().miniRewards}})()""")
+    check(r == {'o': [[91, 200, 2], [3, 0, 1], [100, 0, 0], [0, 0, 0]], 'coins': 394, 'best': 3200, 'clear': True, 'minis': 4, 'ev': 3, 'mini': 0}, f'イベントのゲーム：コインの きまり（{r}）')
+    await ctx.close()
+    # 9) 6つの ゲーム：アプリの中で 開いて、スタート → 3秒で おわる（テスト用）→ けっか → もどる
+    for dev in DEV:
+        for i, gid in enumerate(EV_IDS):
+            ctx, pg = await page(b, dev, b103(coins=0))
+            await ctx.add_init_script("window.__errs=[];addEventListener('error',e=>__errs.push(String(e.message)))")
+            await start(pg)
+            await pg.evaluate(f"openEvGame('{gid}');document.querySelector('#miniFrame iframe').src+='&fast=1'"); await pg.wait_for_timeout(1500)
+            fr = pg.frames[-1]
+            m = await fr.evaluate("({t:document.querySelector('.eg-title').innerText, start:!!document.getElementById('egStart'), ban:document.querySelector('.eg-banner').complete&&document.querySelector('.eg-banner').naturalWidth>0, over:document.documentElement.scrollWidth>innerWidth+1})")
+            check(m['start'] and m['ban'] and not m['over'], f'{dev} {gid}：はじめの画面（{m}）')
+            if dev == 'ip13' or i == 0: await shot(pg, f'event-{dev}-game-{gid}-menu')
+            await fr.click('#egStart'); await pg.wait_for_timeout(2900)
+            box = await pg.evaluate("(()=>{const r=document.querySelector('#miniFrame iframe').getBoundingClientRect();return [r.width,r.height]})()")
+            for k in range(4):   # すこし さわる
+                x, y = box[0] * (.3 + .13 * k), box[1] * .55
+                await pg.mouse.move(x, y); await pg.mouse.down(); await pg.wait_for_timeout(180); await pg.mouse.move(x + 20, y - 10); await pg.mouse.up(); await pg.wait_for_timeout(120)
+            h = await fr.evaluate("({hud:!document.getElementById('egHud').hidden, cat:!!document.querySelector('.eg-cat .pc')})")
+            check(h['hud'] and h['cat'], f'{dev} {gid}：あそんでいる画面（{h}）')
+            if dev == 'ip13' or i == 0: await shot(pg, f'event-{dev}-game-{gid}-play')
+            await pg.wait_for_timeout(2600)
+            res = await fr.evaluate("({res:!!document.getElementById('egAgain'), say:(document.querySelector('.eg-say')||{}).innerText||''})")
+            s = await pg.evaluate(f"(()=>{{const s={SAVED};return {{minis:(s.days[todayStr()]||{{}}).minis||0, best:'{gid}' in s.ev.best}}}})()")
+            check(res['res'] and res['say'] and s['minis'] == 1 and s['best'], f'{dev} {gid}：けっか（{res} {s}）')
+            if dev == 'ip13' or i == 0: await shot(pg, f'event-{dev}-game-{gid}-result')
+            await fr.click('#egHome'); await pg.wait_for_timeout(300); await fr.click('#egBack'); await pg.wait_for_timeout(400)
+            e = await fr.evaluate("window.__errs||[]") if not fr.is_detached() else []
+            closed = await pg.evaluate("!document.getElementById('miniFrame')")
+            errs = await pg.evaluate("window.__errs||[]")
+            check(closed and not errs and not e and not pg.errs, f'{dev} {gid}：もどる・エラーなし（{closed} {errs[:2]} {e[:2]} {pg.errs[:2]}）')
+            await ctx.close()
+    # 10) 前の版から：お知らせ（10.3 → 10.4 は イベントだけ、10.1 からは 10.3 の分も）
+    for frm, want103 in (('10.3', False), ('10.1', True)):
+        ctx, pg = await page(b, 'se', b103(news=frm, ev=None))
+        await start(pg); await pg.wait_for_timeout(400)
+        t = await pg.evaluate("document.getElementById('modalBody').innerText")
+        check('イベントが はじまったよ' in t and (('おもいで' in t) == want103), f'お知らせ（{frm} から）：{t[:60]!r}')
+        if frm == '10.3': await shot(pg, 'event-se-news')
+        r = await pg.evaluate("({ev:JSON.stringify(S.ev)})")
+        check(r['ev'] == '{"pick":"","best":{},"clear":{}}', f'前の版のデータ：S.ev（{r}）')
+        await ctx.close()
+
 GROUPS = [('home', t_home), ('tabs', t_tabs), ('tour', t_tour), ('gacha', t_gacha), ('level', t_level), ('coin', t_coin), ('daily', t_daily), ('first', t_first),
           ('battle', t_battle), ('slot', t_slot), ('sagase', t_sagase), ('font', t_font), ('a11y', t_a11y), ('manifest', t_manifest),
-          ('memo', t_memo), ('migrate', t_migrate), ('achieve', t_achieve), ('stone', t_stone), ('meal-delete', t_mealdel)]
+          ('memo', t_memo), ('migrate', t_migrate), ('achieve', t_achieve), ('stone', t_stone), ('meal-delete', t_mealdel), ('event', t_event)]
 
 async def main():
     async with async_playwright() as p:

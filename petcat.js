@@ -71,6 +71,7 @@ function petCatWear(b, eq) {
   const c = pcCat(b), su = pcSuit(eq);
   let s = '';
   if (su) s += `<img class="pc-shirt wear-suit-${su}" src="${pcImg(b, 'shirt')}" alt="" draggable="false">`;
+  if (su && typeof suitFront === 'function') { const fr = suitFront(su, c); if (fr) s += `<svg class="pc-gear pc-front" viewBox="0 0 ${c.w} ${c.h}" aria-hidden="true">${fr}</svg>`; }   // v10.4：体の前（えり・ボタン・帯など。手袋の下）
   else if (eq.top && eq.top !== 'tee_orange') s += `<img class="pc-shirt wear-${eq.top}" src="${pcImg(b, 'shirt')}" alt="" draggable="false">`;
   if (eq.hand && eq.hand !== 'gloves_brown' && eq.hand !== 'dumbbell') s += `<img class="pc-gloves wear-${eq.hand}" src="${pcImg(b, 'gloves')}" alt="" draggable="false">`;
   let g = '';

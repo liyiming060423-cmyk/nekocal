@@ -200,11 +200,16 @@ function showNews() {
   const v103 = `<div><b>📖</b><span>ねこ →「おもいで」に とくべつな日が のこる</span></div>
       <div><b>📋</b><span>ミッションに「ずっと」。称号・ダイヤがもらえる</span></div>
       <div><b>💎</b><span>ダイヤは ショップで コインに交換できる</span></div>`;
+  const old103 = verNum(from) < verNum('10.3');   // v10.4：10.3 のお知らせを まだ見ていない人だけ 10.3 の分も
+  const v104 = old103 ? `<div><b>🎉</b><span>イベントが はじまったよ！ ホームの右下の「イベント」から</span></div>`   // 10.3 の分も出すときは 1行に（SE でも OK が見えるように）
+    : `<div><b>🎉</b><span>イベントが はじまったよ！ ホームの右下の「イベント」から</span></div>
+      <div><b>🎮</b><span>イベントごとの ミニゲームで コインを あつめよう</span></div>
+      <div><b>👘</b><span>イベントガチャは まだ持っていない きせかえが かならず出る</span></div>`;
   openModal(`<h2 id="modalTitle">${menu ? 'メニューが かわったよ' : 'あたらしくなったよ'}</h2><div class="stack">
     <div class="card news-list">${menu ? `<div><b>ねこ</b><span>ステータスと きせかえ（前の更衣室）は ここ</span></div>
       <div><b>あそぶ</b><span>ジム・ミニゲーム・対戦（前のトレーニング）</span></div>
       <div><b>きろく</b><span>1週間のごはんの記録（前のりれき）</span></div>
-      <div><b>⚙</b><span>せってい は ホームの右上</span></div>` : ''}${v103}</div>
+      <div><b>⚙</b><span>せってい は ホームの右上</span></div>` : ''}${v104}${old103 ? (menu ? '<div><b>📖</b><span>おもいで・ずっとミッション・ダイヤ（ねこ・📋・ショップ）</span></div>' : v103) : ''}</div>
     ${menu ? '<p class="hint" style="margin:0">ログボとミッションは、ホームの左（スタミナの上）に うつりました。</p>' : ''}
     <button class="btn block" id="nwOk">OK</button></div>`, root => { root.querySelector('#nwOk').onclick = closeModal; }, () => setTimeout(maybeShowDaily, 300));
 }

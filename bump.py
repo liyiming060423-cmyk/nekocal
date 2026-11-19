@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-HTMLS = ['index.html', 'sagase.html', 'slot.html', 'dash.html', 'baseball.html', 'fonts.css']   # v10.2：fonts.css の中の文字ファイル（.woff2?v=）も
+HTMLS = ['index.html', 'sagase.html', 'slot.html', 'dash.html', 'baseball.html', 'evgame.html', 'fonts.css']   # v10.4：evgame.html（イベントのミニゲーム）   # v10.2：fonts.css の中の文字ファイル（.woff2?v=）も
 
 
 def edit(name, pattern, repl, need=True):
@@ -30,13 +30,14 @@ def edit(name, pattern, repl, need=True):
 
 # オフライン用に保存しないもの（BGM は service worker を通さない。説明・道具・まとめファイルもいらない）
 SKIP_EXT = {'.mp3', '.md', '.py', '.zip', '.txt'}
+SKIP_PREFIX = ('_dev',)   # 開発用のファイル（_dev_○○.html）はアプリに入れない
 SKIP_NAME = {'sw.js'}
-GAME_PAGES = ['sagase.html', 'dash.html', 'slot.html', 'baseball.html']
+GAME_PAGES = ['sagase.html', 'dash.html', 'slot.html', 'baseball.html', 'evgame.html']
 
 
 def sw_list():
     files = sorted(p.name for p in HERE.iterdir() if p.is_file() and not p.name.startswith('.')
-                   and p.suffix.lower() not in SKIP_EXT and p.name not in SKIP_NAME)
+                   and p.suffix.lower() not in SKIP_EXT and p.name not in SKIP_NAME and not p.name.startswith(SKIP_PREFIX))
     out = ["  './',", "  './index.html',", "  './manifest.webmanifest',"]
     out += [f"  './{h}'," for h in GAME_PAGES if h in files]
     rest = [f for f in files if f not in ('index.html', 'manifest.webmanifest') and f not in GAME_PAGES]

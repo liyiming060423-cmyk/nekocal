@@ -21,6 +21,7 @@ function renderAll() {
   if (UI.tab === 'history') renderHistory();
   if (UI.tab === 'cat') renderCat();
   if (UI.tab === 'settings') renderSettings();
+  if ($('evHub')) renderEventHub();   // v10.4：イベントページが開いていたら（ミニゲームから もどったときなど）
 }
 document.querySelector('.tabbar').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; se('tap'); buzz(10); setTab(b.dataset.tab); });
 $('tiShop').innerHTML = I.bag; $('tiTrain').innerHTML = I.pad; $('tiHome').innerHTML = I.house; $('tiHistory').innerHTML = I.cal; $('tiCat').innerHTML = I.paw;

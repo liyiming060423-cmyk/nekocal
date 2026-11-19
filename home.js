@@ -69,7 +69,8 @@ function renderHome() {
   $('kcalBar').style.width = Math.min(100, it / scale * 100) + '%';
   $('kcalBar').style.background = Math.abs(it - tg) <= 100 ? 'var(--green)' : it > tg ? 'var(--orange)' : 'var(--blue)';
   $('kcalMark').style.left = (tg / scale * 100) + '%';
-  const bn = $('eventBanner'); bn.classList.remove('hosp-b', 'close-b');
+  evTheme();   // v10.4：イベントの背景（タイトル画面も）
+  const bn = $('eventBanner'); bn.classList.remove('hosp-b', 'close-b', 'ev-b'); bn.removeAttribute('aria-label');
   if (S.cat.hospital) {   // v9.9：入院中は退院までのようす
     const h = S.cat.hospital, left = Math.max(1, daysBetween(t, h.until)), g = Math.max(0, HOSPITAL.goodDays - (h.good || 0));
     bn.classList.remove('guide'); bn.classList.add('hosp-b');
@@ -81,6 +82,11 @@ function renderHome() {
     const g = guideCount();
     $('eventBanner').classList.add('guide');
     $('eventBanner').innerHTML = `<span class="ev-txt"><small>はじめてガイド</small>${g.got} / ${GUIDE.tasks.length} クリア<br>${g.ready ? '<b>受けとれるよ！</b>' : 'コインがもらえる！'}</span>`;
+  } else if (eventNow()) {   // v10.4：イベントのタイトル（イベントページへ）
+    const e = eventNow();
+    $('eventBanner').classList.remove('guide'); bn.classList.add('ev-b');
+    if (bn.dataset.ev !== e.id || !bn.querySelector('.evb-in')) { bn.dataset.ev = e.id; bn.innerHTML = evBannerHTML(e); }
+    bn.setAttribute('aria-label', `イベント：${e.name}（イベントのページへ）`);
   } else {
     $('eventBanner').classList.remove('guide');
     $('eventBanner').innerHTML = `<span class="ev-ico">${I.luckyBag}</span><span class="ev-txt"><small>${esc(EVENT.tag)}</small>${EVENT.title}</span>`;
@@ -88,8 +94,15 @@ function renderHome() {
   $('stamIco').innerHTML = I.bolt; $('moodIco').innerHTML = I.heart;
   renderMeters();
   mountHomeCat();
-  if (!$('btnGacha').querySelector('svg')) $('btnGacha').insertAdjacentHTML('afterbegin', `${I.gachaMachine}<span>ガチャ</span>`);
-  $('dotGacha').hidden = S.coins < GACHA_COST;
+  // v10.4（D44）：イベントのあいだは ガチャのボタンが イベントのボタンになる（イベントのページへ）
+  const ge = eventNow(), gb = $('btnGacha');
+  if ((gb.dataset.ev || '') !== (ge ? ge.id : '')) {
+    gb.dataset.ev = ge ? ge.id : '';
+    gb.classList.toggle('ev-btn', !!ge);
+    gb.innerHTML = ge ? evButtonHTML(ge) : `${I.gachaMachine}<span>ガチャ</span><span class="dot" id="dotGacha" hidden></span>`;
+    gb.setAttribute('aria-label', ge ? `イベント：${ge.name}` : 'ガチャへ');
+  }
+  $('dotGacha').hidden = ge ? !evPlaysLeft() : S.coins < GACHA_COST;
   $('btnCamera').innerHTML = I.camera;
   const km = d.steps * (S.user.height || 165) * RULE.strideRate / 100000;
   $('pillSteps').innerHTML = `<span class="sc-ico">${I.shoe}</span><span class="sc-main"><small>歩数</small><b><span class="num">${km.toFixed(1)}</span> km</b><small class="num">${fmt(d.steps)}歩</small></span><span class="sc-arrow" aria-hidden="true">›</span>`;
@@ -107,11 +120,12 @@ function claimedToday() { if (S.claimed.date !== todayStr()) S.claimed = { date:
 $('btnUser').addEventListener('click', () => openProfile(false));
 $('kcalCard').addEventListener('click', () => { UI.histWeek = 0; UI.histDate = todayStr(); setTab('history'); });
 $('pillCoins').addEventListener('click', () => { UI.shopTab = 'shop'; setTab('shop'); });
-$('btnGacha').addEventListener('click', () => { UI.shopTab = 'gacha'; setTab('shop'); });
+$('btnGacha').addEventListener('click', () => { if (eventNow()) { se('tap'); openEventHub(); return; } UI.shopTab = 'gacha'; setTab('shop'); });
 $('eventBanner').addEventListener('click', () => {
   if (S.cat.hospital) { openHospitalInfo(); return; }
   if (pendingYesterday()) { openCloseDay(); return; }
   if (!S.guide.done) { openGuide(); return; }
+  if (eventNow()) { se('tap'); openEventHub(); return; }
   UI.shopTab = 'gacha'; setTab('shop');
 });
 $('bodyPill').addEventListener('click', () => { UI.catTab = 'status'; setTab('cat'); });   // v10.1：ステータスは「ねこ」タブ
