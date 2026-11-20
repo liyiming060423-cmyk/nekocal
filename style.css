@@ -159,7 +159,9 @@ h2 { margin: 0; font-weight: 900; font-size: 18px; }
 .tabbar .ti { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border: 0; background: none; }
 .tabbar .ti svg { width: 30px; height: 30px; }
 .tabbar .ti svg [stroke="#FFFFFF"], .tabbar .ti svg[stroke="#FFFFFF"] { stroke: var(--ink); }
-.tabbar button[aria-current="page"] { background: var(--yellow); margin-top: -8px; border-top-width: 3px; }
+/* v10.5：えらんだタブを上に出すと 上の線が切れて見えたので、高さはそのまま（色・アイコンの大きさ・下の線で わかるように） */
+.tabbar button[aria-current="page"] { background: var(--yellow); box-shadow: inset 0 -5px 0 var(--orange-d), 0 4px 0 var(--ink); }
+.tabbar button[aria-current="page"] .ti svg { transform: scale(1.12); }
 .tabbar .home-tab { flex: 1.15; }
 
 /* ---------- ショップ ---------- */
@@ -293,6 +295,7 @@ label.f { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font
 
 /* ===== イラスト版（B案） ===== */
 .bubble { z-index: 3; pointer-events: none; }
+.say-w { display: inline-block; max-width: 100%; }   /* v10.5：台詞の かたまり（この あいだで 改行） */
 .bubble.pop { animation: pcSay .35s cubic-bezier(.3, 1.6, .5, 1); }
 .tr-cat { width: 170px; }
 .tr-cat .pc-act { animation: aPunchR .45s ease-out 3; }
@@ -301,14 +304,16 @@ label.f { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font
 
 .scene { position: relative; border: 3px solid var(--ink); border-radius: 20px; overflow: hidden; box-shadow: 0 4px 0 var(--ink); background: var(--paper); }
 .scene img { display: block; width: 100%; height: auto; }
-.gym-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
-.gym-card2 { display: flex; flex-direction: column; border: 3px solid var(--ink); border-radius: 16px; overflow: hidden; background: var(--white); box-shadow: 0 4px 0 var(--ink); min-width: 0; }
-.gc-head { background: var(--yellow); border-bottom: 3px solid var(--ink); padding: 6px 4px; text-align: center; font-weight: 900; font-size: 12.5px; line-height: 1.25; min-height: 48px; display: flex; align-items: center; justify-content: center; }
-.gc-body { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px 10px; text-align: center; }
-.gc-ico svg { width: 40px; height: 40px; display: block; }
-.gc-cost { font-weight: 900; font-size: 13px; color: var(--orange-d); }
-.gc-label { font-size: 12px; font-weight: 700; background: #FFF1C9; border-radius: 999px; padding: 2px 8px; }
-.gc-start { margin-top: auto; width: 100%; padding: 0 4px; font-weight: 900; letter-spacing: .04em; }
+.gym-cards { display: grid; gap: 8px; margin-top: 12px; }   /* v10.5：3行の よこ長カード（アイコン｜名前・スタミナ・効果｜START） */
+.gym-card2 { display: grid; grid-template-columns: 50px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 7px 10px 7px 8px; border: 3px solid var(--ink); border-radius: 16px; background: var(--white); box-shadow: 0 4px 0 var(--ink); min-width: 0; }
+.gc-ico { width: 50px; height: 50px; border-radius: 13px; background: #FFF1C9; border: 2.5px solid var(--ink); display: flex; align-items: center; justify-content: center; }
+.gc-ico svg { width: 38px; height: 38px; display: block; }
+.gc-body { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.gc-name { font-size: 15px; font-weight: 900; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gc-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; }
+.gc-cost { font-weight: 900; font-size: 13px; color: var(--orange-d); white-space: nowrap; }
+.gc-label { font-size: 12px; font-weight: 700; background: #FFF1C9; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.gc-start { min-width: 78px; padding: 0 10px; font-weight: 900; letter-spacing: .04em; }
 
 .bag-hit { position: absolute; top: 55%; height: 28%; border: 0; background: transparent; border-radius: 40% 40% 30% 30%; padding: 0; }
 .bag-hit:focus-visible { outline: 4px solid var(--blue); }
@@ -354,7 +359,7 @@ label.f { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font
 .ev-txt small { display: table; background: var(--red); color: var(--white); border-radius: 6px; padding: 0 5px; font-size: 12px; margin-bottom: 2px; }
 
 .h-stage { position: relative; flex: 1; min-height: 330px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
-#tab-home .bubble { position: relative; right: auto; top: auto; max-width: 78%; margin-bottom: 10px; text-align: center; font-size: 16px; background: rgba(255, 255, 255, .97); }
+#tab-home .bubble { position: relative; right: auto; top: auto; max-width: calc(100% - 124px); margin-bottom: 10px; text-align: center; font-size: 16px; line-height: 1.3; background: rgba(255, 255, 255, .97); line-break: strict; }   /* v10.5：右上のボタンに かからない はば */
 #tab-home .bubble::after { left: 50%; margin-left: -7px; }
 #tab-home .cat-wrap { height: clamp(230px, 38dvh, 360px); position: relative; left: 8px; }
 #tab-home .bubble { z-index: 4; }
@@ -365,7 +370,8 @@ label.f { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font
 .mc-val { grid-column: 1 / -1; font-size: 22px; font-weight: 900; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .mc-bar { grid-column: 1 / -1; position: relative; height: 10px; border: 2px solid var(--ink); border-radius: 999px; background: #F4E9D7; overflow: hidden; }
 .mc-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: var(--green); transition: width .6s; }
-#moodFill { background: var(--yellow); }
+#moodFill { background: var(--yellow); transition: width .6s, background-color .6s; }
+.mc-tier { margin-left: 3px; font-size: .8em; vertical-align: 1px; }   /* v10.5：ごきげんの顔 */
 .h-right { position: absolute; right: 0; bottom: 8px; display: grid; gap: 12px; justify-items: center; z-index: 2; }
 .gacha-btn { position: relative; width: 74px; padding: 6px 4px 4px; border: 3px solid var(--ink); border-radius: 16px; background: rgba(255, 255, 255, .93); box-shadow: 0 3px 0 var(--ink); display: flex; flex-direction: column; align-items: center; font-size: 13px; font-weight: 900; }
 .gacha-btn svg { width: 40px; height: 46px; }
@@ -392,7 +398,6 @@ label.f { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font
 /* ガチャボタンの赤丸、トレーニングの連続表示 */
 .gacha-btn .dot { position: absolute; top: -6px; right: -6px; }
 .gym-card2 { position: relative; overflow: visible; }
-.gym-card2 .gc-head { border-radius: 13px 13px 0 0; }
 .gc-float { position: absolute; left: 50%; top: 38%; transform: translateX(-50%); z-index: 3; white-space: nowrap; pointer-events: none; display: flex; flex-direction: column; align-items: center;
   background: var(--white); border: 3px solid var(--ink); border-radius: 12px; padding: 2px 8px; font-weight: 900; font-size: 15px; color: var(--orange-d); animation: gcFloat 1.3s ease-out forwards; }
 .gc-float small { font-size: 12px; color: var(--muted); }
@@ -497,10 +502,15 @@ body.sos::after { content: ""; position: fixed; inset: 0; z-index: 80; pointer-e
 /* スイッチは見た目はそのまま、さわれる所だけ広げる（44px 以上） */
 .switch::before { content: ""; position: absolute; inset: -8px -4px; }
 /* ジムの絵は低めにして、トレーニングの START がはじめの画面に入るように */
-.gym-scene { margin-top: 12px; }
-.gym-scene img { height: clamp(140px, 26dvh, 260px); object-fit: cover; object-position: center 45%; }
+/* v10.5：対戦は 絵の よこ長バナー（1つの ボタン） */
+.gym-scene { margin-top: 12px; position: relative; display: block; width: 100%; padding: 0; font: inherit; color: inherit; text-align: left; }
+.gym-scene img { display: block; width: 100%; height: clamp(96px, 17dvh, 150px); object-fit: cover; object-position: center 42%; }
+.gym-scene .gs-txt { position: absolute; left: 10px; bottom: 10px; display: flex; flex-direction: column; background: var(--red); color: #fff; font-weight: 900; font-size: 16px; line-height: 1.2; padding: 6px 12px; border-radius: 14px; border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink); }
+.gym-scene .gs-txt small { font-size: 11.5px; font-weight: 700; opacity: .95; }
+.gym-scene .vs-badge { right: 10px; bottom: 50%; transform: translateY(50%); padding: 2px 14px; font-size: 26px; line-height: 1.2; animation: none; }
+.gym-scene:disabled { filter: grayscale(.7); opacity: .8; }
+.gym-scene:not(:disabled):active { transform: translateY(3px); }
 .gym-cards { margin-top: 4px; }
-.b-open { margin-top: 10px; }
 /* 朝・昼・夜・間食、目標の えらぶボタンも 44px */
 .radio-row button { min-height: 44px; }
 /* せまい画面では、タブの文字（トレーニング）が入るように字間をつめる */
@@ -561,7 +571,8 @@ body.sos::after { content: ""; position: fixed; inset: 0; z-index: 80; pointer-e
 
 
 /* ---------- v10.1 メニューの入れかえ・ホームの上の列 ---------- */
-.h-quick { display: flex; justify-content: space-between; gap: 6px; }
+/* v10.5：ログボ・ミッションは ステージの右上に たてに ならべる */
+.h-quick { position: absolute; right: 0; top: 0; display: flex; flex-direction: column; gap: 8px; z-index: 3; }
 .h-quick .icon-btn { width: 46px; height: 46px; border-radius: 14px; background: rgba(255, 255, 255, .95); }
 .h-quick .icon-btn svg { width: 30px; height: 30px; }
 #btnSettings { width: 46px; height: 46px; border-radius: 14px; background: rgba(255, 255, 255, .95); }
@@ -791,3 +802,33 @@ body.sos::after { content: ""; position: fixed; inset: 0; z-index: 80; pointer-e
 .ev-tag { display: table; font-size: 11px; background: var(--c); color: var(--white); border-radius: 6px; padding: 0 6px; margin-bottom: 2px; }
 .link-btn { border: 0; background: none; padding: 4px 0 0; font: inherit; font-size: 12.5px; font-weight: 900; color: var(--blue); text-decoration: underline; min-height: 32px; }
 @media (prefers-reduced-motion: reduce) { .evbtn-spark, .gacha-btn.ev-btn::before { animation: none; } .evbtn-spark { display: none; } }
+
+/* ===== v10.5 ジム：せまい画面（iPhone SE）でも 3つのトレーニングと 対戦が スクロールなしで 見える ===== */
+@media (max-height: 620px) {
+  #tab-train .page-head { padding-top: 8px; padding-bottom: 4px; gap: 4px; }
+  #tab-train .page-head h1 { font-size: 26px; }
+  #tab-train .seg { margin: 2px 0 8px; }
+  #tab-train .seg button { min-height: 38px; }
+  .gym-cards { gap: 6px; }
+  .gym-card2 { grid-template-columns: 42px minmax(0, 1fr) auto; gap: 7px; padding: 4px 8px 4px 6px; border-radius: 14px; box-shadow: 0 3px 0 var(--ink); }
+  .gc-ico { width: 42px; height: 42px; border-radius: 11px; }
+  .gc-ico svg { width: 32px; height: 32px; }
+  .gc-name { font-size: 14px; }
+  .gc-meta { flex-wrap: nowrap; gap: 4px; }
+  .gc-cost { font-size: 12px; }
+  .gc-label { font-size: 11px; padding: 0 6px; }
+  .gc-start { min-width: 66px; min-height: 40px; padding: 0 8px; }
+  .gym-scene { margin-top: 8px; }
+  .gym-scene img { height: 84px; }
+  .gym-scene .gs-txt { bottom: 8px; font-size: 14px; padding: 4px 10px; }
+}
+
+/* ===== v10.5 きせかえ：猫の種類（いちばん上） ===== */
+.breed-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.breed-row button { font: inherit; color: inherit; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 2px 5px; border: 3px solid var(--ink); border-radius: 14px; background: var(--white); box-shadow: 0 3px 0 var(--ink); min-width: 0; position: relative; }
+.breed-row button[aria-checked="true"] { background: var(--yellow); }
+.breed-row button[aria-checked="true"]::after { content: "✓"; position: absolute; top: -7px; right: -5px; width: 22px; height: 22px; border-radius: 50%; background: var(--orange); border: 2px solid var(--ink); color: #fff; font-weight: 900; line-height: 18px; font-size: 12px; }
+.breed-row button:active { transform: translateY(3px); box-shadow: 0 0 0 var(--ink); }
+.breed-face { display: block; width: 52px; height: 46px; overflow: hidden; border-radius: 10px; background: #FFF1DE; }
+.breed-face .cp-art { width: 52px; max-width: none; margin-top: 2px; }
+.breed-row b { font-size: 11px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; letter-spacing: -.04em; }

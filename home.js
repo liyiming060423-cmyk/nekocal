@@ -19,12 +19,12 @@ function bubbleText() {
   const nm = S.user.name && S.user.name !== 'プレイヤー' ? S.user.name + '、' : '';
   if (!d.meals.length && h >= 10) return nm + '飯くれ！';
   if (h >= 19 && S.sumSeen !== todayStr()) return nm + '今日のまとめ、見てにゃ！';   // v9.9：夜は「今日のまとめ」へ（カロリーのカードから）
-  if ((S.mood ?? 60) < 30) return nm + 'かまってほしいニャ…';
+  const tier = moodTier();   // v10.5：ごきげんの3だん
+  if (tier === 'low') return nm + MOOD_TIER.low.say;
   if (f > 0.5) return 'おなかパンパン…';
   if (f < -0.5) return 'おなかすいた…';
   if (!d.trains) return nm + 'ジム行くにゃ！';
-  if ((S.mood ?? 60) >= 80) return 'ごきげんニャ♪';
-  return 'いい感じにゃ！';
+  return MOOD_TIER[tier].say;
 }
 function homeMood() {
   const h = new Date().getHours();
@@ -44,7 +44,12 @@ function renderMeters() {
   $('stamFill').style.width = S.stamina + '%';
   $('stamFill').style.backgroundColor = S.stamina < 20 ? 'var(--red)' : S.stamina < 50 ? 'var(--yellow)' : 'var(--green)';
   $('stamVal').textContent = S.stamina + '%'; $('stamMeter').setAttribute('aria-valuenow', S.stamina);
-  $('moodFill').style.width = m + '%'; $('moodVal').textContent = m + '%'; $('moodMeter').setAttribute('aria-valuenow', m);
+  const tr = MOOD_TIER[moodTier(m)];   // v10.5：ごきげん・ふつう・しょんぼり
+  $('moodFill').style.width = m + '%'; $('moodFill').style.backgroundColor = tr.color;
+  $('moodVal').innerHTML = `${m}%<span class="mc-tier" aria-hidden="true" title="${tr.name}">${tr.face}</span>`;
+  $('moodMeter').setAttribute('aria-valuenow', m); $('moodMeter').setAttribute('aria-valuetext', `${m}%（${tr.name}）`);
+  $('moodMeter').dataset.tier = moodTier(m);
+  if (homeCat && homeCat.setTier) homeCat.setTier(moodTier(m));
 }
 function mountHomeCat() {
   const key = JSON.stringify([S.cat.breed, S.cat.idx, S.cat.dead, S.cat.equip, homeMood()]);
@@ -52,8 +57,9 @@ function mountHomeCat() {
   if (homeCat) homeCat.stop();
   homeCatKey = key;
   $('catWrap').innerHTML = petCatHTML({ breed: S.cat.breed, idx: S.cat.idx, equip: S.cat.equip, dead: S.cat.dead, mood: homeMood() });
-  homeCat = petCatBind($('catWrap'), { sayEl: $('bubble'), status: bubbleText, mood: homeMood, sound: petSound, vibrate: p => buzz(p), onReact: touchCat });
-  const b = bubbleText(); $('bubble').textContent = b; $('bubble').hidden = !b;
+  homeCat = petCatBind($('catWrap'), { sayEl: $('bubble'), status: bubbleText, mood: homeMood, tier: () => moodTier(), sound: petSound, vibrate: p => buzz(p), onReact: touchCat });
+  homeCat.setTier(moodTier());
+  const b = bubbleText(); pcSaySet($('bubble'), b); $('bubble').hidden = !b;
 }
 function renderHome() {
   const d = day(), t = todayStr(), tg = target(S.user), it = intake(t);
@@ -102,6 +108,7 @@ function renderHome() {
     gb.innerHTML = ge ? evButtonHTML(ge) : `${I.gachaMachine}<span>ガチャ</span><span class="dot" id="dotGacha" hidden></span>`;
     gb.setAttribute('aria-label', ge ? `イベント：${ge.name}` : 'ガチャへ');
   }
+  gb.hidden = !ge;   // v10.5：イベントが ないときは ボタンを出さない（福袋は 上のバナーから）
   $('dotGacha').hidden = ge ? !evPlaysLeft() : S.coins < GACHA_COST;
   $('btnCamera').innerHTML = I.camera;
   const km = d.steps * (S.user.height || 165) * RULE.strideRate / 100000;
@@ -210,9 +217,10 @@ function openGuide() {
   });
 }
 // ホームの案内：画面を暗くして、1か所ずつ照らす。右上の「スキップ」でいつでも終われる
-let tourI = -1;
+let tourI = -1, TS = TOUR;   // TS：こんかい 出す ステップ（v10.5：when が あるものは そのときだけ）
 function startTour() {
   if (tourI >= 0 || S.cat.dead) return;
+  TS = TOUR.filter(s => !s.when || s.when());
   if (!$('modal').hidden) closeModal();
   $('toast').hidden = true;   // 照らす所にかぶらないように
   if (UI.tab !== 'home') setTab('home');
@@ -224,7 +232,7 @@ function startTour() {
   document.body.appendChild(el);
   el.querySelector('#tourSkip').onclick = () => endTour();
   el.querySelector('#tourBack').onclick = () => { if (tourI > 0) { se('tap'); tourShow(tourI - 1); } };
-  el.querySelector('#tourNext').onclick = () => { se('tap'); if (tourI < TOUR.length - 1) tourShow(tourI + 1); else endTour(); };
+  el.querySelector('#tourNext').onclick = () => { se('tap'); if (tourI < TS.length - 1) tourShow(tourI + 1); else endTour(); };
   window.addEventListener('resize', tourPlace);
   el.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); endTour(); } });   // v10.2：Esc でも終われる
   tourShow(0);
@@ -241,17 +249,17 @@ function tourRect(sel) {
 }
 function tourShow(i) {
   tourI = i;
-  const st = TOUR[i];
+  const st = TS[i];
   $('tourText').textContent = st.text.replace(/\{cat\}/g, S.cat.name || '猫');
-  $('tourN').textContent = `${i + 1} / ${TOUR.length}`;
+  $('tourN').textContent = `${i + 1} / ${TS.length}`;
   $('tourBack').hidden = i === 0;
-  $('tourNext').textContent = i === TOUR.length - 1 ? 'はじめる！' : 'つぎへ';
+  $('tourNext').textContent = i === TS.length - 1 ? 'はじめる！' : 'つぎへ';
   tourPlace();
 }
 function tourPlace() {
   const el = $('tour'); if (!el || tourI < 0) return;
   const hole = el.querySelector('.tour-hole'), box = el.querySelector('.tour-box'), skip = el.querySelector('.tour-skip');
-  const r = tourRect(TOUR[tourI].sel), pad = 6, vh = window.innerHeight;
+  const r = tourRect(TS[tourI].sel), pad = 6, vh = window.innerHeight;
   skip.style.top = '';
   if (!r) { hole.style.cssText = 'left:50%;top:50%;width:0;height:0'; box.style.top = ''; box.style.bottom = '30%'; return; }
   hole.style.cssText = `left:${r.left - pad}px;top:${r.top - pad}px;width:${r.right - r.left + pad * 2}px;height:${r.bottom - r.top + pad * 2}px`;

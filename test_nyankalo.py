@@ -7,7 +7,7 @@
   python test_nyankalo.py --shots shots        … スクショを shots/ に保存（なしなら保存しない）
   python test_nyankalo.py --browser webkit     … Safari と同じエンジン（python -m playwright install webkit が必要）
   python test_nyankalo.py --app <フォルダ>      … ほかのフォルダのアプリを調べる
-グループ：home tabs tour gacha level coin daily first battle slot sagase font a11y manifest memo migrate achieve stone meal-delete event event41（v10.3 で memo〜meal-delete、v10.4 で event、v10.4.1 で event41 を追加）
+グループ：home tabs tour gacha level coin daily first battle slot sagase font a11y manifest memo migrate achieve stone meal-delete event event41 v105（v10.3 で memo〜meal-delete、v10.4 で event、v10.4.1 で event41、v10.5 で v105 を追加）
 ※ bump.py は .py をアプリのファイル一覧に入れないので、このファイルを置いたままでよい
 """
 import sys, os, re, json, asyncio, functools, http.server, socketserver, threading, traceback, argparse, tempfile
@@ -117,6 +117,11 @@ async def t_home(b):
                 bub, lf = m['bubble'], m['left']
                 ov_px = max(0, min(bub['r'], lf['r']) - max(bub['l'], lf['l'])) * max(0, min(bub['b'], lf['b']) - max(bub['t'], lf['t']))
                 check(ov_px < 120, f'{tag} 吹き出しと左の列が重ならない（{ov_px:.0f}px²）')
+                # v10.5：ログボ・ミッションは ステージの右上。吹き出し・右下の列に かからない
+                q, sg, rt = m['quick'], m['stage'], m['right']
+                check(abs(q['r'] - sg['r']) <= 2 and abs(q['t'] - sg['t']) <= 2, f'{tag} 🎁📋は ステージの右上（{q["r"]:.0f},{q["t"]:.0f} / {sg["r"]:.0f},{sg["t"]:.0f}）')
+                check(q['b'] <= rt['t'] + 1, f'{tag} 🎁📋が 右下の列に かからない（{q["b"]:.0f}≤{rt["t"]:.0f}）')
+                check(bub['r'] <= q['l'] + 1 or bub['t'] >= q['b'] or bub['b'] <= q['t'], f'{tag} 吹き出しが 🎁📋に かからない')
                 check(not pg.errs, f'{tag} エラーなし {pg.errs[:2]}')
                 if coins == 1850 or (bk == 'bag' and coins == 12850): await shot(pg, f'home-{dev}-{bk}-{coins}')
                 await ctx.close()
@@ -154,7 +159,7 @@ async def t_tour(b):
     for dev in DEV:
         ctx, pg = await page(b, dev, base(guide={"tour": False, "hits": [], "got": [], "done": False}))
         await start(pg); await pg.wait_for_timeout(600)
-        n = await pg.evaluate("TOUR.length")
+        n = await pg.evaluate("TOUR.filter(s => !s.when || s.when()).length")   # v10.5：イベント中だけの ステップがある
         for i in range(n):
             hole = await pg.evaluate("(()=>{const h=document.querySelector('.tour-hole').getBoundingClientRect(), x=document.querySelector('.tour-box').getBoundingClientRect();return {w:h.width,h:h.height,t:h.top,b:h.bottom,bt:x.top,bb:x.bottom,vh:innerHeight}})()")
             check(hole['w'] > 20 and hole['h'] > 20, f'{dev} 案内 {i+1} 照らす所がある')
@@ -1010,9 +1015,159 @@ async def t_event41(b):
     e = await fr.evaluate("window.__errs||[]"); check(not e and not pg.errs, f'金魚 エラーなし {e[:2]} {pg.errs[:2]}')
     await ctx.close()
 
+async def t_v105(b):
+    # ⚙ は 歯車（太陽の 線ではない）・下のタブの 上の線が そろっている
+    for dev in DEV:
+        ctx, pg = await page(b, dev, base())
+        await start(pg)
+        r = await pg.evaluate("""(()=>{const s=document.querySelector('#btnSettings svg'), p=s.querySelector('path'), tops=[...document.querySelectorAll('.tabbar button')].map(b=>b.getBoundingClientRect().top);
+          return {pts:(p.getAttribute('d').match(/L/g)||[]).length, ray:/v3/.test(s.innerHTML), tops:Math.max(...tops)-Math.min(...tops), cur:document.querySelector('.tabbar [aria-current="page"]').dataset.tab}})()""")
+        check(r['pts'] >= 24 and not r['ray'], f'{dev} ⚙ は 歯の ある 歯車（{r}）')
+        check(r['tops'] <= .5 and r['cur'] == 'home', f'{dev} 下のタブの 上の線が そろう（ずれ {r["tops"]}px）')
+        for tab in ['shop', 'train', 'history', 'cat']:
+            await pg.click(f'.tabbar [data-tab="{tab}"]'); await pg.wait_for_timeout(200)
+            d = await pg.evaluate("(()=>{const t=[...document.querySelectorAll('.tabbar button')].map(b=>b.getBoundingClientRect().top);return Math.max(...t)-Math.min(...t)})()")
+            check(d <= .5, f'{dev} {tab} をえらんでも 上の線が そろう（{d}px）')
+        check(not pg.errs, f'{dev} 歯車・タブ エラーなし {pg.errs[:2]}')
+        await ctx.close()
+    # 台詞：ぜんぶの台詞・いちばん長い名前で 2行まで・ほかの ボタンに かからない・「、」などの あとで 改行
+    for dev in DEV:
+        ctx, pg = await page(b, dev, base(**{'user': dict(base()['user'], name='あいうえおかきくけこさし')}), motion='reduce')
+        await start(pg)
+        res = await pg.evaluate("""(()=>{ if (homeCat) homeCat.stop();
+          const nm=S.user.name+'、', L=new Set();
+          Object.values(PC_LINES).flat().forEach(x=>L.add(x));
+          Object.values(MOOD_TIER).forEach(t=>{t.idle.forEach(x=>L.add(x)); L.add(nm+t.say);});
+          ['hi','lo'].forEach(k=>CRISIS[k].forEach(c=>c&&L.add(c.say)));
+          ['早くよくなりたいにゃ…','つかれたにゃ…',nm+'飯くれ！',nm+'今日のまとめ、見てにゃ！','おなかパンパン…','おなかすいた…',nm+'ジム行くにゃ！','ゴロゴロ…♡'].forEach(x=>L.add(x));
+          const b=document.getElementById('bubble'), R=e=>e.getBoundingClientRect(), ov=(a,c)=>a.left<c.right-1&&a.right>c.left+1&&a.top<c.bottom-1&&a.bottom>c.top+1;
+          const others=['#btnLogin','#btnMission','.h-left','.h-right','#eventBanner','#kcalCard'].map(q=>[q,document.querySelector(q)]).filter(x=>x[1]&&R(x[1]).width);
+          const bad=[]; let n=0;
+          for(const t of L){ n++; b.hidden=false; pcSaySet(b,t); const r=R(b), cs=getComputedStyle(b), lh=parseFloat(cs.lineHeight);
+            const lines=Math.round((r.height-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom)-parseFloat(cs.borderTopWidth)*2)/lh);
+            const hit=others.filter(([q,e])=>ov(r,R(e))).map(x=>x[0]);
+            // 改行した所が かたまりの さかいめ（かたまりの 中で 2行に ならない）
+            const split=[...b.querySelectorAll('.say-w')].some(w=>w.getClientRects().length>1 || R(w).height>lh*1.5);
+            if(lines>2||hit.length||split) bad.push({t,lines,hit,split}); }
+          return {n,bad}})()""")
+        check(res['n'] >= 40 and not res['bad'], f'{dev} 台詞 {res["n"]}こ：2行まで・ほかに かからない・かたまりで 改行（{res["bad"][:3]}）')
+        await ctx.close()
+    # ごきげん 3だん：メーターの顔・色・台詞・猫の クラス
+    for m, tier, face in [(85, 'high', '😊'), (60, 'mid', '🙂'), (20, 'low', '😿')]:
+        ctx, pg = await page(b, 'ip13', base(mood=m, days={'2026-11-17': dayrec([meal('a')], trains=1)}))
+        await start(pg)
+        r = await pg.evaluate("({tier:document.getElementById('moodMeter').dataset.tier, val:document.getElementById('moodVal').textContent, vt:document.getElementById('moodMeter').getAttribute('aria-valuetext'), say:document.getElementById('bubble').textContent, cls:document.querySelector('#catWrap .pc').className, col:getComputedStyle(document.getElementById('moodFill')).backgroundColor})")
+        check(r['tier'] == tier and face in r['val'] and MOOD_NAME[tier] in r['vt'] and f'tier-{tier}' in r['cls'], f'ごきげん {m}：{tier}（{r}）')
+        check(r['say'].endswith({'high': 'ごきげんニャ♪', 'mid': 'いい感じにゃ！', 'low': 'かまってほしいニャ…'}[tier]), f'ごきげん {m}：台詞（{r["say"]}）')
+        await shot(pg, f'v105-mood-{tier}')
+        await ctx.close()
+    # 動きをへらす：ゆれ・息を とめる
+    ctx, pg = await page(b, 'se', base(), motion='reduce')
+    await start(pg)
+    r = await pg.evaluate("[getComputedStyle(document.querySelector('#catWrap .pc-sway')).animationName, getComputedStyle(document.querySelector('#catWrap .pc-idle')).animationName]")
+    check(r == ['none', 'none'], f'動きをへらす：ゆれ・息なし（{r}）')
+    await ctx.close()
+    ctx, pg = await page(b, 'se', base())
+    await start(pg)
+    r = await pg.evaluate("getComputedStyle(document.querySelector('#catWrap .pc-sway')).animationName")
+    check(r == 'pcSway', f'ふだんは 重心が ゆれる（{r}）')
+    await ctx.close()
+    # ジム：SE でも 3つの カードと 対戦が スクロールなしで 見える
+    for dev in DEV:
+        ctx, pg = await page(b, dev, base())
+        await start(pg); await pg.click('.tabbar [data-tab="train"]'); await pg.wait_for_timeout(400)
+        r = await pg.evaluate("""(()=>{const R=q=>document.querySelector(q).getBoundingClientRect(), cards=[...document.querySelectorAll('.gym-card2')].map(e=>e.getBoundingClientRect());
+          const bt=document.querySelectorAll('.gc-start'), sc=R('.gym-scene');
+          return {n:cards.length, row:cards.every(c=>c.width>300), lastB:Math.max(...cards.map(c=>c.bottom)), scB:sc.bottom, bar:R('.tabbar').top, btn:document.querySelector('.gym-scene').tagName, starts:bt.length, y:scrollY}})()""")
+        check(r['n'] == 3 and r['row'] and r['starts'] == 3, f'{dev} ジム：よこ長カード 3まい（{r}）')
+        check(r['scB'] <= r['bar'] + 2 and r['y'] == 0, f'{dev} ジム：対戦まで スクロールなしで 見える（{r["scB"]:.0f}≤{r["bar"]:.0f}）')
+        check(r['btn'] == 'BUTTON', f'{dev} ジム：対戦は ボタン')
+        await shot(pg, f'v105-gym-{dev}')
+        await pg.click('[data-train="tread"]'); await pg.wait_for_timeout(400)
+        s = await pg.evaluate(f"{SAVED}.stamina")
+        check(s == 60, f'{dev} ジム：START で トレーニング（スタミナ {s}）')
+        check(not pg.errs, f'{dev} ジム エラーなし {pg.errs[:2]}')
+        await ctx.close()
+    # 猫の種類：きせかえの上で かえる。せってい・ステータスには もうない
+    for dev in DEV:
+        ctx, pg = await page(b, dev, base())
+        await start(pg); await pg.click('.tabbar [data-tab="cat"]'); await pg.click('#catSeg [data-v="wear"]'); await pg.wait_for_timeout(300)
+        n = await pg.evaluate("document.querySelectorAll('.breed-row [data-nbreed]').length")
+        await pg.click('[data-nbreed="grey"]'); await pg.wait_for_timeout(400)
+        r = await pg.evaluate(f"({{b:{SAVED}.cat.breed, chk:document.querySelector('[data-nbreed=\"grey\"]').getAttribute('aria-checked'), art:document.querySelector('.locker .pc').dataset.breed, foc:document.activeElement.dataset.nbreed}})")
+        check(n == 4 and r == {'b': 'grey', 'chk': 'true', 'art': 'grey', 'foc': 'grey'}, f'{dev} きせかえで 猫の種類を かえる（{n} {r}）')
+        await shot(pg, f'v105-breed-{dev}')
+        await pg.click('#catSeg [data-v="status"]'); await pg.wait_for_timeout(300)
+        st = await pg.evaluate("!!document.getElementById('ncBreed')")
+        await pg.click('.tabbar [data-tab="home"]'); await pg.click('#btnSettings'); await pg.wait_for_timeout(300)
+        se_ = await pg.evaluate("!!document.getElementById('sCat')")
+        check(not st and not se_, f'{dev} ステータス・せっていの「猫の種類」は なし（{st} {se_}）')
+        check(not pg.errs, f'{dev} 猫の種類 エラーなし {pg.errs[:2]}')
+        await ctx.close()
+    # 素手：はじめての人は 素手・前からの人は そのまま（素手は 持っている）・図鑑の数は かわらない・grey は 茶色も 手袋の絵
+    ctx, pg = await page(b, 'ip13', None)
+    await pg.wait_for_timeout(300)
+    r = await pg.evaluate("({h:S.cat.equip.hand, own:S.owned.includes('paw_none'), zk:zukanKeys().length, inZ:zukanKeys().includes('paw_none')})")
+    check(r == {'h': 'paw_none', 'own': True, 'zk': 50, 'inZ': False}, f'素手：はじめての人（{r}）')
+    await ctx.close()
+    ctx, pg = await page(b, 'ip13', base())
+    await start(pg)
+    r = await pg.evaluate(f"({{h:{SAVED}.cat.equip.hand, own:{SAVED}.owned.includes('paw_none'), src:document.querySelector('#catWrap .pc-body').getAttribute('src')}})")
+    check(r['h'] == 'gloves_brown' and r['own'] and r['src'].endswith('tabby-body.webp'), f'素手：前からの人は 手は そのまま（{r}）')
+    await pg.click('.tabbar [data-tab="cat"]'); await pg.click('#catSeg [data-v="wear"]'); await pg.click('[data-lslot="hand"]'); await pg.wait_for_timeout(200)
+    await pg.click('[data-wear="paw_none"]'); await pg.wait_for_timeout(300)
+    r = await pg.evaluate(f"({{h:{SAVED}.cat.equip.hand, src:document.querySelector('.locker .pc-body').getAttribute('src'), gl:!!document.querySelector('.locker .pc-gloves'), name:document.querySelector('[data-wear=\"paw_none\"]').textContent}})")
+    check(r['h'] == 'paw_none' and r['src'].endswith('tabby-body-paw.webp') and not r['gl'] and '素手' in r['name'], f'素手：えらべる・絵は body-paw（{r}）')
+    await shot(pg, 'v105-paw')
+    ok = await pg.evaluate("Promise.all(CAT_KEYS.map(k=>new Promise(res=>{const i=new Image();i.onload=()=>res(i.naturalHeight===813);i.onerror=()=>res(false);i.src=k+'-body-paw.webp';})))")
+    check(all(ok), f'素手：4匹ぶんの 絵がある（{ok}）')
+    g = await pg.evaluate("[petCatHTML({breed:'grey',equip:{hand:'gloves_brown'}}).includes('pc-gloves'), petCatHTML({breed:'tabby',equip:{hand:'gloves_brown'}}).includes('pc-gloves'), petCatHTML({breed:'grey',equip:{hand:'paw_none'}}).includes('pc-gloves')]")
+    check(g == [True, False, False], f'灰色の猫：茶色グローブも 手袋の絵を 重ねる（{g}）')
+    info = await pg.evaluate("nyankaloMini.info().cat.hand")
+    check(info == 'paw_none', f'素手：ミニゲームにも わたす（{info}）')
+    check(not pg.errs, f'素手 エラーなし {pg.errs[:2]}')
+    await ctx.close()
+    # にゃんこバッティング：むずかしさ（アプリの外で）
+    for dev in DEV:
+        ctx, pg = await page(b, dev, None, path='baseball.html')
+        await pg.evaluate("localStorage.setItem('nb_best', JSON.stringify({shiba:200, tut:1}))"); await pg.reload(); await pg.wait_for_timeout(600)
+        r = await pg.evaluate("""(()=>({n:document.querySelectorAll('#modeList [data-mode]').length, m:__bb.modeId, best:document.querySelector('.dog .best').textContent,
+          a:[__bb.guideAlpha('easy',-1),__bb.guideAlpha('easy',.9),__bb.guideAlpha('normal',.2),__bb.guideAlpha('normal',.6),__bb.guideAlpha('hard',-1),__bb.guideAlpha('hard',.02)],
+          c:[__bb.coinRaw(300,'shiba','easy'),__bb.coinRaw(300,'shiba','normal'),__bb.coinRaw(300,'husky','hard')], k:[__bb.bestKey('shiba','easy'),__bb.bestKey('shiba','hard')]}))()""")
+        check(r['n'] == 3 and r['m'] == 'easy' and r['best'] == 'ベスト 200', f'{dev} バッティング：むずかしさ 3つ・はじめは かんたん・前の ベストが そのまま（{r}）')
+        check(r['a'] == [1, 1, 1, 0, 1, 0], f'{dev} バッティング：ガイドの 見える時間（{r["a"]}）')
+        check(r['c'] == [30, 39, 72] and r['k'] == ['shiba', 'shiba-hard'], f'{dev} バッティング：コインの倍率・キー（{r["c"]} {r["k"]}）')
+        await pg.click('[data-mode="hard"]'); await pg.wait_for_timeout(300)
+        r = await pg.evaluate("({m:__bb.modeId, st:JSON.parse(localStorage.getItem('nb_best')).mode, best:document.querySelector('.dog .best').textContent, chk:document.querySelector('[data-mode=\"hard\"]').getAttribute('aria-checked')})")
+        check(r == {'m': 'hard', 'st': 'hard', 'best': 'ベスト 0', 'chk': 'true'}, f'{dev} バッティング：えらぶと 覚える・ベストは むずかしさごと（{r}）')
+        await pg.reload(); await pg.wait_for_timeout(500)
+        m = await pg.evaluate("__bb.modeId")
+        check(m == 'hard', f'{dev} バッティング：ひらきなおしても むずかしい（{m}）')
+        await shot(pg, f'v105-bb-{dev}')
+        check(not pg.errs, f'{dev} バッティング エラーなし {pg.errs[:2]}')
+        await ctx.close()
+    # イベントが ないとき：右下の ボタンは 出ない・案内の イベントの ステップも 出ない
+    ctx, pg = await page(b, 'se', base(guide={"tour": True, "hits": [], "got": [], "done": False}))
+    await start(pg)
+    await pg.evaluate("EVENTS.forEach(e => e.on = false); renderHome(); startTour()"); await pg.wait_for_timeout(400)
+    r = await pg.evaluate("({ev:!!eventNow(), gb:document.getElementById('btnGacha').hidden, n:TS.length, all:TOUR.length, tour:!!document.getElementById('tour')})")
+    check(r['ev'] is False and r['gb'] and r['tour'] and r['n'] == r['all'] - 1, f'イベントなし：ガチャボタンなし・案内は {r["n"]}ステップ（{r}）')
+    await shot(pg, 'v105-noevent-tour')
+    check(not pg.errs, f'イベントなし エラーなし {pg.errs[:2]}')
+    await ctx.close()
+    # お知らせ（10.4 の人）：5行・SE でも OK が見える
+    ctx, pg = await page(b, 'se', base(news='10.4'))
+    await start(pg); await pg.wait_for_timeout(400)
+    r = await pg.evaluate("({n:document.querySelectorAll('.news-list > div').length, t:document.getElementById('modalTitle').textContent, ok:document.getElementById('nwOk').getBoundingClientRect().bottom <= innerHeight})")
+    check(r == {'n': 5, 't': 'あたらしくなったよ', 'ok': True}, f'お知らせ 10.5：10.4 の人に 5行（{r}）')
+    await shot(pg, 'v105-news-se')
+    await ctx.close()
+
+MOOD_NAME = {'high': 'ごきげん', 'mid': 'ふつう', 'low': 'しょんぼり'}
+
 GROUPS = [('home', t_home), ('tabs', t_tabs), ('tour', t_tour), ('gacha', t_gacha), ('level', t_level), ('coin', t_coin), ('daily', t_daily), ('first', t_first),
           ('battle', t_battle), ('slot', t_slot), ('sagase', t_sagase), ('font', t_font), ('a11y', t_a11y), ('manifest', t_manifest),
-          ('memo', t_memo), ('migrate', t_migrate), ('achieve', t_achieve), ('stone', t_stone), ('meal-delete', t_mealdel), ('event', t_event), ('event41', t_event41)]
+          ('memo', t_memo), ('migrate', t_migrate), ('achieve', t_achieve), ('stone', t_stone), ('meal-delete', t_mealdel), ('event', t_event), ('event41', t_event41), ('v105', t_v105)]
 
 async def main():
     async with async_playwright() as p:

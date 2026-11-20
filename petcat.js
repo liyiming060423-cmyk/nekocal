@@ -24,6 +24,13 @@ const PC_LINES = {
   idle: ['ジム行くにゃ！', 'いい感じにゃ！', 'ふわぁ…', '今日もがんばるにゃ']
 };
 const pcPick = a => a[Math.floor(Math.random() * a.length)];
+const PC_TIERS = ['high', 'mid', 'low'];   // v10.5：ごきげんの だん
+// v10.5：台詞は「、」「…」「！」などの あとでだけ 改行する（「今／日」のような 切れ方をしない）。長すぎる かたまりは その中で 折りかえす
+function pcSayHTML(t) {
+  const e = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  return (String(t || '').match(/[^、。！？!?…♪♡]+[、。！？!?…♪♡]*|[、。！？!?…♪♡]+/g) || []).map(x => `<span class="say-w">${e(x)}</span>`).join('');
+}
+function pcSaySet(el, t) { el.innerHTML = pcSayHTML(t); el.setAttribute('aria-label', t || ''); }
 
 function petCatShape(idx) {
   const f = Math.max(-100, Math.min(100, idx || 0)) / 100;
@@ -42,12 +49,12 @@ function petCatHTML(o) {
   if (s.thin > 0.6) cls.push('is-thin');
   const art = `left:${(c.x / PC_BOX_W * 100).toFixed(2)}%;width:${(c.w / PC_BOX_W * 100).toFixed(2)}%`;
   return `<div class="${cls.join(' ')}" data-breed="${b}" style="--sx:${s.sx.toFixed(3)};--sy:${s.sy.toFixed(3)};--tx:${(c.pivot[0] / c.w * 100).toFixed(1)}%;--ty:${(c.pivot[1] / c.h * 100).toFixed(1)}%">
-    <div class="pc-shape"><div class="pc-act"><div class="pc-idle"><div class="pc-art" style="${art}">
+    <div class="pc-shape"><div class="pc-act"><div class="pc-idle"><div class="pc-sway"><div class="pc-art" style="${art}">
       ${petCatBack(b, o.equip || {})}
       <img class="pc-tail" src="${pcImg(b, 'tail')}" alt="" draggable="false">
-      <img class="pc-body" src="${pcImg(b, 'body')}" alt="${c.name}" draggable="false">
+      <img class="pc-body" src="${pcImg(b, pcBare(o.equip) ? 'body-paw' : 'body')}" alt="${c.name}" draggable="false">
       ${petCatWear(b, o.equip || {})}
-    </div></div></div></div>
+    </div></div></div></div></div>
     <div class="pc-fx" aria-hidden="true"></div>
     <div class="pc-say" role="status" hidden></div>
   </div>`;
@@ -58,6 +65,8 @@ const PC_GEAR_DY = { cap_red: 36, crown: 24, band_pink: 16, band_blue: 16,
   hachimaki: 16, ribbon: 14, straw_hat: 30, knit_cat: 22, sunglasses: 14, headphones: 4, school_cap: 30, halo: 44, tiara: 22 };   // v9.4 追加分
 // 猫の種類ごとの微調整（目の高さ・頭のかたむきがちがうので）。{ 種類: { きせかえ: { dy: 下にずらす量（＋で下）, rot: 回す角度 } } }
 const PC_GEAR_FIX = { grey: { sunglasses: { dy: -4, rot: -7 }, knit_cat: { dy: -8 } }, white: { sunglasses: { dy: 4 } } };
+// v10.5：素手（手袋の ところを 毛の手にした 体の絵 ○○-body-paw.webp を使う）
+const pcBare = eq => !!eq && eq.hand === 'paw_none';
 // コスチューム（全身）を着ているか
 const pcSuit = eq => eq && eq.suit && eq.suit !== 'suit_none' && typeof WEAR !== 'undefined' && WEAR[eq.suit] ? eq.suit : null;
 // 体のうしろ（マント・リュックなど）
@@ -73,7 +82,7 @@ function petCatWear(b, eq) {
   if (su) s += `<img class="pc-shirt wear-suit-${su}" src="${pcImg(b, 'shirt')}" alt="" draggable="false">`;
   if (su && typeof suitFront === 'function') { const fr = suitFront(su, c); if (fr) s += `<svg class="pc-gear pc-front" viewBox="0 0 ${c.w} ${c.h}" aria-hidden="true">${fr}</svg>`; }   // v10.4：体の前（えり・ボタン・帯など。手袋の下）
   else if (eq.top && eq.top !== 'tee_orange') s += `<img class="pc-shirt wear-${eq.top}" src="${pcImg(b, 'shirt')}" alt="" draggable="false">`;
-  if (eq.hand && eq.hand !== 'gloves_brown' && eq.hand !== 'dumbbell') s += `<img class="pc-gloves wear-${eq.hand}" src="${pcImg(b, 'gloves')}" alt="" draggable="false">`;
+  if (eq.hand && eq.hand !== 'dumbbell' && eq.hand !== 'paw_none' && (eq.hand !== 'gloves_brown' || c.gloveLayer)) s += `<img class="pc-gloves wear-${eq.hand}" src="${pcImg(b, 'gloves')}" alt="" draggable="false">`;   // v10.5：gloveLayer の猫は 茶色も 重ねる
   let g = '';
   if (su && typeof suitHead === 'function') {
     const [hx, hy, hr] = c.head, k = hr / 97;
@@ -96,15 +105,15 @@ function petCatWear(b, eq) {
 function petCatBind(host, opt) {
   opt = opt || {};
   const root = host.querySelector('.pc');
-  if (!root || root.classList.contains('pc-dead')) return { react() {}, rest() {}, stop() {} };
+  if (!root || root.classList.contains('pc-dead')) return { react() {}, rest() {}, setTier() {}, stop() {} };
   const act = root.querySelector('.pc-act'), fx = root.querySelector('.pc-fx'), body = root.querySelector('.pc-body');
   const say = opt.sayEl || root.querySelector('.pc-say');
   const status = opt.status || (() => '');
   const sound = opt.sound || (() => {}), vib = opt.vibrate || (() => {});
   let sayT = 0, busy = 0, taps = [], petting = null, idleT = 0, alive = true;
 
-  const rest = () => { const t = status(); say.textContent = t; say.hidden = !t; };
-  const speak = (t, ms = 1600) => { say.textContent = t; say.hidden = false; say.classList.remove('pop'); void say.offsetWidth; say.classList.add('pop'); clearTimeout(sayT); sayT = setTimeout(rest, ms); };
+  const rest = () => { const t = status(); pcSaySet(say, t); say.hidden = !t; };
+  const speak = (t, ms = 1600) => { pcSaySet(say, t); say.hidden = false; say.classList.remove('pop'); void say.offsetWidth; say.classList.add('pop'); clearTimeout(sayT); sayT = setTimeout(rest, ms); };
   const play = (name, ms) => {
     act.className = 'pc-act';
     void act.offsetWidth;
@@ -177,23 +186,42 @@ function petCatBind(host, opt) {
   root.addEventListener('pointercancel', endPet);
   root.addEventListener('pointerleave', endPet);
 
+  // v10.5：ごきげんの だん（'high' / 'mid' / 'low'）。動きのはやさ・ひとりごと・小さな動きが かわる
+  let tier = 'mid';
+  const setTier = t => { if (!PC_TIERS.includes(t)) t = 'mid'; tier = t; PC_TIERS.forEach(x => root.classList.toggle('tier-' + x, x === t)); };
+  const calm = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;   // 動きをへらす設定のときは 小さな動きを しない
+  const lines = () => (typeof MOOD_TIER !== 'undefined' && MOOD_TIER[tier] ? MOOD_TIER[tier].idle : PC_LINES.idle);
   // 自分で動く（ときどき）
   function idle() {
     if (!alive || !root.isConnected) return;
     if (Date.now() > busy && !petting) {
-      const mood = opt.mood ? opt.mood() : 'normal';
-      const r = Math.random();
-      if (mood === 'hungry') { play('stomp', 900); speak('飯くれ！'); }
-      else if (mood === 'tired') { speak('つかれたにゃ…', 1800); spawn('z', 70, 6, 'zzz'); setTimeout(() => spawn('z', 74, 2, 'zzz'), 400); }
-      else if (root.classList.contains('is-fat')) { play('puff', 900); speak('おなかパンパン…'); spawn('💧', 78, 8, 'drop'); }
-      else if (root.classList.contains('is-thin')) { play('shiver', 900); speak('おなかすいた…'); }
-      else if (r < 0.45) { play('step', 1600); spawn('♪', 20, 30, 'note'); }
-      else if (r < 0.75) { play('look', 1400); }
-      else speak(status() || pcPick(PC_LINES.idle));
+      const mood = opt.mood ? opt.mood() : 'normal', still = calm();
+      const r = Math.random(), mv = (name, ms) => { if (!still) play(name, ms); };
+      if (opt.tier) setTier(opt.tier());
+      if (mood === 'hungry') { mv('stomp', 900); speak('飯くれ！'); }
+      else if (mood === 'tired') { speak('つかれたにゃ…', 1800); if (!still) { spawn('z', 70, 6, 'zzz'); setTimeout(() => spawn('z', 74, 2, 'zzz'), 400); } }
+      else if (root.classList.contains('is-fat')) { mv('puff', 900); speak('おなかパンパン…'); if (!still) spawn('💧', 78, 8, 'drop'); }
+      else if (root.classList.contains('is-thin')) { mv('shiver', 900); speak('おなかすいた…'); }
+      else if (tier === 'high') {   // ごきげん：はねる・ステップ・♪ が多い
+        if (r < 0.3) { mv('hopS', 900); if (!still) spawn('♪', 24, 26, 'note'); }
+        else if (r < 0.55) { mv('step', 1600); if (!still) spawn('♪', 20, 30, 'note'); }
+        else if (r < 0.75) mv('lookAround', 2200);
+        else speak(pcPick(lines()));
+      } else if (tier === 'low') {   // しょんぼり：ゆっくり・ためいき
+        if (r < 0.4) { mv('sigh', 2000); speak(pcPick(lines()), 1800); }
+        else if (r < 0.6) mv('look', 1400);
+        else speak(pcPick(lines()));
+      } else {   // ふつう
+        if (r < 0.25) mv('lookAround', 2200);
+        else if (r < 0.45) mv('stretch', 1600);
+        else if (r < 0.6) mv('hopS', 900);
+        else if (r < 0.75) { mv('step', 1600); if (!still) spawn('♪', 20, 30, 'note'); }
+        else speak(status() || pcPick(lines()));
+      }
     }
-    idleT = setTimeout(idle, 5000 + Math.random() * 4000);
+    idleT = setTimeout(idle, (tier === 'low' ? 7000 : 5000) + Math.random() * 4000);
   }
   idleT = setTimeout(idle, 2500);
 
-  return { react, rest, stop() { alive = false; clearTimeout(idleT); clearTimeout(sayT); } };
+  return { react, rest, setTier, stop() { alive = false; clearTimeout(idleT); clearTimeout(sayT); } };
 }

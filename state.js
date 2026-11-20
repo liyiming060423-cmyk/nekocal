@@ -11,11 +11,11 @@ function defaultState() {
   return {
     v: 1,
     user: { name: 'プレイヤー', sex: 'male', age: 20, height: 170, weight: 60, goal: 'keep', delta: 300 },
-    cat: { name: 'もち', breed: 'tabby', idx: 0, dead: null, level: 1, exp: 0, stats: { pow: 20, spd: 20, sta: 20 }, equip: { head: 'band_none', top: 'tee_orange', hand: 'gloves_brown', suit: 'suit_none' } },
+    cat: { name: 'もち', breed: 'tabby', idx: 0, dead: null, level: 1, exp: 0, stats: { pow: 20, spd: 20, sta: 20 }, equip: { head: 'band_none', top: 'tee_orange', hand: 'paw_none', suit: 'suit_none' } },   // v10.5：はじめは 素手
     stamina: 65, coins: 850, stones: 0, pity: 0,
     guide: { tour: false, hits: [], got: [], done: false },   // v9.1 はじめてガイド（tour=ホーム案内を見た）
     items: { drink: 0, protein: 0, goldbag: 0 }, protein: false, goldbag: 0, mood: RULE.moodStart,
-    owned: ['band_none', 'tee_orange', 'gloves_brown', 'suit_none'],
+    owned: ['band_none', 'tee_orange', 'gloves_brown', 'suit_none', 'paw_none'],
     start: t, last: t, days: {}, history: [],
     settled: addDays(t, -1),          // v9.9 どの日まで締めたか（体型の計算がすんだ日）
     streak: { n: 0, pass: '' },       // v9.9 連続記録（n=日数、pass=おやすみ券を使った週の月曜日）
@@ -45,6 +45,8 @@ function load() {
     // v8.8：コスチューム（suit）の欄を追加
     if (!st.owned.includes('suit_none')) st.owned.push('suit_none');
     if (!st.cat.equip.suit) st.cat.equip.suit = 'suit_none';
+    // v10.5：素手（みんな持っている。前から遊んでいる人の 手の きせかえは そのまま）
+    if (!st.owned.includes('paw_none')) st.owned.push('paw_none');
     // v9.1：はじめてガイド（前からのデータにも出す）
     st.guide = Object.assign({ tour: false, hits: [], got: [], done: false }, s.guide);
     // v9.9：締め・連続記録・入院。前の版は 0 時に前の日まで締めていたので、締めたのは「最後に開いた日の前の日」まで

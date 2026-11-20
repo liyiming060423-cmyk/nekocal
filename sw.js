@@ -1,7 +1,7 @@
 // にゃんカロ service worker
 // アプリ本体はキャッシュしてオフラインでも起動できるようにする。
 // 更新したら VERSION の数字を上げると、利用者のスマホに新しい版が届く。
-const VERSION = '10.4.1';   // index.html などの ?v= と同じ数字にする
+const VERSION = '10.5';   // index.html などの ?v= と同じ数字にする
 const CACHE = 'nekocal-v' + VERSION;
 const V = '?v=' + VERSION;
 // ↓ ここは bump.py が自動で書く（フォルダの中のファイルから作る。手で直さなくてよい）
@@ -58,6 +58,7 @@ const APP_FILES = [
   './evgame.js' + V,
   './fonts.css' + V,
   './fx.js' + V,
+  './grey-body-paw.webp',
   './grey-body.webp',
   './grey-gloves.webp',
   './grey-shirt.webp',
@@ -71,6 +72,7 @@ const APP_FILES = [
   './icon-maskable-512.png',
   './leaflet.css' + V,
   './leaflet.js' + V,
+  './longwhite-body-paw.webp',
   './longwhite-body.webp',
   './longwhite-gloves.webp',
   './longwhite-shirt.webp',
@@ -88,6 +90,7 @@ const APP_FILES = [
   './state.js' + V,
   './storage.js' + V,
   './style.css' + V,
+  './tabby-body-paw.webp',
   './tabby-body.webp',
   './tabby-gloves.webp',
   './tabby-shirt.webp',
@@ -97,6 +100,7 @@ const APP_FILES = [
   './util.js' + V,
   './walk.css' + V,
   './walk.js' + V,
+  './white-body-paw.webp',
   './white-body.webp',
   './white-gloves.webp',
   './white-shirt.webp',

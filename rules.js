@@ -147,7 +147,7 @@ function checkCrisis() {
   a[c.side] = c.stage; save();
   petSound('cry'); if (c.stage === 2) setTimeout(() => petSound('cry'), 1300);
   if (S.settings.vibrate && navigator.vibrate) { try { navigator.vibrate(c.stage === 2 ? [300, 120, 300, 120, 600] : [200, 100, 300]); } catch (e) {} }
-  if (UI.tab === 'home' && $('bubble')) { $('bubble').textContent = c.say; $('bubble').hidden = false; $('bubble').classList.remove('pop'); void $('bubble').offsetWidth; $('bubble').classList.add('pop'); }
+  if (UI.tab === 'home' && $('bubble')) { pcSaySet($('bubble'), c.say); $('bubble').hidden = false; $('bubble').classList.remove('pop'); void $('bubble').offsetWidth; $('bubble').classList.add('pop'); }
   document.body.classList.remove('sos'); void document.body.offsetWidth; document.body.classList.add('sos');
   toast(`${S.cat.name}：${c.say}`);
   const s = S.settings;
@@ -188,4 +188,6 @@ function claimLevelRewards() {
   return out;
 }
 function addStamina(n) { S.stamina = clamp(S.stamina + n, 0, 100); }
+// v10.5：ごきげんの だん（'high' / 'mid' / 'low'）
+function moodTier(m = S.mood ?? RULE.moodStart) { return m >= RULE.moodHigh ? 'high' : m < RULE.moodLow ? 'low' : 'mid'; }
 function addMood(n) { S.mood = clamp((S.mood ?? RULE.moodStart) + n, 0, 100); }

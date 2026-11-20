@@ -74,9 +74,9 @@ $('modal').addEventListener('click', e => { if (e.target === $('modal') && !moda
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('modal').hidden && !modalLocked) closeModal(); });
 
 /* ---------- 猫えらび ---------- */
-function catArtHTML(b) {
+function catArtHTML(b, bare = true) {   // v10.5 bare：素手の絵（はじめの猫えらびは 素手）
   const c = CATS[b];
-  return `<span class="cp-art"><span class="pc-art" style="left:${(c.x / 600 * 100).toFixed(2)}%;width:${(c.w / 600 * 100).toFixed(2)}%"><img src="${pcImg(b, 'tail')}" alt=""><img src="${pcImg(b, 'body')}" alt="${esc(c.name)}"></span></span>`;
+  return `<span class="cp-art"><span class="pc-art" style="left:${(c.x / 600 * 100).toFixed(2)}%;width:${(c.w / 600 * 100).toFixed(2)}%"><img src="${pcImg(b, 'tail')}" alt=""><img src="${pcImg(b, bare ? 'body-paw' : 'body')}" alt="${esc(c.name)}"></span></span>`;
 }
 function catPickerHTML(sel) {
   return `<div class="cat-pick" role="radiogroup" aria-label="猫の種類">${CAT_KEYS.map(k => `<button type="button" role="radio" data-breed="${k}" aria-checked="${k === sel}">${catArtHTML(k)}<b>${esc(CATS[k].name)}</b><small>${esc(CATS[k].desc)}</small></button>`).join('')}</div>`;
@@ -193,24 +193,24 @@ function openProfile(first) {
   }, null, first);
 }
 
-/* ---------- メニューが変わったお知らせ（v10.1。前から遊んでいる人に1回だけ） ---------- */
+/* ---------- メニューが変わったお知らせ（v10.1。前から遊んでいる人に1回だけ）　v10.5：ホーム・ごきげん・猫の種類・バッティング ---------- */
 function showNews() {
   const from = S.news; S.news = APP_NEWS; save();
   const menu = verNum(from) < verNum('10.1');   // verNum は settings.js   // v10.1 より前から：メニューが変わったことも知らせる
-  const v103 = `<div><b>📖</b><span>ねこ →「おもいで」に とくべつな日が のこる</span></div>
-      <div><b>📋</b><span>ミッションに「ずっと」。称号・ダイヤがもらえる</span></div>
-      <div><b>💎</b><span>ダイヤは ショップで コインに交換できる</span></div>`;
-  const old103 = verNum(from) < verNum('10.3');   // v10.4：10.3 のお知らせを まだ見ていない人だけ 10.3 の分も
-  const v104 = old103 ? `<div><b>🎉</b><span>イベントが はじまったよ！ ホームの右下の「イベント」から</span></div>`   // 10.3 の分も出すときは 1行に（SE でも OK が見えるように）
-    : `<div><b>🎉</b><span>イベントが はじまったよ！ ホームの右下の「イベント」から</span></div>
-      <div><b>🎮</b><span>イベントごとの ミニゲームで コインを あつめよう</span></div>
-      <div><b>👘</b><span>イベントガチャは まだ持っていない きせかえが かならず出る</span></div>`;
+  const old103 = verNum(from) < verNum('10.3'), old104 = verNum(from) < verNum('10.4');
+  const row = (i, t) => `<div><b>${i}</b><span>${t}</span></div>`;
+  // 10.4 まで見た人には くわしく、もっと前の人には みじかく（SE でも OK が見えるように）
+  const v105 = old104
+    ? row('🏠', 'ホームを 見やすく。🎁ログボ・📋ミッションは 右上') + row('🐾', '猫の種類は ねこ →「きせかえ」の いちばん上で かえる')
+    : row('🏠', '🎁ログボ・📋ミッションは ホームの 右上に うつったよ') +
+      row('😊', 'ごきげんが 3だん。ごきげんだと 猫が はずむ') +
+      row('🐾', '猫の種類は ねこ →「きせかえ」の いちばん上で。「素手」も えらべる') +
+      row('⚾', 'バッティングに むずかしさ（むずかしいほど コイン多め）') +
+      row('💪', 'ジムが 1画面で 見やすく');
+  const v104 = old104 ? row('🎉', 'イベントが はじまったよ！ ホームの右下の「イベント」から') : '';
+  const v103 = old103 ? row('📖', 'おもいで・ずっとミッション・ダイヤ（ねこ・📋・ショップ）') : '';
   openModal(`<h2 id="modalTitle">${menu ? 'メニューが かわったよ' : 'あたらしくなったよ'}</h2><div class="stack">
-    <div class="card news-list">${menu ? `<div><b>ねこ</b><span>ステータスと きせかえ（前の更衣室）は ここ</span></div>
-      <div><b>あそぶ</b><span>ジム・ミニゲーム・対戦（前のトレーニング）</span></div>
-      <div><b>きろく</b><span>1週間のごはんの記録（前のりれき）</span></div>
-      <div><b>⚙</b><span>せってい は ホームの右上</span></div>` : ''}${v104}${old103 ? (menu ? '<div><b>📖</b><span>おもいで・ずっとミッション・ダイヤ（ねこ・📋・ショップ）</span></div>' : v103) : ''}</div>
-    ${menu ? '<p class="hint" style="margin:0">ログボとミッションは、ホームの左（スタミナの上）に うつりました。</p>' : ''}
+    <div class="card news-list">${menu ? row('ねこ', 'ステータスと きせかえ（前の更衣室）') + row('あそぶ', 'ジム・ミニゲーム・対戦（前のトレーニング）') + row('きろく', '1週間のごはんの記録（前のりれき）') + row('⚙', 'せってい は ホームの右上') : ''}${v105}${v104}${v103}</div>
     <button class="btn block" id="nwOk">OK</button></div>`, root => { root.querySelector('#nwOk').onclick = closeModal; }, () => setTimeout(maybeShowDaily, 300));
 }
 

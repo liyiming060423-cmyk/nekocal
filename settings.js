@@ -143,7 +143,6 @@ function renderSettings() {
     ${evSettingHTML()}
     <div class="section-title">そのほか</div>
     <div class="card set-group">
-      <div class="set-row"><div class="grow">猫の種類<small>いまは「${esc((CATS[S.cat.breed] || CATS.tabby).name)}」</small></div><button class="btn small white" id="sCat">かえる</button></div>
       <div class="set-row"><div class="grow">使い方ガイド<small>ホームの案内をもう一度見る</small></div><button class="btn small white" id="sTour">見る</button></div>
       <div class="set-row"><div class="grow">プロフィール・目標カロリー</div><button class="btn small white" id="sProfile">ひらく</button></div>
       <div class="set-row"><div class="grow">データをすべて消す<small>猫・コイン・記録が最初にもどります</small></div><button class="btn small ${resetArmed ? 'red' : 'white'}" id="sReset">${resetArmed ? 'もう一度押すと消えます' : '消す'}</button></div>
@@ -166,7 +165,6 @@ $('setBody').addEventListener('click', async e => {
   else if (b.id === 'sTour') { setTab('home'); setTimeout(startTour, 300); return; }
   else if (b.id === 'sBackup') { doBackup(); return; }
   else if (b.id === 'sRestore') { openRestore(); return; }
-  else if (b.id === 'sCat') { openCatPicker(); return; }
   else if (b.dataset.setev) {   // v10.4：イベント（発表用）
     if (EVENT_MODE === 'rotate') S.settings.event = b.dataset.setev; else S.ev.pick = b.dataset.setev;
     se('tap'); save(); evTheme(); renderAll(); const f = $('setBody').querySelector(`[data-setev="${b.dataset.setev}"]`); if (f) f.focus({ preventScroll: true }); return;

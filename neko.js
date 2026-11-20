@@ -32,6 +32,16 @@ function statRows() {
     `<div class="stat-row"><span>EXP</span><span class="bar"><i style="width:${S.cat.exp / expNeed(S.cat.level) * 100}%;background:var(--yellow)"></i></span><b class="num" style="font-size:12px">${S.cat.exp}/${expNeed(S.cat.level)}</b></div>`;
 }
 
+// v10.5：きせかえの いちばん上で 猫の種類を かえる（見た目だけ。名前・レベル・きせかえは そのまま）
+function breedRowHTML() {
+  return `<div class="breed-row" role="radiogroup" aria-label="猫の種類">${CAT_KEYS.map(k => `<button type="button" role="radio" data-nbreed="${k}" aria-checked="${k === S.cat.breed}"><span class="breed-face" aria-hidden="true">${catArtHTML(k, pcBare(S.cat.equip))}</span><b>${esc(CATS[k].name)}</b></button>`).join('')}</div>`;
+}
+function pickBreed(k) {
+  if (!CATS[k] || k === S.cat.breed) return;
+  S.cat.breed = k; save(); se('tap'); buzz(10); petSound('meow'); renderAll();
+  toast(`${CATS[k].name}になりました`);
+  const b = document.querySelector(`[data-nbreed="${k}"]`); if (b) b.focus({ preventScroll: true });
+}
 function renderCat() {
   if (UI.catTab !== 'wear' && UI.catTab !== 'memo') UI.catTab = 'status';
   $('catSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === UI.catTab));
@@ -41,7 +51,7 @@ function renderCat() {
     $('catBody').innerHTML = memoHTML();
   } else if (UI.catTab === 'wear') {
     const eq = S.cat.equip;
-    $('catBody').innerHTML = `<div class="locker"><div class="card preview">${petCatHTML({ breed: S.cat.breed, idx: S.cat.idx, equip: eq, dead: S.cat.dead })}</div>
+    $('catBody').innerHTML = `${breedRowHTML()}<div class="locker"><div class="card preview">${petCatHTML({ breed: S.cat.breed, idx: S.cat.idx, equip: eq, dead: S.cat.dead })}</div>
       <div class="card stats"><div style="font-weight:900">${esc(S.cat.name)}　Lv.${S.cat.level}</div>${statRows()}</div></div>
       ${lockerHTML(eq)}
       <p class="hint" style="margin-top:10px">ガチャで新しいきせかえが手に入ります。</p>`;
@@ -61,7 +71,7 @@ function renderCat() {
       <div class="section-title">これまで</div>
       <div class="totals"><div class="card"><b class="num">${recDays}</b><span>記録した日</span></div><div class="card"><b class="num">${meals}</b><span>ごはんの記録</span></div><div class="card"><b class="num">${fmt(steps)}</b><span>歩いた歩数</span></div></div>
       <div class="card" style="margin-top:10px;padding:10px 14px;font-size:14px">基礎代謝 <b>${fmt(bmr(S.user))}</b> kcal　→　1日の目標 <b>${fmt(target(S.user))}</b> kcal</div>
-      <button class="btn white block" id="ncBreed" style="margin-top:10px">猫の種類をかえる（いまは「${esc((CATS[S.cat.breed] || CATS.tabby).name)}」）</button>`;
+`;
   }
 }
 $('catSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; UI.catTab = b.dataset.v; se('tap'); renderCat(); bgmUpdate(); });
@@ -69,7 +79,7 @@ $('catBody').addEventListener('click', e => {
   const t = e.target.closest('button'); if (!t) return;
   if (t.dataset.lslot) { UI.lockerSlot = t.dataset.lslot; se('tap'); renderCat(); }
   else if (t.dataset.wear) { const k = t.dataset.wear; S.cat.equip[WEAR[k].slot] = k; guideHit('wear'); save(); se('tap'); renderAll(); }
-  else if (t.id === 'ncBreed') openCatPicker();
+  else if (t.dataset.nbreed) pickBreed(t.dataset.nbreed);
   else if (t.id === 'ncTitle') openTitlePicker();
   else if (t.dataset.memo != null) openMemo(+t.dataset.memo);
 });

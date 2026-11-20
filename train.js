@@ -13,11 +13,10 @@ function renderTrain() {
   const d = day();
   if (UI.trainTab === 'gym') {
     $('trainBody').innerHTML = `${S.cat.hospital ? '<p class="boost hosp-note">🏥 入院中は トレーニングと対戦はお休み（ミニゲーム・きせかえはできます）</p>' : ''}${S.protein ? '<p class="boost">プロテイン効果中：次のトレーニングが1.5倍</p>' : ''}${S.goldbag > 0 ? `<p class="boost">金のサンドバッグ効果中：あと${S.goldbag}回 2倍</p>` : ''}
-      <div class="gym-cards">${TRAININGS.map(t => { const ok = S.stamina >= t.cost && !S.cat.hospital; return `<div class="gym-card2" id="gc-${t.id}"><div class="gc-head">${{ bag: 'サンドバッグ<br>連打', tread: 'トレッドミル', weight: 'ウェイト<br>トレーニング' }[t.id] || esc(t.name)}</div>
-        <div class="gc-body"><span class="gc-ico">${I[{ bag: 'sandbag', tread: 'tread', weight: 'barbell' }[t.id]]}</span><span class="gc-cost">スタミナ −${t.cost}</span><span class="gc-label">${esc(t.label)}</span>
-        <button class="btn small red gc-start" data-train="${t.id}" ${ok ? '' : 'disabled'}>START</button></div></div>`; }).join('')}</div>
-      <div class="scene gym-scene b-entry" data-battle="1" role="button" tabindex="0" aria-label="猫バトル（対戦）をひらく"><img src="gym-bg.webp" alt="ジムで猫たちがトレーニングしている絵" width="900" height="718"><span class="vs-badge">⚔️ 対戦</span></div>
-      <button class="btn red block b-open" data-battle="1" ${S.cat.hospital ? 'disabled' : ''}>⚔️ 猫バトル（対戦）へ</button>
+      <div class="gym-cards">${TRAININGS.map(t => { const ok = S.stamina >= t.cost && !S.cat.hospital; return `<div class="gym-card2" id="gc-${t.id}"><span class="gc-ico">${I[{ bag: 'sandbag', tread: 'tread', weight: 'barbell' }[t.id]]}</span>
+        <div class="gc-body"><b class="gc-name">${esc(t.name)}</b><span class="gc-meta"><span class="gc-cost">スタミナ −${t.cost}</span><span class="gc-label">${esc(t.label)}</span></span></div>
+        <button class="btn small red gc-start" data-train="${t.id}" aria-label="${esc(t.name)}をはじめる（スタミナ −${t.cost}）" ${ok ? '' : 'disabled'}>START</button></div>`; }).join('')}</div>
+      <button type="button" class="scene gym-scene b-entry b-open" data-battle="1" ${S.cat.hospital ? 'disabled' : ''} aria-label="猫バトル（対戦）へ"><img src="gym-bg.webp" alt="" width="900" height="718"><span class="gs-txt">⚔️ 猫バトル（対戦）へ<small>順位の近い猫と たたかう（勝つと +${BATTLE.winCoin}コイン）</small></span><span class="vs-badge" aria-hidden="true">›</span></button>
       <div class="section-title">もちもの</div>
       <div class="list">${SHOP_ITEMS.filter(it => it.shop !== false || (S.items[it.id] || 0) > 0).map(it => `<div class="card row"><span style="width:40px;height:40px;flex:none">${I[it.id]}</span><div class="grow"><div class="name">${esc(it.name)} ×${S.items[it.id] || 0}</div><div class="hint">${esc(it.desc)}</div></div><button class="btn small yellow" data-use="${it.id}" ${(S.items[it.id] || 0) > 0 ? '' : 'disabled'}>使う</button></div>`).join('')}</div>
       <p class="hint" style="margin-top:10px">スタミナは、ごはんを記録したり歩いたりすると回復します。</p>`;
@@ -35,7 +34,7 @@ function renderTrain() {
   }
 }
 $('trainSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; UI.trainTab = b.dataset.v; se('tap'); renderTrain(); bgmUpdate(); });
-$('trainBody').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-battle]')) { e.preventDefault(); openBattleLobby(); } });
+$('trainBody').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-battle]') && !e.target.closest('button')) { e.preventDefault(); openBattleLobby(); } });   // v10.5：対戦は button になったので、button は ふつうの クリックで ひらく
 $('trainBody').addEventListener('click', e => {
   if (e.target.closest('[data-battle]')) { openBattleLobby(); return; }
   const t = e.target.closest('button'); if (!t) return;
