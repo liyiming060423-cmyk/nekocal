@@ -341,7 +341,7 @@ function draw(){
       txt('茶色のベンチはジャンプでよけられるよ',W/2,300,14,'#cfd6e6','center',500);
       txt('だんだん速くなるよ！',W/2,324,14,'#cfd6e6','center',500);
       if(best)txt('ベスト '+best,W/2,364,15,'#ffc933','center');
-      if(APP){const i=APP.info();txt(i.left>0?'今日アプリにコインがもらえるのは あと'+i.left+'回（最大'+i.max+'枚）':'今日のコイン報酬はおわり（あそべます）',W/2,392,12,'#ffd44d','center',500)}
+      if(APP){const i=APP.info();txt(i.left>0?'♥ '+i.left+'（コインを もらうと ♥1・最大'+i.max+'枚）':'♥が ないので 練習（コインなし）',W/2,392,12,'#ffd44d','center',500)/* v10.6 */}
     }
     txt(o?'タップでリトライ':'タップでスタート',W/2,430,19,'#fff','center');
   }

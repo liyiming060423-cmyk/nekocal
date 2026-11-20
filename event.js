@@ -34,7 +34,6 @@ function evRecText(e, n, goal = true) {
   const r = e.rec || { unit: '', goal: 0 };
   return `${n ? fmt(n) + r.unit : '—'}${goal && r.goal ? `（目標 ${r.goal}）` : ''}`;
 }
-const evPlaysLeft = () => Math.max(0, EV_GAME.plays - (day().evPlays || 0));   // きょう コインがもらえる のこり回数（6つのゲーム あわせて）
 
 /* ---------- 見た目（ホームの背景・タイトル画面） ---------- */
 function evTheme() {
@@ -55,6 +54,12 @@ function evButtonHTML(e) {
 }
 
 /* ---------- イベントページ ---------- */
+// v10.6 セットボーナスの説明（イベントページ・ガチャ・更衣室）
+const setBonusText = () => ['pow', 'spd', 'sta'].map(k => `${STAT_NAME[k]}+${EV_SET[k]}`).join('・');
+function setNoteHTML(e) {
+  const n = setCount(e), all = n >= e.wears.length;
+  return `<p class="set-note${all ? ' on' : ''}">🎁 セットボーナス ${all ? '<b>そろった！</b>' : `<b class="num">${n}</b>/${e.wears.length}`}　4つ そろうと、どれかを 着ているあいだ ${setBonusText()}</p>`;
+}
 function evChipsHTML(cur, attr = 'data-evpick') {
   if (EVENT_MODE !== 'all') return '';
   return `<div class="ev-chips" role="group" aria-label="イベントをえらぶ">${evList().map(e => `<button type="button" class="ev-chip" ${attr}="${e.id}" aria-pressed="${e.id === cur.id}" style="--c:${e.color}"><span aria-hidden="true">${e.icon}</span>${esc(e.name)}</button>`).join('')}</div>`;
@@ -71,7 +76,7 @@ function evWearsHTML(e) {
 }
 function evHubHTML() {
   const e = eventNow(); if (!e) return '';
-  const best = S.ev.best[e.id] || 0, cleared = !!S.ev.clear[e.id], left = evLeft(e).length, plays = evPlaysLeft();
+  const best = S.ev.best[e.id] || 0, cleared = !!S.ev.clear[e.id], left = evLeft(e).length, hn = hearts();
   const next = EVENT_MODE === 'rotate' ? evRotate(addDays(todayStr(), 1)) : null;
   return `${evChipsHTML(e)}
     <div class="evh-hero" style="background-image:url('${evFile(e, 'home.webp')}')">
@@ -85,14 +90,16 @@ function evHubHTML() {
           : `<div><span>いちばんの点</span><b class="num">${best ? fmt(best) : '—'}</b></div>
         <div><span>いちばんの記録</span><b>${esc(evRecText(e, S.ev.rec[e.id] || 0))}</b></div>`}
         <div><span>はじめてクリア</span><b>${cleared ? '✔ クリアずみ' : `+${EV_GAME.clear}コイン`}</b></div>
-        <div><span>きょう コインがもらえる</span><b>${plays ? `あと <span class="num">${plays}</span> 回` : 'あしたまで おやすみ'}</b></div>
+        <div><span>メダル</span><b>${medalRowHTML(e.id)}</b></div>
+        <div><span>♥</span><b>${heartsHTML()}</b></div>
       </div>
+      <ul class="evh-medals">${MEDALS.find(g => g.id === e.id).m.map((t, i) => `<li class="${medalOf(e.id)[i] ? 'got' : ''}"><span aria-hidden="true">${MEDAL_ICON[i]}</span>${esc(t)}<small>${medalOf(e.id)[i] ? '✔' : '💎' + MEDAL_STONES[i]}</small></li>`).join('')}</ul>
       <button class="btn block" data-evgame="${e.id}">あそぶ</button>
-      <p class="hint" style="margin:6px 0 0">コインがもらえるのは 6つのゲームを あわせて 1日${EV_GAME.plays}回まで（1回 最大${EV_GAME.max}コイン）。そのあとも あそべます。</p>
+      <p class="hint" style="margin:6px 0 0">コインを もらうと ♥1（1回 最大${EV_GAME.max}コイン）。♥が ${hn ? `あと ${hn}こ` : 'ないので いまは 練習（コインなし）'}。</p>
     </div>
     <div class="card evh-card">
       <div class="evh-ct"><span class="evh-ico ev-bagico" aria-hidden="true"><img src="${evFile(e, 'bag.webp')}" alt="" width="64" height="64"></span><div><b>${esc(e.gacha)}</b><small>${left ? `まだ持っていない きせかえが かならず出る！（のこり ${left}/${e.wears.length}）` : 'コンプリート！ ぜんぶ そろったよ'}</small></div></div>
-      ${evWearsHTML(e)}
+      ${evWearsHTML(e)}${setNoteHTML(e)}
       <button class="btn block ${left ? '' : 'white'}" data-evgacha="${e.id}">${left ? `ガチャへ（1回 ${fmt(EV_GACHA_COST)}コイン）` : 'ガチャを見る'}</button>
     </div>`;
 }
@@ -162,7 +169,7 @@ function pullEvGacha(e) {
   save(); renderShop();   // 結果は ここで保存ずみ（演出の途中で閉じても なくならない）
   const tryEq = Object.assign({}, S.cat.equip, { suit: id });
   const body = `<div class="g-stage ${rar}"><span class="g-rays"></span><div class="g-cat">${petCatHTML({ breed: S.cat.breed, idx: S.cat.idx, equip: tryEq })}</div><span class="g-badge">${wearIcon(id)}</span></div><span class="rar ${rar}">${rar}</span>
-    <div style="font-weight:900;font-size:20px">${esc(w.name)}</div><div class="hint">${esc(e.name)}イベントの コスチューム（見た目だけ）</div>
+    <div style="font-weight:900;font-size:20px">${esc(w.name)}</div><div class="hint">${esc(e.name)}イベントの コスチューム（4つ そろうと セットボーナス）</div>${done ? `<p style="margin:0;font-weight:900">🎁 セットボーナス：着ているあいだ ${setBonusText()}</p>` : ''}
     <button class="btn block" id="equipNow" data-id="${id}">さっそく着る</button>`;
   gachaOpen(rar, root => {
     se(rar === 'SR' ? 'get' : 'coin'); buzz(rar === 'SR' ? [60, 40, 60] : 40);
@@ -191,7 +198,7 @@ Object.assign(window.nyankaloMini, {
     const m = e ? evModeOf(e, mode || S.ev.mode[id]) : '', k = e ? evKey(e, m) : id;
     return Object.assign(window.nyankaloMini.info(), {
       ev: e ? { id: e.id, name: e.name, game: e.game, color: e.color, color2: e.color2 } : null,
-      plays: evPlaysLeft(), perMax: EV_GAME.max, clearBonus: EV_GAME.clear, cleared: !!S.ev.clear[id], best: S.ev.best[k] || 0, rec: S.ev.rec[k] || 0, mode: m,
+      plays: hearts(), perMax: EV_GAME.max, clearBonus: EV_GAME.clear, cleared: !!S.ev.clear[id], best: S.ev.best[k] || 0, rec: S.ev.rec[k] || 0, mode: m, medal: medalOf(id).map(Boolean),
       bgm: S.settings.bgm !== false, reduced: !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)
     });
   },
@@ -199,7 +206,8 @@ Object.assign(window.nyankaloMini, {
   // むずかしさを えらんだ（つぎに開いたときも それから）
   evMode: (id, mode) => { const e = evById(id); if (!e || !evModes(e)) return; S.ev.mode[id] = evModeOf(e, mode); save(); },
   // v10.4.1：rec＝目標の記録（ジャンプの回数など）、mode＝むずかしさ
-  evResult: (id, score, coins, cleared, rec, mode) => {
+  // v10.6：ex＝ゲームの数（stats。メダルの条件に使う）。コインは ♥を1つ使う。medals＝この回で とった メダル
+  evResult: (id, score, coins, cleared, rec, mode, ex) => {
     const e = evById(id); if (!e) return { given: 0, bonus: 0, best: 0, newBest: false, plays: 0, rec: 0, newRec: false };
     const d = day(); bumpMini(d);   // ミッション・ずっとミッションの「ミニゲーム」に数える
     score = Math.max(0, Math.round(score || 0)); rec = Math.max(0, Math.round(rec || 0));
@@ -208,9 +216,13 @@ Object.assign(window.nyankaloMini, {
     const oldR = S.ev.rec[k] || 0, newRec = rec > oldR; S.ev.rec[k] = Math.max(oldR, rec);
     let given = 0, bonus = 0;
     coins = Math.max(0, Math.min(EV_GAME.max, Math.round(coins || 0)));
-    if (coins > 0 && (d.evPlays || 0) < EV_GAME.plays) { d.evPlays = (d.evPlays || 0) + 1; given = coins; }
+    const noHeart = coins > 0 && hearts() <= 0;
+    given = heartPay(coins);
     if (cleared && !S.ev.clear[id]) { S.ev.clear[id] = todayStr(); bonus = EV_GAME.clear; }
-    S.coins += given + bonus; save();
-    return { given, bonus, best: Math.max(old, score), newBest: newBest && old > 0, plays: evPlaysLeft(), rec: Math.max(oldR, rec), newRec: newRec && oldR > 0 };
+    S.coins += bonus;
+    if (id === 'school' && ex && (ex.reached || 0) >= 3 && !(ex.bumps > 0)) { S.miniRec = S.miniRec || {}; S.miniRec['ev-school'] = Object.assign({}, S.miniRec['ev-school'], { nobump: 1 }); }
+    const got = medalScan(); save();
+    return { given, bonus, noHeart, best: Math.max(old, score), newBest: newBest && old > 0, plays: hearts(), rec: Math.max(oldR, rec), newRec: newRec && oldR > 0,
+      medals: got.map(o => ({ icon: MEDAL_ICON[o.i], text: o.g.m[o.i], stones: o.stones })), medal: medalOf(id).map(Boolean) };
   }
 });

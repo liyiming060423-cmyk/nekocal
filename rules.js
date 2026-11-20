@@ -21,7 +21,7 @@ function bodyState(idx) {
   if (idx <= 70) return ['でぶ猫', '#F0943F']; if (idx < 100) return ['破裂寸前', '#E0573F']; return ['爆発', '#E0573F'];
 }
 const expNeed = lv => 50 + lv * 50;
-const statWithBonus = k => S.cat.stats[k] + ['head', 'top', 'hand', 'suit'].reduce((a, sl) => a + (((WEAR[S.cat.equip[sl]] || {}).bonus || {})[k] || 0), 0);
+const statWithBonus = k => S.cat.stats[k] + ['head', 'top', 'hand', 'suit'].reduce((a, sl) => a + (((WEAR[S.cat.equip[sl]] || {}).bonus || {})[k] || 0), 0) + (setEvent() ? EV_SET[k] || 0 : 0);   // v10.6：セットボーナスも
 function mealSlotNow() { const h = new Date().getHours() + new Date().getMinutes() / 60; return h < 10.5 ? 'morning' : h < 15.5 ? 'noon' : 'night'; }
 
 /* ---------- 1日の締め（v9.9） ----------
@@ -191,3 +191,47 @@ function addStamina(n) { S.stamina = clamp(S.stamina + n, 0, 100); }
 // v10.5：ごきげんの だん（'high' / 'mid' / 'low'）
 function moodTier(m = S.mood ?? RULE.moodStart) { return m >= RULE.moodHigh ? 'high' : m < RULE.moodLow ? 'low' : 'mid'; }
 function addMood(n) { S.mood = clamp((S.mood ?? RULE.moodStart) + n, 0, 100); }
+
+/* ---------- v10.6 ♥（ミニゲームの体力。数は data.js の RULE.heart○○） ----------
+   S.heart＝{ n: いまの数, t: つぎの♥を数えはじめた時刻（ms） }。heartMax より少ないときだけ 時間で もどる（heartMin 分で 1つ）
+   写真の +1 は heartOver まで ためられる。コインが もらえるとき 1つ使う（heartUse） */
+const HEART_MS = () => RULE.heartMin * 60000;
+function heartSync() {
+  const h = S.heart || (S.heart = { n: RULE.heartMax, t: Date.now() }), now = Date.now();
+  if (!(h.t <= now)) h.t = now;   // 時計が もどったとき
+  if (h.n >= RULE.heartMax) { h.t = now; return h; }
+  const k = Math.floor((now - h.t) / HEART_MS());
+  if (k > 0) { h.n = Math.min(RULE.heartMax, h.n + k); h.t = h.n >= RULE.heartMax ? now : h.t + k * HEART_MS(); }
+  return h;
+}
+const hearts = () => heartSync().n;
+// つぎの♥まで（ms）。いっぱいなら null
+function heartNext() { const h = heartSync(); return h.n >= RULE.heartMax ? null : Math.max(0, h.t + HEART_MS() - Date.now()); }
+// 1つ使う。なければ false
+function heartUse() {
+  const h = heartSync(); if (h.n <= 0) return false;
+  if (h.n >= RULE.heartMax && h.n - 1 < RULE.heartMax) h.t = Date.now();   // いっぱいから へったら ここから数える
+  h.n--; return true;
+}
+// ふやす（写真の +1）。heartOver まで
+function heartAdd(n = 1) { const h = heartSync(); h.n = Math.min(RULE.heartOver, h.n + n); if (h.n >= RULE.heartMax) h.t = Date.now(); }
+// へらす（写真の記録を消したとき）。0 より下には しない。へらせたら true
+function heartTake(n = 1) {
+  const h = heartSync(); if (h.n <= 0) return false;
+  if (h.n >= RULE.heartMax && h.n - n < RULE.heartMax) h.t = Date.now();
+  h.n = Math.max(0, h.n - n); return true;
+}
+const heartTimeText = ms => { const s = Math.ceil(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+// 「♥♥♥♡♡」（heartMax をこえた分は ＋で）
+function heartsHTML(cls = '') {
+  const n = hearts(), max = RULE.heartMax;
+  return `<span class="hearts ${cls}" role="img" aria-label="ハート ${n}こ（${max}こで いっぱい）">${Array.from({ length: max }, (_, i) => `<i class="${i < n ? 'on' : ''}">${i < n ? '♥' : '♡'}</i>`).join('')}${n > max ? `<b>+${n - max}</b>` : ''}</span>`;
+}
+
+// v10.6 セットボーナス：着ている コスチュームが イベントの きせかえで、その イベントの 4つを ぜんぶ もっているとき
+function setEvent(eq = S.cat.equip) {
+  const w = WEAR[eq && eq.suit]; if (!w || !w.ev) return null;
+  const e = EVENTS.find(x => x.id === w.ev);
+  return e && e.wears.every(k => S.owned.includes(k)) ? e : null;
+}
+const setCount = e => e.wears.filter(k => S.owned.includes(k)).length;

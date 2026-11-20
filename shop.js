@@ -38,14 +38,16 @@ function gachaHTML() {
     </div>
     <div class="card gacha-info"><div class="gacha-cost">1回引く：<b class="num">${fmt(EV_GACHA_COST)}</b>コイン<span class="muted">　もっている ${fmt(S.coins)}</span></div>
       <div class="gacha-pity">${done ? '<b>コンプリート！</b> ぜんぶ そろったよ' : `まだ持っていない きせかえが かならず出る（のこり <b class="num">${left.length}</b> / ${e.wears.length}）`}</div>
-      ${evWearsHTML(e)}
-      <p class="hint">${done ? 'もう引けません。きせかえは「ねこ」→ きせかえ → コスチューム で着られます。' : `福袋をタップすると引けます。${esc(e.name)}イベントの コスチューム（見た目だけ）が出ます。SR ${GACHA_RATE.SR}%・R ${GACHA_RATE.R}%・N ${GACHA_RATE.N}% の重みで、のこっているものから えらばれます。`}</p></div>`;
+      ${left.length >= 2 ? `<button class="btn block g10-btn" id="gEvAll" ${S.coins >= evAllCost(e) ? '' : 'disabled'}>🎁 のこり${left.length}つ まとめて <b class="num">${fmt(evAllCost(e))}</b>コイン<small>${Math.round((1 - GACHA_MULTI.rate) * 100)}%おトク</small></button>` : ''}
+      ${evWearsHTML(e)}${setNoteHTML(e)}
+      <p class="hint">${done ? 'もう引けません。きせかえは「ねこ」→ きせかえ → コスチューム で着られます。' : `福袋をタップすると引けます。${esc(e.name)}イベントの コスチュームが出ます（4つ そろうと セットボーナス）。SR ${GACHA_RATE.SR}%・R ${GACHA_RATE.R}%・N ${GACHA_RATE.N}% の重みで、のこっているものから えらばれます。`}</p></div>`;
   }
   return `${sw}<div class="scene shop-scene">
       <img src="shop-bg.webp" alt="猫の店員がいる福袋ガチャのお店の絵" width="900" height="772">
       ${BAG_NAMES.map((n, i) => `<button class="bag-hit b${i}" style="${bagHitStyle(BAGS_NORMAL[i])}" data-bag="${i}" aria-label="${n}をえらぶ（${GACHA_COST}コイン）"></button>`).join('')}
     </div>
     <div class="card gacha-info"><div class="gacha-cost">1回引く：<b class="num">${GACHA_COST}</b>コイン<span class="muted">　もっている ${fmt(S.coins)}</span></div>
+      <button class="btn block g10-btn" id="g10" ${S.coins >= g10Cost() ? '' : 'disabled'}>🎁 ${GACHA_MULTI.n}連で引く <b class="num">${fmt(g10Cost())}</b>コイン<small>${Math.round((1 - GACHA_MULTI.rate) * 100)}%おトク・SR かならず1つ以上</small></button>
       <div class="gacha-pity">${pityHTML()}</div>
       <p class="hint">福袋をタップすると引けます。きせかえとトレーニングアイテムが出ます。SR ${GACHA_RATE.SR}%・R ${GACHA_RATE.R}%・N ${GACHA_RATE.N}%　${GACHA_PITY}回のうちに SR が必ず出ます（まだ持っていないきせかえから先に出ます）　かぶったら ${DUP_REFUND}コインに交換</p></div>`;
 }
@@ -85,6 +87,8 @@ $('shopBody').addEventListener('click', e => {
       <button class="btn block" id="spOk">OK</button></div>`, root => { root.querySelector('#spOk').onclick = closeModal; });
   }
   else if (t.dataset.bag) { t.classList.add('picked'); setTimeout(() => confirmGacha(+t.dataset.bag), 300); }
+  else if (t.id === 'g10') { se('tap'); confirmGacha10(); }
+  else if (t.id === 'gEvAll') { const e = eventNow(); if (e) { se('tap'); confirmEvAll(e); } }
   else if (t.dataset.gmode) { UI.gachaMode = t.dataset.gmode; se('tap'); renderShop(); const f = $('shopBody').querySelector(`[data-gmode="${t.dataset.gmode}"]`); if (f) f.focus({ preventScroll: true }); }
   else if (t.dataset.gpick) { evPick(t.dataset.gpick); se('tap'); renderAll(); const f = $('shopBody').querySelector(`[data-gpick="${t.dataset.gpick}"]`); if (f) f.focus({ preventScroll: true }); }
   else if (t.dataset.evbag) { const e = eventNow(); if (!e) return; t.classList.add('picked'); setTimeout(() => confirmEvGacha(e, +t.dataset.evbag), 300); }
@@ -107,9 +111,8 @@ function confirmGacha(bag) {
     root.querySelector('#gNo').onclick = closeModal;
   });
 }
-function pullGacha() {
-  if (S.coins < GACHA_COST) { toast(`コインが ${fmt(GACHA_COST - S.coins)} 足りません`); se('bad'); return; }
-  S.coins -= GACHA_COST; guideHit('gacha');
+// v10.6：1回ぶん 引く（コインは へらさない。天井・図鑑も ここで）。{ rar, item, n } か { rar, wear, dup } を返す
+function gachaRoll() {
   // 天井：SR が出ないまま GACHA_PITY 回目になったら SR 確定（S.pity = 前の SR から何回引いたか）
   const since = (S.pity || 0) + 1, r = Math.random() * 100;
   const rar = r < GACHA_RATE.SR || since >= GACHA_PITY ? 'SR' : r < GACHA_RATE.SR + GACHA_RATE.R ? 'R' : 'N';
@@ -122,17 +125,26 @@ function pullGacha() {
   if (hasNew) wears = wears.filter(k => !S.owned.includes(k));
   wears = wears.map(k => ({ wear: k }));
   const pool = srNew ? wears : wears.concat((GACHA_ITEMS[rar] || []).map(x => ({ item: x.id, n: x.n })));
-  const got = pool[Math.floor(Math.random() * pool.length)];
+  const got = Object.assign({ rar }, pool[Math.floor(Math.random() * pool.length)]);
+  if (got.item) S.items[got.item] = (S.items[got.item] || 0) + got.n;
+  else if (S.owned.includes(got.wear)) { got.dup = true; S.coins += DUP_REFUND; }
+  else { S.owned.push(got.wear); memoZukan(); }   // v10.3：図鑑 25・50 は おもいでに
+  return got;
+}
+function pullGacha() {
+  if (S.coins < GACHA_COST) { toast(`コインが ${fmt(GACHA_COST - S.coins)} 足りません`); se('bad'); return; }
+  S.coins -= GACHA_COST; guideHit('gacha');
+  const got = gachaRoll(), rar = got.rar;
   let body, refund = 0, label = '';
   if (got.item) {
     const it = SHOP_ITEMS.find(x => x.id === got.item);
-    S.items[got.item] = (S.items[got.item] || 0) + got.n; label = `${it.name} ×${got.n}`;
+    label = `${it.name} ×${got.n}`;
     body = `<div class="g-stage ${rar}"><span class="g-rays"></span><div class="item-big ${rar}">${I[got.item]}</div></div><span class="rar ${rar}">${rar}</span>
       <div style="font-weight:900;font-size:20px">${esc(it.name)} ×${got.n}</div><div class="hint">トレーニングアイテム：${esc(it.desc)}</div>
       <p style="margin:0;font-weight:900">「あそぶ」→ ジム の「もちもの」に入りました</p>`;
   } else {
-    const id = got.wear, w = WEAR[id], dup = S.owned.includes(id); label = w.name;
-    if (dup) { S.coins += DUP_REFUND; refund = DUP_REFUND; } else { S.owned.push(id); memoZukan(); }   // v10.3：図鑑 25・50 は おもいでに
+    const id = got.wear, w = WEAR[id], dup = !!got.dup; label = w.name;
+    if (dup) refund = DUP_REFUND;
     // v10.1：着てみたところを見せる（コスチュームを着ていると 頭・服 が見えないので、頭・服・手 のときは ぬいで見せる）
     const tryEq = Object.assign({}, S.cat.equip, { [w.slot]: id }, w.slot === 'suit' ? {} : { suit: 'suit_none' });
     body = `<div class="g-stage ${rar}"><span class="g-rays"></span><div class="g-cat">${petCatHTML({ breed: S.cat.breed, idx: S.cat.idx, equip: tryEq })}</div><span class="g-badge">${wearIcon(id)}</span></div><span class="rar ${rar}">${rar}</span>
@@ -150,4 +162,65 @@ function pullGacha() {
     root.querySelector('#againG').onclick = () => { closeModal(); confirmGacha(); };
     if (refund) setTimeout(() => coinFx(refund, root.querySelector('.g-stage')), 450);
   }, label);
+}
+
+/* ---------- v10.6 まとめて引く（10連・イベントの のこり ぜんぶ） ---------- */
+const g10Cost = () => Math.round(GACHA_COST * GACHA_MULTI.n * GACHA_MULTI.rate);
+const evAllCost = e => Math.round(EV_GACHA_COST * GACHA_MULTI.rate) * evLeft(e).length;
+const RAR_RANK = { N: 0, R: 1, SR: 2 };
+function multiConfirm(title, cost, note, go) {
+  const enough = S.coins >= cost;
+  openModal(`<h2 id="modalTitle">${title}</h2><div class="reveal">
+    <div class="item-big">${I.luckyBag}</div>
+    <div style="font-weight:900;font-size:18px">${I.coin.replace('width="24" height="24"', 'width="20" height="20" style="vertical-align:-4px"')} ${fmt(cost)}コインを使います</div>
+    <div class="hint">もっているコイン：${fmt(S.coins)} → ${enough ? fmt(S.coins - cost) : 'たりません'}</div>
+    <div class="gacha-pity">${note}</div>
+    <button class="btn block" id="gYes" ${enough ? '' : 'disabled'}>はい、引く！</button>
+    <button class="btn white block" id="gNo">やめる</button></div>`, root => {
+    root.querySelector('#gYes').onclick = () => { closeModal(); go(); };
+    root.querySelector('#gNo').onclick = closeModal;
+  });
+}
+function confirmGacha10() { multiConfirm(`福袋を ${GACHA_MULTI.n}連で引く？`, g10Cost(), `${GACHA_MULTI.n}回ぶん（ふつうは ${fmt(GACHA_COST * GACHA_MULTI.n)}）・SR かならず1つ以上`, pullGacha10); }
+// 結果：小さな カードを ならべる（新しいものに NEW、かぶりは コイン）
+function multiResult(title, list, again) {
+  const top = list.reduce((a, g) => RAR_RANK[g.rar] > RAR_RANK[a] ? g.rar : a, 'N'), refund = list.filter(g => g.dup).length * DUP_REFUND;
+  const cell = g => {
+    const it = g.item && SHOP_ITEMS.find(x => x.id === g.item), w = g.wear && WEAR[g.wear];
+    return `<div class="g10-cell ${g.rar}${g.dup ? ' dup' : ''}"><span class="g10-ic">${it ? I[g.item] : wearIcon(g.wear)}</span><span class="rar ${g.rar}">${g.rar}</span>
+      <b>${esc(it ? `${it.name} ×${g.n}` : w.name)}</b><small>${it ? 'アイテム' : g.dup ? `+${DUP_REFUND}コイン` : 'NEW!'}</small></div>`;
+  };
+  save(); renderShop();   // 結果は ここで保存ずみ
+  gachaOpen(top, root => {
+    se(top === 'SR' ? 'get' : 'coin'); buzz(top === 'SR' ? [60, 40, 60] : 40);
+    root.innerHTML = `<h2 id="modalTitle">${title}</h2><div class="reveal g-res ${top}">${top === 'SR' ? confettiHTML() : ''}
+      <div class="g10-grid">${list.map(cell).join('')}</div>
+      ${refund ? `<p class="hint" style="margin:0">かぶった きせかえは ${fmt(refund)}コインに 交換しました</p>` : ''}
+      <p class="hint" style="margin:0">きせかえは「ねこ」→ きせかえ で着られます</p>
+      ${again ? `<button class="btn white block" id="againG">${again.label}</button>` : ''}<button class="btn block" id="g10Ok">OK</button></div>`;
+    root.querySelector('#g10Ok').onclick = closeModal;
+    const ag = root.querySelector('#againG'); if (ag) ag.onclick = () => { closeModal(); again.go(); };
+    if (refund) setTimeout(() => coinFx(refund, root.querySelector('.g10-grid')), 450);
+  }, `${list.length}こ`);
+}
+function pullGacha10() {
+  const cost = g10Cost();
+  if (S.coins < cost) { toast(`コインが ${fmt(cost - S.coins)} 足りません`); se('bad'); return; }
+  S.coins -= cost; guideHit('gacha');
+  const list = Array.from({ length: GACHA_MULTI.n }, gachaRoll);
+  multiResult(`${GACHA_MULTI.n}連の けっか`, list, { label: `もう${GACHA_MULTI.n}連（${fmt(cost)}コイン）`, go: confirmGacha10 });
+}
+// イベントガチャ：のこりを ぜんぶ（4つより少ないので「10連」の かわり）
+function confirmEvAll(e) {
+  const n = evLeft(e).length; if (n < 2) { confirmEvGacha(e); return; }
+  multiConfirm(`のこり${n}つ まとめて引く？`, evAllCost(e), `${esc(e.gacha)}の のこり ${n}つ が ぜんぶ 出る（ふつうは ${fmt(EV_GACHA_COST * n)}）`, () => pullEvAll(e));
+}
+function pullEvAll(e) {
+  const left = evLeft(e), cost = evAllCost(e);
+  if (left.length < 2) return;
+  if (S.coins < cost) { toast(`コインが ${fmt(cost - S.coins)} 足りません`); se('bad'); return; }
+  S.coins -= cost; guideHit('gacha');
+  const list = left.map(k => ({ rar: WEAR[k].rar, wear: k })).sort((a, b) => RAR_RANK[a.rar] - RAR_RANK[b.rar]);
+  left.forEach(k => S.owned.push(k)); memoAdd('ev_' + e.id);
+  multiResult('コンプリート！', list, null);
 }

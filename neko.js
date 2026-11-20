@@ -15,7 +15,7 @@ function lockerHTML(eq) {
   const cnt = x => { const ks = all.filter(k => WEAR[k].slot === x); return `${ks.filter(k => S.owned.includes(k)).length}/${ks.length}`; };
   const list = Object.keys(WEAR).filter(k => WEAR[k].slot === sl)
     .sort((a, b) => (isNone(b) - isNone(a)) || (!!WEAR[a].ev - !!WEAR[b].ev) || (!!WEAR[a].ach - !!WEAR[b].ach) || (evOrder(a) - evOrder(b)) || (RAR_ORDER[WEAR[a].rar] - RAR_ORDER[WEAR[b].rar]));   // v10.4：イベントのきせかえは うしろ（イベントの順）
-  const tag = k => WEAR[k].ev ? `<span class="rar ev">イベント</span>` : WEAR[k].ach ? '<span class="rar ach">実績</span>' : `<span class="rar ${WEAR[k].rar}">${WEAR[k].rar}</span>`;
+  const tag = k => WEAR[k].ev ? `<span class="rar ev">イベント${(() => { const e = EVENTS.find(x => x.id === WEAR[k].ev); return e && setCount(e) >= e.wears.length ? '・セット' : ''; })()}</span>` : WEAR[k].ach ? '<span class="rar ach">実績</span>' : `<span class="rar ${WEAR[k].rar}">${WEAR[k].rar}</span>`;
   const cell = k => S.owned.includes(k)
     ? `<button class="wear" data-wear="${k}" aria-pressed="${eq[sl] === k}">${wearIcon(k)}<span>${esc(WEAR[k].name)}</span>${tag(k)}</button>`
     : WEAR[k].ev ? `<div class="wear locked" aria-label="${esc(evName(k))}イベントでもらえるきせかえ"><span class="q">？</span><span>${esc(evName(k))}イベントでもらえる</span>${tag(k)}</div>`
@@ -23,8 +23,15 @@ function lockerHTML(eq) {
     : `<div class="wear locked" aria-label="まだ持っていない ${WEAR[k].rar} のきせかえ"><span class="q">？</span><span>？？？</span>${tag(k)}</div>`;
   return `<div class="card zukan"><div class="zk-top"><b>きせかえ図鑑</b><span>集めた <b class="num">${got}</b> / ${all.length}</span></div><div class="prog"><i style="width:${got / all.length * 100}%"></i></div></div>
     <div class="seg locker-seg" role="tablist">${LOCKER_SLOTS.map(x => `<button role="tab" data-lslot="${x}" aria-selected="${x === sl}">${SLOT_NAME[x]}<small>${cnt(x)}</small></button>`).join('')}</div>
-    ${sl === 'suit' ? '<p class="hint" style="margin:0 0 8px;text-align:center">着ている間は 頭・服 が見えません（能力のボーナスはそのまま）</p>' : ''}
+    ${sl === 'suit' ? `<p class="hint" style="margin:0 0 8px;text-align:center">着ている間は 頭・服 が見えません（能力のボーナスはそのまま）</p>${setListHTML(eq)}` : ''}
     <div class="wear-grid">${list.map(cell).join('')}</div>`;
+}
+// v10.6 セットボーナス：イベントごとに いくつ そろったか。そろった イベントの きせかえを 着ていると 能力が上がる
+function setListHTML(eq) {
+  const on = setEvent(eq);
+  return `<div class="card set-list"><b>🎁 イベントの セットボーナス</b><small>おなじイベントの 4つが そろうと、そのどれかを 着ているあいだ ${setBonusText()}</small>
+    <div class="set-chips">${evList().map(e => { const n = setCount(e), all = n >= e.wears.length; return `<span class="set-chip${all ? ' all' : ''}${on && on.id === e.id ? ' on' : ''}" style="--c:${e.color}"><span aria-hidden="true">${e.icon}</span>${esc(e.name)} ${all ? '✔' : `${n}/${e.wears.length}`}</span>`; }).join('')}</div>
+    ${on ? `<p class="set-on">いま ${esc(on.name)}の セットボーナス 中！</p>` : ''}</div>`;
 }
 function statRows() {
   const col = { pow: 'var(--red)', spd: 'var(--blue)', sta: 'var(--green)' };

@@ -1,7 +1,7 @@
 // にゃんカロ service worker
 // アプリ本体はキャッシュしてオフラインでも起動できるようにする。
 // 更新したら VERSION の数字を上げると、利用者のスマホに新しい版が届く。
-const VERSION = '10.5';   // index.html などの ?v= と同じ数字にする
+const VERSION = '10.6';   // index.html などの ?v= と同じ数字にする
 const CACHE = 'nekocal-v' + VERSION;
 const V = '?v=' + VERSION;
 // ↓ ここは bump.py が自動で書く（フォルダの中のファイルから作る。手で直さなくてよい）

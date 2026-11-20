@@ -7,7 +7,7 @@
   python test_nyankalo.py --shots shots        … スクショを shots/ に保存（なしなら保存しない）
   python test_nyankalo.py --browser webkit     … Safari と同じエンジン（python -m playwright install webkit が必要）
   python test_nyankalo.py --app <フォルダ>      … ほかのフォルダのアプリを調べる
-グループ：home tabs tour gacha level coin daily first battle slot sagase font a11y manifest memo migrate achieve stone meal-delete event event41 v105（v10.3 で memo〜meal-delete、v10.4 で event、v10.4.1 で event41、v10.5 で v105 を追加）
+グループ：home tabs tour gacha level coin daily first battle slot sagase font a11y manifest memo migrate achieve stone meal-delete event event41 v105 v106（v10.3 で memo〜meal-delete、v10.4 で event、v10.4.1 で event41、v10.5 で v105、v10.6 で v106 を追加）
 ※ bump.py は .py をアプリのファイル一覧に入れないので、このファイルを置いたままでよい
 """
 import sys, os, re, json, asyncio, functools, http.server, socketserver, threading, traceback, argparse, tempfile
@@ -588,7 +588,7 @@ async def t_achieve(b):
         await pg.click('#btnMission'); await pg.wait_for_timeout(300)
         await pg.click('[data-mt="ever"]'); await pg.wait_for_timeout(300)
         r = await pg.evaluate("({n:document.querySelectorAll('.ach').length, first:document.querySelector('.ach').innerText, over:document.querySelector('.sheet').scrollWidth>document.querySelector('.sheet').clientWidth+1})")
-        check(r['n'] == 9 and not r['over'], f'{dev} 実績：9つ・はみ出さない（{r["n"]}）')
+        check(r['n'] == 10 and not r['over'], f'{dev} 実績：10（v10.6 メダル）・はみ出さない（{r["n"]}）')
         check('ごはん' in r['first'] or 'さんぽ' in r['first'], f'{dev} 実績：受けとれるものが上（{r["first"][:20]!r}）')
         await shot(pg, f'achieve-{dev}-ever')
         c0 = await pg.evaluate("S.coins")
@@ -825,12 +825,12 @@ async def t_event(b):
     await pg.evaluate("document.querySelector('[data-setev]').scrollIntoView({block:'center'})"); await shot(pg, 'event-se-settings')
     await pg.click('#setBack'); await pg.wait_for_timeout(300); await shot(pg, 'event-se-home-xmas')
     await ctx.close()
-    # 8) コインの きまり（アプリ側）：1日3回まで・1回100まで・はじめてクリア1回
+    # 8) コインの きまり（アプリ側）：v10.6 ♥を1つずつ使う（♥3 で 3回）・1回100まで・はじめてクリア1回（♥は いらない）
     ctx, pg = await page(b, 'ip13', b103(coins=0))
-    r = await pg.evaluate("""(()=>{const m=window.nyankaloMini, o=[];
+    r = await pg.evaluate("""(()=>{const m=window.nyankaloMini, o=[]; S.heart={n:3,t:Date.now()};
       o.push(m.evResult('halloween', 3200, 91, true)); o.push(m.evResult('halloween', 100, 3, true)); o.push(m.evResult('xmas', 10, 250, false)); o.push(m.evResult('school', 900, 60, false));
       return {o:o.map(x=>[x.given,x.bonus,x.plays]), coins:S.coins, best:S.ev.best.halloween, clear:!!S.ev.clear.halloween, minis:day().minis, ev:day().evPlays, mini:day().miniRewards}})()""")
-    check(r == {'o': [[91, 200, 2], [3, 0, 1], [100, 0, 0], [0, 0, 0]], 'coins': 394, 'best': 3200, 'clear': True, 'minis': 4, 'ev': 3, 'mini': 0}, f'イベントのゲーム：コインの きまり（{r}）')
+    check(r == {'o': [[91, 200, 2], [3, 0, 1], [100, 0, 0], [0, 0, 0]], 'coins': 394, 'best': 3200, 'clear': True, 'minis': 4, 'ev': None, 'mini': 3}, f'イベントのゲーム：コインの きまり（{r}）')
     await ctx.close()
     # 9) 6つの ゲーム：アプリの中で 開いて、スタート → 3秒で おわる（テスト用）→ けっか → もどる
     for dev in DEV:
@@ -1159,15 +1159,182 @@ async def t_v105(b):
     ctx, pg = await page(b, 'se', base(news='10.4'))
     await start(pg); await pg.wait_for_timeout(400)
     r = await pg.evaluate("({n:document.querySelectorAll('.news-list > div').length, t:document.getElementById('modalTitle').textContent, ok:document.getElementById('nwOk').getBoundingClientRect().bottom <= innerHeight})")
-    check(r == {'n': 5, 't': 'あたらしくなったよ', 'ok': True}, f'お知らせ 10.5：10.4 の人に 5行（{r}）')
+    check(r == {'n': 5, 't': 'あたらしくなったよ', 'ok': True}, f'お知らせ：10.4 の人に 5行（v10.6 の4行＋10.5 の1行）（{r}）')
     await shot(pg, 'v105-news-se')
     await ctx.close()
 
 MOOD_NAME = {'high': 'ごきげん', 'mid': 'ふつう', 'low': 'しょんぼり'}
 
+async def t_v106(b):
+    H = "(()=>{const s=JSON.parse(localStorage.getItem('nyankalo-v1'));return {n:s.heart.n, coins:s.coins, stones:s.stones||0}})()"
+    # ♥：コインを もらうと 1つ・0コインは 使わない・0 なら 練習・30分で 1つ もどる
+    ctx, pg = await page(b, 'ip13', base())
+    await start(pg)
+    h = await pg.evaluate(H); check(h['n'] == 5, f'♥：前の版の人は いっぱい（5）から（{h}）')
+    r = await pg.evaluate("window.nyankaloMini.reward(120)")
+    h = await pg.evaluate(H); check(r['given'] == 80 and h['n'] == 4 and h['coins'] == 1930, f'♥：1回 最大80コイン・♥1つ使う（{r} {h}）')
+    r = await pg.evaluate("window.nyankaloMini.reward(0)"); h = await pg.evaluate(H)
+    check(h['n'] == 4, f'♥：0コインなら 使わない（{h}）')
+    for _ in range(4): await pg.evaluate("window.nyankaloMini.reward(10)")
+    r = await pg.evaluate("window.nyankaloMini.reward(30)"); h = await pg.evaluate(H)
+    check(h['n'] == 0 and not r['ok'] and r['given'] == 0 and '練習' in r['msg'] and h['coins'] == 1970, f'♥：0 なら コインなし（練習）（{r} {h}）')
+    check(await pg.evaluate("window.nyankaloMini.info().left") == 0, '♥：ゲームに わたす left＝♥の数')
+    await pg.evaluate("UI.trainTab='mini';setTab('train')"); await pg.wait_for_timeout(300)
+    t = await pg.evaluate("document.querySelector('.heart-card').innerText")
+    check('つぎの♥まで' in t and ('30:00' in t or '29:5' in t), f'♥：つぎの♥までの 時間（{t[:40]!r}）')
+    await shot(pg, 'v106-hearts0')
+    await pg.clock.fast_forward('30:05'); await pg.wait_for_timeout(1300)
+    n = await pg.evaluate("hearts()"); on = await pg.evaluate("document.querySelectorAll('.heart-card .hearts i.on').length")
+    check(n == 1 and on == 1, f'♥：30分で 1つ もどる・画面も なおる（{n} {on}）')
+    await pg.clock.fast_forward('03:00:00'); await pg.wait_for_timeout(300)
+    check(await pg.evaluate("hearts()") == 5, '♥：時間で もどるのは 5 まで')
+    await pg.evaluate("heartAdd(1);heartAdd(1);heartAdd(1);heartAdd(1);save()")
+    check(await pg.evaluate("hearts()") == 8, '♥：写真の +1 は 8 まで ためられる')
+    await pg.evaluate("renderAll()")
+    check(await pg.evaluate("!document.querySelector('#dotGacha').hidden"), '♥：いっぱいなら イベントボタンに 赤い点')
+    await pg.evaluate("S.heart.n=2;renderAll()")
+    check(await pg.evaluate("document.querySelector('#dotGacha').hidden"), '♥：へっていたら 赤い点なし')
+    check(not pg.errs, f'♥ エラーなし {pg.errs[:2]}')
+    await ctx.close()
+    # 写真つきの記録で ♥+1、消すと もどる
+    ctx, pg = await page(b, 'ip13', base(heart={'n': 2, 't': NOW_MS}))
+    await start(pg)
+    await record(pg, photo=True)
+    check(await pg.evaluate("hearts()") == 3, '♥：写真つきで ごはんを記録すると ♥+1')
+    mid = await pg.evaluate(f"{SAVED}.days[todayStr()].meals[0].id")
+    await del_meal(pg, mid)
+    t = await pg.evaluate("document.getElementById('toast').innerText")
+    check(await pg.evaluate("hearts()") == 2 and '♥−1' in t, f'♥：写真の記録を 消すと ♥−1（{t!r}）')
+    check(not pg.errs, f'♥ 写真 エラーなし {pg.errs[:2]}')
+    await ctx.close()
+    # イベントのミニゲーム：♥を使う・メダル
+    ctx, pg = await page(b, 'ip13', base(heart={'n': 1, 't': NOW_MS}))
+    await start(pg)
+    r = await pg.evaluate("window.nyankaloMini.evResult('rainy', 2700, 150, true, 42, 'normal', {jumps:42})")
+    h = await pg.evaluate(H)
+    check(r['given'] == 100 and r['bonus'] == 200 and h['n'] == 0 and len(r['medals']) == 3 and h['stones'] == 18, f'イベント：最大100・はじめてクリア・メダル3つ（💎18）（{r} {h}）')
+    r = await pg.evaluate("window.nyankaloMini.evResult('rainy', 500, 20, false, 5, 'normal', {})")
+    check(r['given'] == 0 and r['noHeart'] and not r['medals'], f'イベント：♥なしは 練習（{r}）')
+    r = await pg.evaluate("window.nyankaloMini.evResult('school', 100, 7, true, 3, '', {reached:3,bumps:1})")
+    r2 = await pg.evaluate("window.nyankaloMini.evResult('school', 100, 7, true, 3, '', {reached:3,bumps:0})")
+    check(r['medal'] == [True, False, False] and r2['medal'] == [True, True, False], f'イベント：通学路の 🥈＝いぬに もどされずに（{r["medal"]} {r2["medal"]}）')
+    await pg.evaluate("openEventHub()"); await pg.wait_for_timeout(400)
+    t = await pg.evaluate("document.getElementById('evhBody').innerText")
+    check('♥' in t and '1日' not in t, f'イベントページ：♥を 出す・1日の回数は 出さない')
+    check(await pg.evaluate("document.querySelectorAll('#evhBody .medals i').length") == 3, 'イベントページ：メダル3つ')
+    await shot(pg, 'v106-evhub')
+    await pg.evaluate("closeEventHub()")
+    check(await pg.evaluate("ACHIEVE.find(a=>a.id==='medals') && achValue(ACHIEVE.find(a=>a.id==='medals'))") == 5, 'ずっとミッション：メダルの数')
+    check(not pg.errs, f'イベント ♥ エラーなし {pg.errs[:2]}')
+    await ctx.close()
+    # 前の版の記録から メダル（お知らせで 知らせる）
+    st = base(news='10.5', miniRec={'baseball': {'shiba': 600, 'husky-hard': 560, 'mode': 'hard'}, 'sagase': {'easy': {'score': 100, 'cats': 16}, 'hard': {'score': 1, 'cats': 3}}, 'dash': {'best': 1200}}, stones=1)
+    st['ev'] = {'pick': '', 'best': {'rainy-hard': 2700}, 'clear': {}, 'rec': {'rainy-hard': 25}, 'mode': {}}
+    for dev in DEV:
+        ctx, pg = await page(b, dev, st)
+        await start(pg)
+        m = await pg.evaluate("JSON.stringify(S.medal)")
+        n = await pg.evaluate("medalCount()"); s = await pg.evaluate("S.stones")
+        # baseball 3・sagase 1・dash 2・rainy 2（上級の 記録も）＝ 8
+        check(n == 8 and s == 1 + 3+5+10 + 3 + 3+5 + 3+10, f'{dev} メダル：前の記録から 8枚（💎{s}）（{m}）')
+        t = await pg.evaluate("document.querySelector('.news-list') ? document.querySelector('.news-list').innerText : ''")
+        check('8枚' in t and '♥' in t, f'{dev} お知らせ：♥・メダル8枚（{t[:60]!r}）')
+        ok = await pg.evaluate("(()=>{const b=document.getElementById('nwOk').getBoundingClientRect();return b.bottom<=innerHeight})()")
+        check(ok, f'{dev} お知らせの OK が 見える')
+        await shot(pg, f'v106-news-{dev}')
+        await pg.click('#nwOk'); await pg.wait_for_timeout(300)
+        check(await pg.evaluate("S.medalOld === undefined"), f'{dev} お知らせの あと medalOld を けす')
+        await pg.evaluate("UI.trainTab='mini';setTab('train')"); await pg.wait_for_timeout(300)
+        await pg.click('#medalOpen'); await pg.wait_for_timeout(300)
+        c = await pg.evaluate("document.querySelectorAll('.medal-card').length")
+        check(c == 12, f'{dev} メダルの一覧 12ゲーム（{c}）')
+        await shot(pg, f'v106-medals-{dev}')
+        check(not pg.errs, f'{dev} メダル エラーなし {pg.errs[:2]}')
+        await ctx.close()
+    # クイズ・連打・スロットの メダル（記録から）
+    ctx, pg = await page(b, 'ip13', base())
+    await start(pg)
+    await pg.evaluate("miniRecBump('quiz', r=>{r.best=5;r.perfect=3}); miniRecBump('tap', r=>{r.best=85})")
+    check(await pg.evaluate("[medalCount('quiz'), medalCount('tap')]") == [3, 2], 'メダル：クイズ 3・連打 2')
+    # スロット：BET を 10/30/50/100 だけ・♥1・あたりは BET×10 まで 1回だけ
+    r = await pg.evaluate("[window.nyankaloMini.slotBet(20).ok, window.nyankaloMini.slotBet(100), window.nyankaloMini.slotWin(5000, 100, '🐈'), window.nyankaloMini.slotWin(1000, 100, '🐈')]")
+    h = await pg.evaluate(H)
+    check(r[0] is False and r[1]['ok'] and r[2]['given'] == 1000 and r[3]['given'] == 0, f'スロット：BET 100・あたりは BET×10 まで・1回だけ（{r}）')
+    check(h['n'] == 4 and h['coins'] == 1850 - 100 + 1000, f'スロット：♥1・1日の上限なし（{h}）')
+    check(await pg.evaluate("medalCount('slot')") == 3, 'スロット：BET100 の 🐈🐈🐈 で メダル3つ')
+    await pg.evaluate("S.heart={n:0,t:Date.now()};save()")
+    r = await pg.evaluate("window.nyankaloMini.slotBet(100)"); h = await pg.evaluate(H)
+    w = await pg.evaluate("window.nyankaloMini.slotWin(1000, 100, '🐈')")
+    check(r['practice'] and h['coins'] == 2750 and w['given'] == 0, f'スロット：♥0 は 練習（コインは うごかない）（{r} {w}）')
+    check(not pg.errs, f'スロット エラーなし {pg.errs[:2]}')
+    await ctx.close()
+    # スロットの ページ：BET の えらびかた・すべり の説明・♥
+    ctx, pg = await page(b, 'se', base(heart={'n': 3, 't': NOW_MS}))
+    await start(pg)
+    await pg.evaluate("openMiniPage('slot')"); await pg.wait_for_timeout(1200)
+    f = pg.frame_locator('#miniFrame iframe')
+    opts = await f.locator('#betAmount option').evaluate_all("o=>o.map(x=>+x.value)")
+    note = await f.locator('#oddsNote').inner_text(); hs = await f.locator('#hearts').inner_text()
+    check(opts == [10, 30, 50, 100] and 'すべる' in note and '1.7倍' in note and hs == '♥♥♥', f'スロット画面：BET・すべり・♥（{opts} {hs} {note[:30]!r}）')
+    await f.locator('#betAmount').select_option('50'); await f.locator('#spin').click(); await pg.wait_for_timeout(300)
+    for k in range(3): await f.locator(f'#stop{k}').click(); await pg.wait_for_timeout(450)
+    await pg.wait_for_timeout(1000)
+    h = await pg.evaluate(H)
+    check(h['n'] == 2 and h['coins'] in (1800, 1800 + 100, 1800 + 150, 1800 + 200, 1800 + 250, 1800 + 400, 1800 + 500), f'スロット画面：1回 ♥1・BET50（{h}）')
+    await shot(pg, 'v106-slot-se')
+    check(not pg.errs, f'スロット画面 エラーなし {pg.errs[:2]}')
+    await ctx.close()
+    # すべり：止めたあと 1コマ すべる確率（ページの SLIP）
+    ctx, pg = await page(b, 'ip13', None, path='slot.html')
+    sl = await pg.evaluate("(()=>{let n=0;const r=reels[0];for(let i=0;i<4000;i++){r.stopping=false;r.spinning=true;r.stopBtn.disabled=false;r.stopBtn.click();n+=r.extra;}r.spinning=false;return n/4000})()")
+    check(.40 < sl < .50, f'スロット：すべる確率 ≒ 45%（{sl}）')
+    await ctx.close()
+    # 10連：4,500コイン・10こ・SR 1つ以上・天井
+    for dev in DEV:
+        ctx, pg = await page(b, dev, base(coins=9000))
+        await start(pg)
+        await pg.evaluate("UI.shopTab='gacha';UI.gachaMode='normal';setTab('shop')"); await pg.wait_for_timeout(300)
+        await pg.click('#g10'); await pg.wait_for_timeout(300); await pg.click('#gYes'); await pg.wait_for_timeout(1800)
+        r = await pg.evaluate("({cells:document.querySelectorAll('.g10-cell').length, sr:document.querySelectorAll('.g10-cell.SR').length, coins:S.coins, ok:document.getElementById('g10Ok').getBoundingClientRect().bottom<=innerHeight})")
+        check(r['cells'] == 10 and r['sr'] >= 1 and r['coins'] >= 4500 and r['ok'], f'{dev} 10連：10こ・SR 1つ以上・4,500コイン・OK が見える（{r}）')
+        await shot(pg, f'v106-g10-{dev}')
+        check(not pg.errs, f'{dev} 10連 エラーなし {pg.errs[:2]}')
+        await ctx.close()
+    ctx, pg = await page(b, 'ip13', base(coins=900000))
+    await start(pg)
+    r = await pg.evaluate("(()=>{let srs=0;for(let i=0;i<30;i++){S.coins+=4500;pullGacha10();closeModal()}return {pity:S.pity, owned:zukanGot()}})()")
+    check(r['pity'] < 10 and r['owned'] >= 45, f'10連 30回：天井 そのまま・図鑑が うまる（{r}）')
+    check(not pg.errs, f'10連 くりかえし エラーなし {pg.errs[:2]}')
+    await ctx.close()
+    # イベント：のこり まとめて（n×450）
+    st = base(coins=3000); st['owned'] = st['owned'] + ['ev_teru']
+    ctx, pg = await page(b, 'ip13', st)
+    await start(pg)
+    await pg.evaluate("evPick('rainy');UI.shopTab='gacha';UI.gachaMode='ev';setTab('shop')"); await pg.wait_for_timeout(300)
+    t = await pg.evaluate("document.getElementById('gEvAll').innerText")
+    check('のこり3つ' in t and '1,350' in t, f'まとめて：のこり3つ 1,350（{t!r}）')
+    await pg.click('#gEvAll'); await pg.wait_for_timeout(300); await pg.click('#gYes'); await pg.wait_for_timeout(1800)
+    r = await pg.evaluate("({coins:S.coins, left:evLeft(eventNow()).length, cells:document.querySelectorAll('.g10-cell').length})")
+    check(r == {'coins': 1650, 'left': 0, 'cells': 3}, f'まとめて：3つ ぜんぶ（{r}）')
+    await pg.evaluate("closeModal()")
+    check(await pg.evaluate("!document.getElementById('gEvAll')"), 'まとめて：コンプリートしたら ボタンなし')
+    # セットボーナス：そろった イベントの きせかえを 着ると 各+4
+    b0 = await pg.evaluate("statWithBonus('pow')")
+    await pg.evaluate("S.cat.equip.suit='ev_raijin';save()")
+    b1 = await pg.evaluate("[statWithBonus('pow'),statWithBonus('spd'),statWithBonus('sta')]")
+    check(b1[0] == b0 + 4 and b1[1] == 25 + 4 and b1[2] == 22 + 4, f'セットボーナス：各+4（{b0} → {b1}）')
+    await pg.evaluate("S.cat.equip.suit='ev_gakuran';S.owned.push('ev_gakuran');save()")
+    check(await pg.evaluate("statWithBonus('pow')") == b0, 'セットボーナス：そろっていない イベントは なし')
+    await pg.evaluate("S.cat.equip.suit='ev_raijin';UI.catTab='wear';UI.lockerSlot='suit';setTab('cat')"); await pg.wait_for_timeout(300)
+    t = await pg.evaluate("document.querySelector('.set-list').innerText")
+    check('梅雨 ✔' in t and 'セットボーナス 中' in t and '+4' in await pg.evaluate("document.querySelector('.stats').innerText"), f'更衣室：セットの ようす（{t[:60]!r}）')
+    await shot(pg, 'v106-set')
+    check(not pg.errs, f'まとめて・セット エラーなし {pg.errs[:2]}')
+    await ctx.close()
+
 GROUPS = [('home', t_home), ('tabs', t_tabs), ('tour', t_tour), ('gacha', t_gacha), ('level', t_level), ('coin', t_coin), ('daily', t_daily), ('first', t_first),
           ('battle', t_battle), ('slot', t_slot), ('sagase', t_sagase), ('font', t_font), ('a11y', t_a11y), ('manifest', t_manifest),
-          ('memo', t_memo), ('migrate', t_migrate), ('achieve', t_achieve), ('stone', t_stone), ('meal-delete', t_mealdel), ('event', t_event), ('event41', t_event41), ('v105', t_v105)]
+          ('memo', t_memo), ('migrate', t_migrate), ('achieve', t_achieve), ('stone', t_stone), ('meal-delete', t_mealdel), ('event', t_event), ('event41', t_event41), ('v105', t_v105), ('v106', t_v106)]
 
 async def main():
     async with async_playwright() as p:

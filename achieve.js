@@ -19,6 +19,7 @@ function achValue(a) {
   if (a.id === 'walk') return Math.floor(walkKm(t.steps || 0) * 10) / 10;
   if (a.id === 'zukan') return zukanGot();
   if (a.id === 'streak') return Math.max(t.bestStreak || 0, S.streak.n || 0);
+  if (a.id === 'medals') return medalCount();   // v10.6
   return t[a.id] || 0;
 }
 const achStep = a => Math.min(a.goals.length, S.ach[a.id] || 0);   // 受けとった段階の数
@@ -126,4 +127,66 @@ function stoneExchange(n) {
   if ((S.stones || 0) < STONE.rate * n) return 0;
   S.stones -= STONE.rate * n; S.coins += STONE.coins * n; save();
   return STONE.coins * n;
+}
+
+/* ---------- v10.6 ミニゲームのメダル（data.js の MEDALS） ----------
+   S.medal＝{ ゲームのid: [日付 or 0, …] }（3つ）。medalScan が いままでの記録（S.ev・S.miniRec）を しらべて、まだのものを わたす
+   もらうと ダイヤ MEDAL_STONES。ずっとミッション「メダルを集める」にも 数える */
+const medalGame = g => g.ev ? EVENTS.find(e => e.id === g.ev) : null;
+const medalName = g => { const e = medalGame(g); return e ? e.game : g.name; };
+const medalIcon = g => { const e = medalGame(g); return e ? e.icon : g.icon; };
+const medalOf = id => ((S.medal || {})[id] || [0, 0, 0]);
+const medalCount = (id = null) => MEDALS.filter(g => !id || g.id === id).reduce((a, g) => a + medalOf(g.id).filter(Boolean).length, 0);
+const medalTotal = () => MEDALS.length * 3;
+// 条件を しらべる道具
+function medalR() {
+  const ev = S.ev || { best: {}, rec: {} }, mr = S.miniRec || {};
+  const evMax = (o, id) => Object.keys(o).filter(k => k === id || k.startsWith(id + '-')).reduce((a, k) => Math.max(a, +o[k] || 0), 0);
+  return {
+    evBest: id => evMax(ev.best || {}, id), evRec: id => evMax(ev.rec || {}, id),
+    x: k => mr[k] || {},
+    cats: d => (((mr.sagase || {})[d]) || {}).cats || 0,
+    bbMax: () => Object.values(mr.baseball || {}).reduce((a, v) => Math.max(a, typeof v === 'number' ? v : 0), 0)
+  };
+}
+// まだの メダルを わたす。もらったものの一覧を返す [{ g, i, stones }]。quiet＝前の版の記録から（お知らせで まとめて 見せる）
+function medalScan(quiet) {
+  if (!S.medal || typeof S.medal !== 'object') S.medal = {};
+  const R = medalR(), out = [];
+  for (const g of MEDALS) {
+    let ok; try { ok = g.t(R); } catch (e) { ok = []; }
+    const cur = medalOf(g.id).slice();
+    ok.forEach((v, i) => { if (v && !cur[i]) { cur[i] = todayStr(); out.push({ g, i, stones: MEDAL_STONES[i] }); } });
+    S.medal[g.id] = cur;
+  }
+  if (out.length) {
+    const st = out.reduce((a, o) => a + o.stones, 0);
+    S.stones = (S.stones || 0) + st;
+    if (quiet) { const r = S.medalOld || { n: 0, stones: 0 }; S.medalOld = { n: r.n + out.length, stones: r.stones + st }; }
+    else { medalPending.push(...out); if (!document.getElementById('miniFrame')) medalToastNow(); }   // ミニゲームの中では 見えないので、とじたときに
+    save();
+  }
+  return out;
+}
+let medalToastT = 0, medalPending = [];
+function medalToastNow() {
+  if (!medalPending.length) return;
+  const out = medalPending.splice(0), st = out.reduce((a, o) => a + o.stones, 0), t = out.map(o => `${MEDAL_ICON[o.i]}「${o.g.m[o.i]}」`).join(' ');
+  clearTimeout(medalToastT); medalToastT = setTimeout(() => toast(`🏅 メダル ${t}　💎+${st}`), 500);
+}
+// v10.6：前の版の記録で とどいている メダルは、はじめて開いたときに まとめて わたす（S.medal が ないとき 1回だけ）
+function medalMigrate() { if (S.medal) return; S.medal = {}; medalScan(true); }
+medalMigrate();
+// ゲームごとの「🥉🥈🥇」（もっていないものは うすく）
+function medalRowHTML(id, big) {
+  const m = medalOf(id), g = MEDALS.find(x => x.id === id);
+  return `<span class="medals${big ? ' big' : ''}" aria-label="メダル ${m.filter(Boolean).length}/3">${MEDAL_ICON.map((ic, i) => `<i class="${m[i] ? 'got' : ''}" title="${esc(g.m[i])}">${ic}</i>`).join('')}</span>`;
+}
+// メダルの一覧（ミニゲームの上の「メダル n/36」から）
+function openMedals() {
+  openModal(`<h2 id="modalTitle">ミニゲームのメダル<small>${medalCount()} / ${medalTotal()}</small></h2><div class="stack">
+    <p class="hint" style="margin:0">メダルを とると ダイヤ（🥉💎${MEDAL_STONES[0]}・🥈💎${MEDAL_STONES[1]}・🥇💎${MEDAL_STONES[2]}）。♥が ない「練習」でも とれます。</p>
+    <div class="list medal-list">${MEDALS.map(g => { const m = medalOf(g.id); return `<div class="card medal-card"><div class="mc-top"><b><span aria-hidden="true">${esc(medalIcon(g))}</span> ${esc(medalName(g))}${g.ev ? '<small class="ev-tag">イベント</small>' : ''}</b>${medalRowHTML(g.id)}</div>
+      <ul>${g.m.map((t, i) => `<li class="${m[i] ? 'got' : ''}"><span aria-hidden="true">${MEDAL_ICON[i]}</span>${esc(t)}<small>${m[i] ? '✔' : '💎' + MEDAL_STONES[i]}</small></li>`).join('')}</ul></div>`; }).join('')}</div>
+    <button class="btn block" id="mdOk">とじる</button></div>`, root => { root.querySelector('#mdOk').onclick = closeModal; });
 }

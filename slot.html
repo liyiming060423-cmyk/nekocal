@@ -61,7 +61,7 @@ select{padding:12px 10px;background:#fff;color:#4c2678;border:2px solid #ffe36e;
 </style>
 </head>
 <body>
-<!-- 組員作のミニゲーム。にゃんカロの中で開くと、アプリのコインをかける（1日のもうけ上限あり） -->
+<!-- 組員作のミニゲーム。にゃんカロの中で開くと、アプリのコインをかける（v10.6：1回まわすと ♥1・1日の上限なし・ときどき 1コマ すべる） -->
 <button id="backBtn" aria-label="にゃんカロにもどる">×</button>
 <button id="sndBtn" aria-label="BGMのオン・オフ">🔊</button>
 <main class="game">
@@ -71,6 +71,7 @@ select{padding:12px 10px;background:#fff;color:#4c2678;border:2px solid #ffe36e;
  <div class="topbar">
   <div class="stat">💰 コイン<span id="coins">1000</span></div>
   <div class="stat"><span id="earnedLabel" style="display:inline;font-size:inherit;text-shadow:none;color:inherit;margin:0">🏆 獲得合計</span><span id="earned">0</span></div>
+  <div class="stat" id="heartStat">❤️ ハート<span id="hearts" style="color:#ff6fa8;font-size:clamp(14px,4vw,18px);letter-spacing:-1px;line-height:1.6">♥♥♥♥♥</span></div>
  </div>
  <p class="limit" id="limitNote"></p>
  <section class="machine">
@@ -81,7 +82,7 @@ select{padding:12px 10px;background:#fff;color:#4c2678;border:2px solid #ffe36e;
    <div class="reel-col"><div class="reel-window" id="reel2"><div class="symbol-el top"></div><div class="symbol-el curr"></div></div><button class="stop-btn" id="stop2" aria-label="右リールを止める" disabled><span class="paw"><i class="toe"></i><i class="toe"></i><i class="toe"></i><i class="pad"></i></span></button></div>
   </div>
   <div class="message" id="message">スピンして肉球ボタンでストップ！</div>
-  <div class="controls"><select id="betAmount" aria-label="賭け金"><option value="10">10コイン BET</option><option value="20">20コイン BET</option><option value="30" selected>30コイン BET</option></select><button id="spin">🎰 SPIN!!</button></div>
+  <div class="controls"><select id="betAmount" aria-label="賭け金"><option value="10">10コイン BET</option><option value="30" selected>30コイン BET</option><option value="50">50コイン BET</option><option value="100">100コイン BET</option></select><button id="spin">🎰 SPIN!!</button></div>
  </section>
  <section class="payouts"><h2>🐱 絵柄別 PAYOUT</h2><div class="pay-grid">
   <div class="pay-item">🍎 りんご<b>×2</b><small>1/216</small></div><div class="pay-item">🥗 サラダ<b>×3</b><small>1/216</small></div><div class="pay-item">🐟 おさかな<b>×4</b><small>1/216</small></div>
@@ -94,8 +95,10 @@ const symbols=["🍎","🥗","🐟","🏋️","🥊","🐈"];
 const multipliers={"🍎":2,"🥗":3,"🐟":4,"🏋️":5,"🥊":8,"🐈":10};
 // にゃんカロとのつなぎ（同じサイトの中で iframe として開かれたときだけ使える）
 const APP=(()=>{try{return window.parent!==window&&window.parent.nyankaloMini?window.parent.nyankaloMini:null}catch(e){return null}})();
-let coins=1000,earned=0,busy=false,netMax=100;
-if(APP){const i=APP.slotInfo();coins=i.coins;earned=i.net;netMax=i.max}
+// v10.6：BET 10/30/50/100（アプリの RULE.slotBets）。1回まわすと ♥1（♥がなければ 練習：コインは うごかない）。SLIP＝止めたあと 1コマ すべる確率
+let coins=1000,earned=0,busy=false,hearts=5,heartMax=5,SLIP=.45,practice=false,BETS=[10,30,50,100];
+if(APP){const i=APP.slotInfo();coins=i.coins;hearts=i.hearts;heartMax=i.heartMax;SLIP=i.slip;BETS=i.bets}
+(()=>{const sel=document.getElementById('betAmount'),cur=+sel.value;sel.innerHTML=BETS.map(b=>`<option value="${b}"${b===(BETS.includes(cur)?cur:BETS[1])?' selected':''}>${b}コイン BET</option>`).join('')})();
 const coinsEl=document.getElementById('coins'),earnedEl=document.getElementById('earned'),messageEl=document.getElementById('message'),betSelect=document.getElementById('betAmount'),spinBtn=document.getElementById('spin');
 let sfxContext=null;
 function playTone(frequency,duration,type='sine',volume=.12,endFrequency=null,delay=0){try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;if(!sfxContext)sfxContext=new AC();if(sfxContext.state==='suspended')sfxContext.resume();const t=sfxContext.currentTime+delay,o=sfxContext.createOscillator(),g=sfxContext.createGain();o.type=type;o.frequency.setValueAtTime(frequency,t);if(endFrequency!==null)o.frequency.exponentialRampToValueAtTime(endFrequency,t+duration);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(volume,t+.015);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g);g.connect(sfxContext.destination);o.start(t);o.stop(t+duration+.03)}catch(e){}}
@@ -103,26 +106,30 @@ function playSpinSound(){playTone(150,.35,'sawtooth',.05,430);playTone(250,.25,'
 function playStopSound(){playTone(680,.12,'square',.07,300)}
 function playWinSound(){[[523,0],[659,.13],[784,.26],[1047,.42],[1318,.58]].forEach(([f,d])=>playTone(f,.3,'triangle',.12,null,d))}
 function updateUI(){coinsEl.textContent=coins;earnedEl.textContent=APP?(earned>0?'+':'')+earned:earned;spinBtn.disabled=busy;betSelect.disabled=busy;
- if(APP){document.getElementById('earnedLabel').textContent='📈 今日のもうけ';document.getElementById('limitNote').textContent=earned>=netMax?`今日のもうけ上限（${netMax}枚）に達しました。当たってもコインは増えません`:`アプリのコインをかけます。1日のもうけ上限 ${netMax}枚（あと${netMax-Math.max(0,earned)}枚）`}}
+ if(APP){document.getElementById('earnedLabel').textContent='📈 もうけ';const h=document.getElementById('hearts');h.textContent=hearts>0?'♥'.repeat(Math.min(hearts,heartMax))+(hearts>heartMax?'+'+(hearts-heartMax):''):'なし';
+  document.getElementById('limitNote').textContent=hearts>0?`アプリのコインをかけます。1回まわすと ♥1（のこり ${hearts}）`:'♥が ないので 練習（コインは うごきません）。♥は 30分で 1つ もどります';
+  spinBtn.textContent=hearts>0?'🎰 SPIN!!':'🎰 練習 SPIN'}}
+if(!APP)document.getElementById('heartStat').hidden=true;
 updateUI();
 // v10.2：タイミングまかせで止めたときの確率と返還率（RTP）。倍率（multipliers）から計算するので、倍率を変えても自動で合う
-(()=>{const n=symbols.length,one=n*n*n,rtp=symbols.reduce((a,s)=>a+multipliers[s],0)/one;document.querySelectorAll('.pay-item small').forEach(e=>{e.textContent='1/'+one});
- document.getElementById('oddsNote').innerHTML=`タイミングまかせで止めたとき：どれかが3つ揃う確率 <b>1/${one/n}</b>（約${(100*n/one).toFixed(1)}%）<br>かけたコインのうち 平均で返ってくる割合（返還率）<b>約${Math.round(rtp*100)}%</b>。目押しが うまいほど上がる`})();
+// v10.6：止めたあと SLIP の確率で 1コマ すべる。目押しが うまい人の いちばん いい割合＝いちばん高い倍率 ×（すべらない確率）³
+(()=>{const n=symbols.length,one=n*n*n,rtp=symbols.reduce((a,s)=>a+multipliers[s],0)/one,best=Math.max(...Object.values(multipliers))*Math.pow(1-SLIP,3);document.querySelectorAll('.pay-item small').forEach(e=>{e.textContent='1/'+one});
+ document.getElementById('oddsNote').innerHTML=`リールは 止めたあと ときどき（${Math.round(SLIP*100)}%）1コマ すべる！<br>タイミングまかせ：どれかが3つ揃う確率 <b>1/${one/n}</b>・平均で返ってくる割合 <b>約${Math.round(rtp*100)}%</b><br>目押しが うまいと 平均で かけた分の <b>約${best.toFixed(1)}倍</b>まで（BETが 大きいほど 大きく 勝ったり 負けたり）`})();
 function randomSymbol(){return symbols[Math.floor(Math.random()*symbols.length)]}
 function shuffledSymbols(){const order=[...symbols];for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]]}return order}
 class Reel{
- constructor(id,buttonId){this.el=document.getElementById(id);this.stopBtn=document.getElementById(buttonId);this.topEl=this.el.querySelector('.top');this.currEl=this.el.querySelector('.curr');this.y=0;this.step=this.el.clientHeight;this.msPer=1000/60*13;this.last=0;this.spinning=false;this.stopping=false;this.onStopped=null;this.order=shuffledSymbols();this.orderIndex=0;this.currEl.textContent=randomSymbol();this.topEl.textContent=randomSymbol();this.render();this.stopBtn.addEventListener('click',()=>{if(this.spinning&&!this.stopping){this.stopping=true;this.stopBtn.disabled=true;playStopSound()}})}
+ constructor(id,buttonId){this.el=document.getElementById(id);this.stopBtn=document.getElementById(buttonId);this.topEl=this.el.querySelector('.top');this.currEl=this.el.querySelector('.curr');this.y=0;this.step=this.el.clientHeight;this.msPer=1000/60*13;this.last=0;this.spinning=false;this.stopping=false;this.onStopped=null;this.order=shuffledSymbols();this.orderIndex=0;this.currEl.textContent=randomSymbol();this.topEl.textContent=randomSymbol();this.render();this.stopBtn.addEventListener('click',()=>{if(this.spinning&&!this.stopping){this.stopping=true;this.extra=Math.random()<SLIP?1:0;this.stopBtn.disabled=true;playStopSound()}})}
  start(onStopped){this.onStopped=onStopped;this.spinning=true;this.stopping=false;this.stopBtn.disabled=false;this.y=0;this.last=0;this.order=shuffledSymbols();this.orderIndex=0;this.topEl.textContent=this.order[this.orderIndex];requestAnimationFrame(t=>this.animate(t))}
- animate(now){if(!this.spinning)return;now=now||performance.now();const dt=this.last?Math.min(50,Math.max(0,now-this.last)):1000/60;this.last=now;this.y+=this.step*dt/this.msPer;if(this.y>=this.step){this.y-=this.step;this.currEl.textContent=this.topEl.textContent;if(this.stopping){this.y=0;this.spinning=false;this.render();this.stopBtn.disabled=true;this.onStopped(this.currEl.textContent);return}else{this.orderIndex=(this.orderIndex+1)%this.order.length;this.topEl.textContent=this.order[this.orderIndex]}}this.render();requestAnimationFrame(t=>this.animate(t))}
+ animate(now){if(!this.spinning)return;now=now||performance.now();const dt=this.last?Math.min(50,Math.max(0,now-this.last)):1000/60;this.last=now;this.y+=this.step*dt/this.msPer;if(this.y>=this.step){this.y-=this.step;this.currEl.textContent=this.topEl.textContent;if(this.stopping&&!(this.extra>0)){this.y=0;this.spinning=false;this.render();this.stopBtn.disabled=true;this.onStopped(this.currEl.textContent);return}else{if(this.stopping)this.extra--;this.orderIndex=(this.orderIndex+1)%this.order.length;this.topEl.textContent=this.order[this.orderIndex]}}this.render();requestAnimationFrame(t=>this.animate(t))}
  render(){this.currEl.style.transform=`translateY(${this.y}px)`;this.topEl.style.transform=`translateY(${this.y-this.step}px)`}
 }
 const reels=[new Reel('reel0','stop0'),new Reel('reel1','stop1'),new Reel('reel2','stop2')];
 function burst(){const icons=['✨','⭐','💖','🐾','🎉'];for(let i=0;i<42;i++){const el=document.createElement('span');el.className='confetti';el.textContent=icons[Math.floor(Math.random()*icons.length)];el.style.left=Math.random()*100+'vw';el.style.animationDelay=Math.random()*.6+'s';document.body.appendChild(el);setTimeout(()=>el.remove(),2500)}}
-spinBtn.addEventListener('click',()=>{if(busy)return;const bet=Number(betSelect.value);if(coins<bet){messageEl.textContent='コインが足りません！';return}
- if(APP){const r=APP.slotBet(bet);if(!r.ok){coins=r.coins;updateUI();messageEl.textContent='コインが足りません！';return}coins=r.coins;earned=r.net}else coins-=bet;
+spinBtn.addEventListener('click',()=>{if(busy)return;const bet=Number(betSelect.value);if(coins<bet&&!(APP&&hearts<=0)){messageEl.textContent='コインが足りません！';return}
+ if(APP){const r=APP.slotBet(bet);hearts=r.hearts;if(!r.ok){coins=r.coins;updateUI();messageEl.textContent='コインが足りません！';return}practice=!!r.practice;coins=r.coins;if(!practice)earned-=bet}else coins-=bet;
  busy=true;updateUI();messageEl.className='message';messageEl.textContent='🎰 回転中！タイミングを合わせて肉球をタップ！';playSpinSound();const results=[];let stopped=0;reels.forEach((reel,index)=>reel.start(symbol=>{results[index]=symbol;stopped++;if(stopped===3)checkResult(results,bet)}))});
 function checkResult(result,bet){if(result[0]===result[1]&&result[1]===result[2]){const reward=bet*multipliers[result[0]];let got=reward,capTxt='';
- if(APP){const r=APP.slotWin(reward);got=r.given;coins=r.coins;earned=r.net;if(r.capped)capTxt=`（今日の上限で +${got}）`}else{coins+=reward;earned+=reward}
+ if(APP&&practice){capTxt='（練習なので コインは うごきません）'}else if(APP){const r=APP.slotWin(reward,bet,result[0]);got=r.given;coins=r.coins;earned+=got}else{coins+=reward;earned+=reward}
  messageEl.textContent=`🎉 大当たり！ ${result[0]} ×${multipliers[result[0]]}　+${reward}コイン！${capTxt}`;messageEl.classList.add('win');playWinSound();burst()}else{messageEl.textContent='🐾 おしい！ もう一度チャレンジ！'}busy=false;updateUI()}
 </script>
 <!-- BGMはHTML内に内蔵。ページ表示中はループ再生 -->

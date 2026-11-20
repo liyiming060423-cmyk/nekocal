@@ -2,6 +2,6 @@
    Zen Maru Gothic（SIL Open Font License 1.1、OFL-ZenMaruGothic.txt）を自分のサイトから読みこむ（前は Google Fonts）。
    アプリで使っている字だけを入れて軽くしている（make_fonts.py で作る）。入っていない字（名前やごはんの名前の めずらしい漢字・絵文字）は、
    下のほうの字体（iPhone はヒラギノ丸ゴ）で出る。 */
-@font-face { font-family: 'Zen Maru Gothic'; font-style: normal; font-weight: 400 500; font-display: swap; src: url('zmg-500.woff2?v=10.5') format('woff2'); }
-@font-face { font-family: 'Zen Maru Gothic'; font-style: normal; font-weight: 600 700; font-display: swap; src: url('zmg-700.woff2?v=10.5') format('woff2'); }
-@font-face { font-family: 'Zen Maru Gothic'; font-style: normal; font-weight: 800 1000; font-display: swap; src: url('zmg-900.woff2?v=10.5') format('woff2'); }
+@font-face { font-family: 'Zen Maru Gothic'; font-style: normal; font-weight: 400 500; font-display: swap; src: url('zmg-500.woff2?v=10.6') format('woff2'); }
+@font-face { font-family: 'Zen Maru Gothic'; font-style: normal; font-weight: 600 700; font-display: swap; src: url('zmg-700.woff2?v=10.6') format('woff2'); }
+@font-face { font-family: 'Zen Maru Gothic'; font-style: normal; font-weight: 800 1000; font-display: swap; src: url('zmg-900.woff2?v=10.6') format('woff2'); }

@@ -109,7 +109,7 @@ function renderHome() {
     gb.setAttribute('aria-label', ge ? `イベント：${ge.name}` : 'ガチャへ');
   }
   gb.hidden = !ge;   // v10.5：イベントが ないときは ボタンを出さない（福袋は 上のバナーから）
-  $('dotGacha').hidden = ge ? !evPlaysLeft() : S.coins < GACHA_COST;
+  $('dotGacha').hidden = ge ? hearts() < RULE.heartMax : S.coins < GACHA_COST;   // v10.6：♥が いっぱいの ときに 赤い点
   $('btnCamera').innerHTML = I.camera;
   const km = d.steps * (S.user.height || 165) * RULE.strideRate / 100000;
   $('pillSteps').innerHTML = `<span class="sc-ico">${I.shoe}</span><span class="sc-main"><small>歩数</small><b><span class="num">${km.toFixed(1)}</span> km</b><small class="num">${fmt(d.steps)}歩</small></span><span class="sc-arrow" aria-hidden="true">›</span>`;
@@ -390,8 +390,8 @@ function openCapture(opt = {}) {
       // v10.3：もらったごほうびを記録に残す（消したときに もどすため。rw＝ごほうびの回数を使った・st＝本当にふえたスタミナ・pb＝ミニゲーム +1）
       meal.rw = 0; meal.st = 0; meal.pb = 0;
       if (d.mealRewards < 5) { const s0 = S.stamina; d.mealRewards++; addStamina(RULE.staminaPerMeal); meal.rw = 1; meal.st = S.stamina - s0; addExp(RULE.expPerMeal); addMood(RULE.moodPerMeal); msg += `・スタミナ +${RULE.staminaPerMeal}`; }
-      // 写真つきの記録：ミニゲームの報酬つきプレイ +1（1日 photoBonusMax 回まで）
-      if (cap && (d.photoBonus || 0) < RULE.photoBonusMax) { d.photoBonus = (d.photoBonus || 0) + 1; meal.pb = 1; msg += '・ミニゲーム +1回'; }
+      // 写真つきの記録：ミニゲームの ♥+1（1日 photoBonusMax 回まで。v10.6：前は 報酬つきプレイ +1回）
+      if (cap && (d.photoBonus || 0) < RULE.photoBonusMax) { d.photoBonus = (d.photoBonus || 0) + 1; meal.pb = 1; heartAdd(1); msg += '・♥+1'; }
       save(); se('get'); buzz(40); setTimeout(() => { if (homeCat) homeCat.react('head'); }, 400);
       saved = true; closeModal(); toast(msg); setTimeout(checkCrisis, 2800);
     };

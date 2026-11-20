@@ -29,6 +29,7 @@ function defaultState() {
     ach: {},                          // v10.3 実績：{ 種類: 受けとった段階の数 }
     titles: [], title: '',            // v10.3 実績でもらった称号・つけている称号（'' ＝ レベルの称号）
     memo: [], memoNew: 0,             // v10.3 おもいで・まだ見ていない数
+    heart: { n: RULE.heartMax, t: Date.now() },   // v10.6 ♥（rules.js の heartSync）。S.medal（メダル）は achieve.js の medalMigrate が つくる
     ev: { pick: '', best: {}, clear: {}, rec: {}, mode: {} },   // v10.4 イベント：pick＝いま開いているイベント（EVENT_MODE 'all' のとき）・best＝ミニゲームの いちばんの点・clear＝はじめてクリアした日。v10.4.1：rec＝目標の いちばんの記録・mode＝さいごに えらんだ むずかしさ（best・rec は むずかしさごとに「id-hard」のように 別）
     onboarded: false
   };
@@ -60,6 +61,8 @@ function load() {
     if (!st.ach || typeof st.ach !== 'object') st.ach = {};
     // v10.4：イベント
     st.ev = Object.assign({ pick: '', best: {}, clear: {}, rec: {}, mode: {} }, s.ev); for (const k of ['best', 'clear', 'rec', 'mode']) st.ev[k] = Object.assign({}, st.ev[k]);
+    // v10.6：♥（前の版から遊んでいる人は いっぱいから）
+    if (!s.heart || typeof s.heart.n !== 'number') st.heart = { n: RULE.heartMax, t: Date.now() };
     if (s.news === undefined) st.news = '';   // v10.1：前の版のデータ → メニューが変わったお知らせを1回出す
     // 前の版で骸骨・爆発になっていた猫は、今日から入院（入院費はとらない）
     if (st.cat.dead) {
@@ -90,7 +93,7 @@ function save() {
   }
 }
 function day(d = todayStr()) {
-  if (!S.days[d]) S.days[d] = { meals: [], steps: 0, stepUnits: 0, trains: 0, minis: 0, miniRewards: 0, mealRewards: 0, photoBonus: 0, slotNet: 0, evPlays: 0 };   // v10.4 evPlays＝イベントのミニゲームで コインをもらった回数
+  if (!S.days[d]) S.days[d] = { meals: [], steps: 0, stepUnits: 0, trains: 0, minis: 0, miniRewards: 0, mealRewards: 0, photoBonus: 0 };   // v10.6：miniRewards＝コインを もらった回数（数えるだけ）、photoBonus＝写真の ♥+1 の回数
   return S.days[d];
 }
 const intake = d => (S.days[d] ? S.days[d].meals.reduce((a, m) => a + m.kcal, 0) : 0);

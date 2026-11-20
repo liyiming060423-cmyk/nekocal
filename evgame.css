@@ -82,3 +82,11 @@ button { font: inherit; color: inherit; }
 @keyframes egHop { to { transform: translateY(-8%); } }
 @media (max-height: 600px) { .eg-card { gap: 8px; } .eg-mode { min-height: 46px; } .eg-modes ~ .eg-stats div { padding: 4px; } .eg-catbox { width: 96px; } .eg-title { font-size: 20px; } .eg-how { font-size: 13px; padding: 8px 10px; } .eg-btn { min-height: 48px; } .eg-res-score b { font-size: 38px; } }
 @media (prefers-reduced-motion: reduce) { .eg-new, .eg-combo.pop, .eg-cat-jump .pc-idle { animation: none; } }
+/* v10.6 メダル */
+.eg-medal { margin: 0; text-align: center; font-size: 22px; letter-spacing: 4px; }
+.eg-medal i { font-style: normal; filter: grayscale(1); opacity: .3; }
+.eg-medal i.got { filter: none; opacity: 1; }
+.eg-getmedal { display: grid; gap: 4px; }
+.eg-getmedal div { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 12px; background: #FFF6D6; border: 2px solid #E9B730; font-weight: 900; font-size: 14px; }
+.eg-getmedal span { font-size: 20px; }
+.eg-getmedal b { margin-left: auto; color: #4C8FD6; }

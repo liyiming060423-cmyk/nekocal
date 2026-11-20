@@ -199,18 +199,19 @@ function showNews() {
   const menu = verNum(from) < verNum('10.1');   // verNum は settings.js   // v10.1 より前から：メニューが変わったことも知らせる
   const old103 = verNum(from) < verNum('10.3'), old104 = verNum(from) < verNum('10.4');
   const row = (i, t) => `<div><b>${i}</b><span>${t}</span></div>`;
-  // 10.4 まで見た人には くわしく、もっと前の人には みじかく（SE でも OK が見えるように）
-  const v105 = old104
-    ? row('🏠', 'ホームを 見やすく。🎁ログボ・📋ミッションは 右上') + row('🐾', '猫の種類は ねこ →「きせかえ」の いちばん上で かえる')
-    : row('🏠', '🎁ログボ・📋ミッションは ホームの 右上に うつったよ') +
-      row('😊', 'ごきげんが 3だん。ごきげんだと 猫が はずむ') +
-      row('🐾', '猫の種類は ねこ →「きせかえ」の いちばん上で。「素手」も えらべる') +
-      row('⚾', 'バッティングに むずかしさ（むずかしいほど コイン多め）') +
-      row('💪', 'ジムが 1画面で 見やすく');
+  // v10.6：10.4 より あとの人には くわしく、もっと前の人には みじかく（SE でも OK が見えるように）。前の記録で とれた メダルも ここで知らせる
+  const old105 = verNum(from) < verNum('10.5'), mo = S.medalOld; if (mo) { delete S.medalOld; save(); }
+  const heart = '<span style="color:#E8577A">♥</span>', moTxt = mo ? `いままでの記録で ${mo.n}枚（💎+${mo.stones}）` : '';
+  const v106 = old104 ? row(heart, `ミニゲームは ♥で あそぶ・メダル（とると ダイヤ）・福袋の ${GACHA_MULTI.n}連${mo ? '。メダルは ' + moTxt : ''}`)
+    : row(heart, `ミニゲームは ♥で あそぶ（${RULE.heartMin}分で 1つ・写真で +1）。1日の回数は なくなった`) +
+      row('🏅', `ミニゲームに メダル（とると ダイヤ）${mo ? '。' + moTxt : ''}`) +
+      row('🎁', `福袋の ${GACHA_MULTI.n}連（1割 おトク）・イベントの セットボーナス`) +
+      row('🎰', 'スロットは BET 100 まで。1日の上限が なくなった（ときどき 1コマ すべる）');
+  const v105 = old105 ? row('🏠', 'ホーム・ごきげん・猫の種類（ねこ →「きせかえ」の 上）を 見やすく') : '';
   const v104 = old104 ? row('🎉', 'イベントが はじまったよ！ ホームの右下の「イベント」から') : '';
   const v103 = old103 ? row('📖', 'おもいで・ずっとミッション・ダイヤ（ねこ・📋・ショップ）') : '';
   openModal(`<h2 id="modalTitle">${menu ? 'メニューが かわったよ' : 'あたらしくなったよ'}</h2><div class="stack">
-    <div class="card news-list">${menu ? row('ねこ', 'ステータスと きせかえ（前の更衣室）') + row('あそぶ', 'ジム・ミニゲーム・対戦（前のトレーニング）') + row('きろく', '1週間のごはんの記録（前のりれき）') + row('⚙', 'せってい は ホームの右上') : ''}${v105}${v104}${v103}</div>
+    <div class="card news-list">${menu ? row('ねこ', 'ステータスと きせかえ（前の更衣室）') + row('あそぶ', 'ジム・ミニゲーム・対戦（前のトレーニング）') + row('きろく', '1週間のごはんの記録（前のりれき）') + row('⚙', 'せってい は ホームの右上') : ''}${v106}${v105}${v104}${v103}</div>
     <button class="btn block" id="nwOk">OK</button></div>`, root => { root.querySelector('#nwOk').onclick = closeModal; }, () => setTimeout(maybeShowDaily, 300));
 }
 

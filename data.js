@@ -1,6 +1,6 @@
 // アプリの版。index.html の ?v= と sw.js の VERSION もこれにそろえる
-const APP_VER = '10.5';
-const APP_NEWS = '10.5';   // この版のお知らせ（ui.js の showNews）まで見たか。10.1＝メニューが変わった、10.3＝おもいで・ずっとミッション・ダイヤ、10.4＝イベント、10.5＝ホーム・ごきげん・猫の種類・バッティング（次に大きく変えたら、数字をその版にする）
+const APP_VER = '10.6';
+const APP_NEWS = '10.6';   // この版のお知らせ（ui.js の showNews）まで見たか。10.1＝メニューが変わった、10.3＝おもいで・ずっとミッション・ダイヤ、10.4＝イベント、10.5＝ホーム・ごきげん・猫の種類・バッティング、10.6＝♥・メダル・10連・セットボーナス・スロット（次に大きく変えたら、数字をその版にする）
 
 // にゃんカロ データ定義
 // アイテム・ショップ・トレーニング・ミッションなど「数字や名前」はここだけで管理する。
@@ -179,6 +179,8 @@ const GACHA_ITEMS = {
 // ホームのイベントバナー（go: 'gacha' でガチャへ）
 const EVENT = { tag: '福袋', title: 'トレーニング<br>アイテム入り！', go: 'gacha' };
 const DUP_REFUND = 100;          // かぶったらコインに交換
+// v10.6 まとめて引く：10連は 10回ぶんの 9割（GACHA_COST×10×0.9）。イベントガチャは のこりの数ぶん まとめて（1つ EV_GACHA_COST×0.9）
+const GACHA_MULTI = { n: 10, rate: 0.9 };
 
 // ===== v10.4 イベント =====
 // EVENT_MODE：'all'＝6つ ぜんぶ同時に開く（テスト用。イベントページの上で えらぶ）／'rotate'＝1日1つ、下の順番で 0時に かわる（D38）
@@ -214,10 +216,12 @@ const EVENTS = [
     wears: ['ev_kagami', 'ev_sheep', 'ev_furisode', 'ev_shishi'] }
 ];
 const EV_GACHA_COST = 500;     // イベントガチャ1回のコイン（いつも まだ持っていない きせかえが出る。4つ そろうと引けない）
+// v10.6 セットボーナス：おなじイベントの きせかえを 4つ ぜんぶ もっていると、そのどれかを着ているとき 能力が上がる
+const EV_SET = { pow: 4, spd: 4, sta: 4 };
 // いつもの福袋の絵（shop-bg.webp）の4つの福袋の場所（%）
 const BAGS_NORMAL = [[6.2, 47, 22, 31], [29.3, 47, 21, 31], [52.2, 47, 21, 31], [74.4, 47, 21.4, 31]];
-// イベントのミニゲーム：6つ ぜんぶ あわせて1日 plays 回まで コインがもらえる（1回 max まで）。はじめてクリアすると clear コイン（ゲームごとに1回）
-const EV_GAME = { plays: 3, max: 100, clear: 200 };
+// イベントのミニゲーム：1回 max コインまで（v10.6：1日の回数は なくして ♥ を1つ使う）。はじめてクリアすると clear コイン（ゲームごとに1回）
+const EV_GAME = { max: 100, clear: 200 };
 
 // ジムのトレーニング（cost=使うスタミナ）
 // stat: pow=ちから / spd=すばやさ / sta=たいりょく
@@ -263,10 +267,14 @@ const RULE = {
   staminaPerUnit: 5,       //   スタミナ回復
   coinPerUnit: 10,         //   コイン
   bgmVolume: 0.35,         // BGMの音量（0〜1。効果音より小さめ）
-  miniPlaysPerDay: 3,      // ミニゲームで報酬がもらえる回数
-  photoBonusMax: 3,        // 写真つきでごはんを記録すると、報酬つきプレイが1回ふえる（1日この回数まで）
-  miniRewardMax: 50,       // 組員作ミニゲーム（猫探し・ダッシュ）で1回にもらえるコインの上限
-  slotNetMax: 100,         // スロットで1日に増やせるコインの上限（負けはそのまま減る）
+  // v10.6 ♥（ミニゲームの体力）：コインが もらえるとき 1つ使う（0コインなら使わない）。♥が0でも「練習」で あそべる（記録・メダルは のこる）
+  heartMax: 5,             // 時間で もどるのは ここまで
+  heartMin: 30,            // 何分で 1つ もどるか
+  heartOver: 8,            // 写真の +1 は heartMax をこえて ここまで ためられる
+  photoBonusMax: 3,        // 写真つきでごはんを記録すると ♥+1（1日この回数まで）
+  miniRewardMax: 80,       // ふつうのミニゲームで1回にもらえるコインの上限（v10.6：50→80。イベントは EV_GAME.max）
+  slotBets: [10, 30, 50, 100],   // v10.6 スロットの BET（1回まわすと ♥1。1日の上限は なし）
+  slotSlip: 0.45,          // v10.6 スロット：止めたあと 1コマ すべる 確率（目押しが うまい人でも 平均 BET の1.5倍くらい）
   crisisWarn: 70,          // 体型がこの値をこえたら猫がSOS（1回目）
   crisisDanger: 90,        //   この値をこえたら2回目（±100で骸骨／爆発）
   expPerMeal: 10,
@@ -339,7 +347,28 @@ const ACHIEVE = [
   { id: 'minis',     icon: '🎮', name: 'ミニゲームであそぶ',     unit: '回', goals: [20, 100],      stones: [5, 10],     rw: [{ coins: 100 }, { coins: 300 }] },
   { id: 'zukan',     icon: '👕', name: 'きせかえ図鑑を集める',   unit: '件', goals: [10, 25, 50],   stones: [5, 10, 20], rw: [{ coins: 100 }, { coins: 300 }, { title: 'きせかえコレクター' }] },
   { id: 'streak',    icon: '🔥', name: '連続記録（いちばん長く）', unit: '日', goals: [7, 30],      stones: [5, 20],     rw: [{ wear: 'gloves_paw' }, { title: '毎日コツコツねこ' }] },
-  { id: 'wins',      icon: '⚔️', name: '対戦で勝つ',             unit: '回', goals: [10, 50],       stones: [5, 20],     rw: [{ coins: 200 }, { title: 'バトルチャンピオン' }] }
+  { id: 'wins',      icon: '⚔️', name: '対戦で勝つ',             unit: '回', goals: [10, 50],       stones: [5, 20],     rw: [{ coins: 200 }, { title: 'バトルチャンピオン' }] },
+  { id: 'medals',    icon: '🏅', name: 'ミニゲームのメダルを集める', unit: '枚', goals: [6, 18, 36],  stones: [5, 10, 20], rw: [{ coins: 200 }, { coins: 500 }, { title: 'メダルハンター' }] }   // v10.6
+];
+
+// v10.6 ミニゲームのメダル：ゲームごとに3つ（🥉🥈🥇）。もらうと ダイヤ（MEDAL_STONES）。♥がない「練習」でも もらえる（スロットは BET したときだけ）
+//   t(R)＝メダルの条件を 3つ（true/false）。R は achieve.js の medalR（いままでの記録から しらべる。前の版の記録でも もらえる）
+//   イベントのゲーム：①クリア ②目標の2倍（目標がないゲームは べつの条件） ③満点（1回 100コインに なる点。お菓子泥棒は 5,000点）
+const MEDAL_STONES = [3, 5, 10];
+const MEDAL_ICON = ['🥉', '🥈', '🥇'];
+const MEDALS = [
+  { id: 'school',    ev: 'school',    m: ['3つの道で 学校に つく', 'いぬに もどされずに 3つ つく', '1,500点'],  t: R => [R.evRec('school') >= 3, !!R.x('ev-school').nobump, R.evBest('school') >= 1500] },
+  { id: 'rainy',     ev: 'rainy',     m: ['20かい ジャンプ', '40かい ジャンプ', '2,600点'],                    t: R => [R.evRec('rainy') >= 20, R.evRec('rainy') >= 40, R.evBest('rainy') >= 2600] },
+  { id: 'summer',    ev: 'summer',    m: ['10ぴき すくう', '20ぴき すくう', '2,000点'],                        t: R => [R.evRec('summer') >= 10, R.evRec('summer') >= 20, R.evBest('summer') >= 2000] },
+  { id: 'halloween', ev: 'halloween', m: ['3,000点', '20コンボ', '5,000点'],                                  t: R => [R.evBest('halloween') >= 3000, R.evRec('halloween') >= 20, R.evBest('halloween') >= 5000] },
+  { id: 'xmas',      ev: 'xmas',      m: ['10けん 配達', '20けん 配達', '2,200点'],                           t: R => [R.evRec('xmas') >= 10, R.evRec('xmas') >= 20, R.evBest('xmas') >= 2200] },
+  { id: 'newyear',   ev: 'newyear',   m: ['10だん つむ', '20だん つむ', '1,800点'],                           t: R => [R.evRec('newyear') >= 10, R.evRec('newyear') >= 20, R.evBest('newyear') >= 1800] },
+  { id: 'quiz',     name: 'どっちが高い？',     icon: '?',  m: ['3問 正解', '5問 ぜんぶ 正解', 'ぜんぶ正解を 3回'],          t: R => [(R.x('quiz').best || 0) >= 3, (R.x('quiz').best || 0) >= 5, (R.x('quiz').perfect || 0) >= 3] },
+  { id: 'tap',      name: 'サンドバッグ連打',   icon: '👊', m: ['50回 たたく', '80回 たたく', '100回 たたく'],              t: R => [(R.x('tap').best || 0) >= 50, (R.x('tap').best || 0) >= 80, (R.x('tap').best || 0) >= 100] },
+  { id: 'sagase',   name: 'お題の猫を探せ！',   icon: '🐱', m: ['初級で 15ひき', '中級で 15ひき', '上級で 10ぴき'],         t: R => [R.cats('easy') >= 15, R.cats('normal') >= 15, R.cats('hard') >= 10] },
+  { id: 'dash',     name: 'にゃんこダッシュ',   icon: '🏃', m: ['500点', '1,000点', '2,000点'],                             t: R => [(R.x('dash').best || 0) >= 500, (R.x('dash').best || 0) >= 1000, (R.x('dash').best || 0) >= 2000] },
+  { id: 'baseball', name: 'にゃんこバッティング', icon: '⚾', m: ['★1 を とる', '★3 を とる', 'ハスキー・むずかしい で ★3'], t: R => [R.bbMax() >= 150, R.bbMax() >= 550, (R.x('baseball')['husky-hard'] || 0) >= 550] },
+  { id: 'slot',     name: 'にゃんこスロット',   icon: '🎰', m: ['はじめて 3つ そろう', '🐈🐈🐈', 'BET 100 で 🐈🐈🐈'],      t: R => [(R.x('slot').win || 0) >= 1, (R.x('slot').cat || 0) >= 1, (R.x('slot').cat100 || 0) >= 1] }
 ];
 // v10.3 おもいで（ねこ → おもいで）。t＝題、s＝日記（3つから1つ。{cat}＝猫の名前、{v}＝レベル）
 // 写真は残さない（D24）。そのときの猫（種類・体型・きせかえ・レベル）は achieve.js の memoAdd が残す

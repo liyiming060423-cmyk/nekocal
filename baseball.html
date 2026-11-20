@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#2E7D46">
 <title>にゃんこバッティング</title>
-<link rel="preload" href="zmg-900.woff2?v=10.5" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="fonts.css?v=10.5">
+<link rel="preload" href="zmg-900.woff2?v=10.6" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="fonts.css?v=10.6">
 <style>
 :root{--ink:#4A2A1A;--orange:#F0943F;--red:#E0573F;--cream:#FFF8EC;--font:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif}
 *{box-sizing:border-box}
@@ -95,7 +95,7 @@ body{background:#1E4A2E;display:flex;align-items:center;justify-content:center;o
       カーソルの真ん中（オレンジ）で打つと遠くへ飛ぶ。ボールの<b>下</b>を打つとフライ、<b>上</b>を打つとゴロ。早く振ると左へ、おそいと右へ。<br>
       ホームラン100・長打50・ヒット30・ファウル5点。<b>ボール球を見逃す</b>と+10点（ボール球を振ると当たりが弱くなる）。<br>
       <b>連続ヒット</b>は2本目×1.2・3本目から×1.5。10球のうち1球は<b>金のボール</b>（打つと×2）。<br>
-      点数で <span id="starPts"></span>。合計点でコインがもらえる（最大<span id="maxC">50</span>）。
+      点数で <span id="starPts"></span>。合計点でコインがもらえる（最大<span id="maxC">80</span>）。
       <button class="btn white" id="practiceBtn" type="button" style="margin-top:.5em;width:100%">練習2球からはじめる（柴犬）</button>
       </details>
     </div>
@@ -1020,9 +1020,9 @@ function showTitle() {
     b.addEventListener('click', () => { audio(); se('start'); dogKey = k; startGame(); });
     list.appendChild(b);
   });
-  document.getElementById('maxC').textContent = INFO ? INFO.max : 50;
+  document.getElementById('maxC').textContent = INFO ? INFO.max : 80;
   document.getElementById('starPts').textContent = STARS.map((s, i) => `★${i + 1}（${s}点）`).join('');
-  document.getElementById('leftMsg').textContent = !APP ? 'アプリの中で遊ぶとコインがもらえます' : INFO && INFO.left > 0 ? `今日の報酬つきプレイ　のこり ${INFO.left}回` : '今日の報酬はもう受けとりました（練習モード）';
+  document.getElementById('leftMsg').textContent = !APP ? 'アプリの中で遊ぶとコインがもらえます' : INFO && INFO.left > 0 ? `♥ ${INFO.left}（コインを もらうと ♥1）` : '♥が ないので 練習（コインなし）';   // v10.6
 }
 // v10.5：むずかしさの ボタン（えらぶと 覚える。ベストの表示も その むずかしさに）
 function drawModes() {

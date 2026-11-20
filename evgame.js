@@ -153,7 +153,8 @@ const EG = (() => {
         <p class="eg-desc">${esc(ev.gameDesc || '')}</p>
         <div class="eg-catbox eg-cat-jump">${catHTML()}</div>
         ${MODES ? `<div class="eg-modes" role="group" aria-label="むずかしさ">${MODES.map(m => `<button type="button" class="eg-mode" data-mode="${m.id}" aria-pressed="${m.id === mode}"><b>${esc(m.name)}</b><small>${esc(m.desc)}</small></button>`).join('')}</div>` : ''}
-        <div class="eg-stats"><div><small>いちばんの点</small><b>${inf.best ? fmt(inf.best) : '—'}</b></div><div><small>はじめてクリア</small><b>${inf.cleared ? '✔' : '+' + inf.clearBonus}</b></div><div><small>コイン きょう</small><b>あと${inf.plays}回</b></div></div>
+        <div class="eg-stats"><div><small>いちばんの点</small><b>${inf.best ? fmt(inf.best) : '—'}</b></div><div><small>はじめてクリア</small><b>${inf.cleared ? '✔' : '+' + inf.clearBonus}</b></div><div><small>のこりの ♥</small><b>${inf.plays > 0 ? '♥' + inf.plays : '練習'}</b></div></div>
+        ${inf.medal ? `<p class="eg-medal" aria-label="メダル ${inf.medal.filter(Boolean).length}/3">${['🥉', '🥈', '🥇'].map((ic, i) => `<i class="${inf.medal[i] ? 'got' : ''}">${ic}</i>`).join('')}</p>` : ''}
         <p class="eg-rec" id="egRec">いちばん：<b>${esc(recText(inf.rec))}</b></p>
         <button type="button" class="eg-btn" id="egStart">スタート</button>
         <p class="eg-note">クリアの目標：${esc(def.goal)}</p>
@@ -229,7 +230,7 @@ const EG = (() => {
     setTimeout(() => {
       cancelAnimationFrame(raf); bgmPlay(false);
       const rec = Math.max(0, Math.round(def.rec ? def.rec(stats) || 0 : 0));
-      const r = APP ? APP.evResult(ID, score, coins, cleared, rec, mode) : (() => {
+      const r = APP ? APP.evResult(ID, score, coins, cleared, rec, mode, Object.assign({}, stats)) : (() => {
         const g = mock.plays > 0 && coins > 0 ? coins : 0; if (g) mock.plays--; const b = cleared && !mock.cleared ? EV_GAME.clear : 0; if (b) mock.cleared = true;
         const ob = mock.best[mode] || 0, or = mock.rec[mode] || 0; mock.best[mode] = Math.max(ob, score); mock.rec[mode] = Math.max(or, rec); mock.coins += g + b;
         return { given: g, bonus: b, best: mock.best[mode], newBest: score > ob && ob > 0, plays: mock.plays, rec: mock.rec[mode], newRec: rec > or && or > 0 };
@@ -241,7 +242,7 @@ const EG = (() => {
   function showResult(r, cleared, coins) {
     inf = info();
     const tier = def.tiers.reduce((a, t) => (score >= t[0] ? t : a), def.tiers[0]);
-    const coinRow = r.given ? `<b class="plus">+${fmt(r.given)}コイン</b>` : coins > 0 ? '<b>きょうは もう もらえない</b>' : '<b>0</b>';
+    const coinRow = r.given ? `<b class="plus">+${fmt(r.given)}コイン</b>` : coins > 0 ? '<b>♥が ないので 練習</b>' : '<b>0</b>';   // v10.6
     $('egHud').hidden = true; $('egCombo').textContent = '';
     panel(`<div class="eg-card">
       <h2 class="eg-title">${stats.timeUp ? 'タイムアップ！' : esc(def.endTitle ? def.endTitle(stats) : 'おしまい！')}</h2>
@@ -253,9 +254,10 @@ const EG = (() => {
         <div><span>いちばんの点</span><b>${fmt(r.best)}</b></div>
         <div><span>コイン</span>${coinRow}</div>
         ${r.bonus ? `<div><span>はじめてクリア</span><b class="plus">+${fmt(r.bonus)}コイン</b></div>` : ''}
-        <div><span>コインが もらえる のこり</span><b>きょう あと${r.plays}回</b></div></div>
+        <div><span>♥ のこり</span><b>${r.plays > 0 ? '♥' + r.plays : 'なし（練習で あそべる）'}</b></div></div>
+      ${(r.medals || []).length ? `<div class="eg-getmedal">${r.medals.map(m => `<div><span aria-hidden="true">${m.icon}</span>メダル「${esc(m.text)}」<b>💎+${m.stones}</b></div>`).join('')}</div>` : ''}
       <div class="eg-btns"><button type="button" class="eg-btn white" id="egHome">もどる</button><button type="button" class="eg-btn" id="egAgain">もう1回</button></div></div>`);
-    live(`スコア ${score}。${r.given ? `${r.given}コイン もらいました。` : ''}${r.bonus ? `はじめてクリアで ${r.bonus}コイン。` : ''}`);
+    live(`スコア ${score}。${r.given ? `${r.given}コイン もらいました。` : ''}${r.bonus ? `はじめてクリアで ${r.bonus}コイン。` : ''}${(r.medals || []).map(m => `メダル「${m.text}」。`).join('')}`);
     if (r.given || r.bonus) setTimeout(() => se('coin'), 200);
     $('egAgain').onclick = () => { se('tap'); start(); };
     $('egHome').onclick = () => { se('tap'); menu(); };

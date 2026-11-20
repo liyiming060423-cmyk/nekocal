@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>お題の猫を探せ！</title>
   <!-- 組員作のミニゲーム。にゃんカロ用に、Tailwind をオフライン用の sagase.css にし、コインをアプリのコインにつないだ -->
-  <link rel="stylesheet" href="fonts.css?v=10.5">
-  <link rel="stylesheet" href="sagase.css?v=10.5">
+  <link rel="stylesheet" href="fonts.css?v=10.6">
+  <link rel="stylesheet" href="sagase.css?v=10.6">
   <style>
     
     * {
@@ -964,7 +964,7 @@
       const el = document.getElementById('rewardLeft');
       if (APP) {
         const i = APP.info(); totalCoins = i.coins;
-        el.textContent = i.left > 0 ? `今日アプリにコインがもらえるのは あと${i.left}回（1回最大${i.max}枚）` : '今日のコイン報酬はおわり（あそぶことはできます）';
+        el.textContent = i.left > 0 ? `♥ ${i.left}（コインを もらうと ♥1・1回最大${i.max}枚）` : '♥が ないので 練習（コインなし）';   // v10.6
       } else el.textContent = 'にゃんカロの中で開くとコインがアプリにたまります';
       totalCoinsMenu.textContent = totalCoins;
     }
