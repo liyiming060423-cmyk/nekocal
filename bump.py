@@ -1,5 +1,5 @@
 # にゃんカロ 版の数字をそろえて上げる（v9.8 から）
-# つかいかた：このファイルと同じフォルダで  python bump.py 9.9
+# つかいかた：このファイルと同じフォルダで  python bump.py 9.9（小さな なおしは python bump.py 10.4.1 も OK）
 # 変えるところ：sw.js の VERSION、data.js の APP_VER、各 HTML の ?v=（css・js の読みこみ）
 # v10.0 から：sw.js の APP_FILES（オフライン用に保存するファイルの一覧）も、フォルダの中身から自動で作りなおす
 # v10.2：文字（.woff2）にも ?v= をつける（字を入れなおしたとき古い文字が残らないように）
@@ -62,8 +62,8 @@ def write_sw_list():
 
 
 def main():
-    if len(sys.argv) != 2 or not re.fullmatch(r'\d+\.\d+', sys.argv[1]):
-        sys.exit('つかいかた：python bump.py 9.9（数字.数字）')
+    if len(sys.argv) != 2 or not re.fullmatch(r'\d+\.\d+(?:\.\d+)?', sys.argv[1]):   # v10.4.1：10.4.1 のような 3つの数字も OK
+        sys.exit('つかいかた：python bump.py 9.9（数字.数字）／ python bump.py 10.4.1（数字.数字.数字）')
     v = sys.argv[1]
     old = re.search(r"const APP_VER = '([^']+)'", (HERE / 'data.js').read_text(encoding='utf-8'))
     print(f'版：{old.group(1) if old else "?"} → {v}')

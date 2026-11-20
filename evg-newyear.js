@@ -1,4 +1,4 @@
-// にゃんカロ イベントのミニゲーム：お正月「鏡餅タワー」（v10.4）
+// にゃんカロ イベントのミニゲーム：お正月「鏡餅タワー」（v10.4。v10.4.1：10だんより上で 点の字が 見えないのを なおした）
 // 上で ゆれている おもちを、タップで おとして つみあげる。ずれると タワーが かたむき、かたむきすぎると たおれる。はみだしすぎた おもちは おちて ♥が へる
 'use strict';
 (() => {
@@ -45,13 +45,15 @@
     c.fillStyle = '#FFFFFF'; c.beginPath(); c.moveTo(x - baseW * .48, y - 1); c.lineTo(x, y - 14); c.lineTo(x + baseW * .48, y - 1); c.closePath(); c.fill(); c.stroke();
     c.strokeStyle = '#D8343F'; c.lineWidth = 4; c.beginPath(); c.moveTo(x - baseW * .46, y - 3); c.lineTo(x, y - 12); c.lineTo(x + baseW * .46, y - 3); c.stroke();
   }
+  // v10.4.1：タワーの 位置（カメラで 上に うごく）→ 画面の 位置。点の 字・つぶは 画面の 位置で かく（10だんより 上で 字が 見えなかった）
+  const sy = y => y - cam;
   function hearts() { g.hud(`<span style="color:#E0573F">${'♥'.repeat(lives)}</span><span style="color:#D6C8B8">${'♥'.repeat(3 - lives)}</span>`); }
 
   EG.register('newyear', {
     title: '鏡餅タワー', time: 0, goal: '10だん つむ',
     how: ['ゆれている おもちを タップで おとそう', 'まん中に のせるほど 点が高い。ぴったりで コンボ', 'ずれると タワーが かたむく。はみだした おもちは おちて ♥が へる'],
     tiers: [[0, 'おもちは むずかしいにゃ…つぎこそ！'], [800, 'りっぱな 鏡もちが できたにゃ！'], [1800, 'たかい たかい 鏡もち！ ことしは いい年にゃ！']],
-    coins: (s, sc) => sc / 18, cleared: s => (s.layers || 0) >= 10,
+    coins: (s, sc) => sc / 18, cleared: s => (s.layers || 0) >= 10, rec: s => s.layers,
     endTitle: s => s.fall ? 'タワーが たおれた！' : 'おもちが なくなった…',
     init(api) {
       g = api; blocks = []; falling = []; lives = 3; cam = camT = 0; topple = null; wob = 0; catHop = 0;
@@ -60,6 +62,8 @@
       this.resize(api); newCur();
       cat = g.cat(); hearts();
     },
+    // 自動テスト用：ぴったり n だん つむ（1だんごとに おちたあと 0.75秒 すすめる＝ふつうに あそぶときの 間）
+    t: { stack(n) { for (let i = 0; i < n; i++) { const t2 = towerTop(); falling.push({ x: t2.x, y: t2.y - MH - 1, w: baseW * .8, vy: 0 }); cur = null; this.step(); } }, step() { for (let k = 0; k < 30 && falling.length; k++) EGT.def.update(1 / 60); for (let k = 0; k < 45; k++) EGT.def.update(1 / 60); }, get cam() { return cam; }, get layers() { return blocks.length; } },
     resize() { baseW = Math.min(210, g.W * .46); baseX = g.W / 2; baseY = g.H - Math.max(110, g.H * .17); },
     down() {
       if (cur && !topple) { falling.push({ x: cur.x, y: cur.y, w: cur.w, vy: 0, orange: cur.orange }); cur = null; g.se('tap'); }
@@ -82,7 +86,7 @@
           const off = f.x - t2.x, lim = t2.w / 2 * .96;   // おもちの まん中が 下の おもちから はみだしたら おちる
           if (Math.abs(off) > lim) {   // はみだし：おちる
             f.off = true; f.vx = Math.sign(off) * 140; f.vr = Math.sign(off) * 4; f.rot = 0; f.y = landY;
-            lives--; hearts(); g.combo(0); g.se('bad'); g.buzz([40, 30, 40]); g.pop('ポロッ！', f.x, landY - 30, '#FF8A7A');
+            lives--; hearts(); g.combo(0); g.se('bad'); g.buzz([40, 30, 40]); g.pop('ポロッ！', f.x, sy(landY - 30), '#FF8A7A');
             if (lives <= 0) setTimeout(() => g.end({}), 600);
             else newCur();
             continue;
@@ -91,10 +95,10 @@
           const perfect = Math.abs(off) < 6;
           const b = { x: perfect ? t2.x : f.x, w: f.w, y: landY, orange: f.orange };
           blocks.push(b); g.stats.layers = blocks.length;
-          if (perfect) { g.stats.perfect++; const n = g.comboN + 1; g.combo(n); g.add(150 + Math.min(5, n) * 30, b.x, b.y - 50, '#FFE07A'); g.pop('ぴったり！', b.x, b.y - 80, '#FFFFFF', 20); g.se('coin'); catHop = .5; }
-          else { g.combo(0); g.add(Math.round(100 - Math.abs(off) / lim * 60), b.x, b.y - 50); g.se('get'); }
-          if (b.orange) { g.add(200, b.x, b.y - 110, '#FFB04A'); g.pop('だいだい ボーナス！', b.x, b.y - 140, '#FFFFFF', 18); }
-          g.burst(b.x, b.y, '#FFFFFF', 8, 120); wob = 1;
+          if (perfect) { g.stats.perfect++; const n = g.comboN + 1; g.combo(n); g.add(150 + Math.min(5, n) * 30, b.x, sy(b.y - 50), '#FFE07A'); g.pop('ぴったり！', b.x, sy(b.y - 80), '#FFFFFF', 20); g.se('coin'); catHop = .5; }
+          else { g.combo(0); g.add(Math.round(100 - Math.abs(off) / lim * 60), b.x, sy(b.y - 50)); g.se('get'); }
+          if (b.orange) { g.add(200, b.x, sy(b.y - 110), '#FFB04A'); g.pop('だいだい ボーナス！', b.x, sy(b.y - 140), '#FFFFFF', 18); }
+          g.burst(b.x, sy(b.y), '#FFFFFF', 8, 120); wob = 1;
           g.live(`${blocks.length}だん`);
           if (!stable()) { topple = { a: 0, dir: Math.sign(lean()) || 1, t: 0 }; g.se('bad'); g.buzz([60, 40, 60]); return; }
           newCur();

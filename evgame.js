@@ -1,8 +1,10 @@
 // にゃんカロ イベントのミニゲーム（v10.4）共通の しくみ
+// v10.4.1：目標の記録（ゲームの rec(stats)・data.js の EVENTS[].rec）・むずかしさ（EVENTS[].modes）・時間を足す（addTime）
 // evgame.html?e=イベントのid で開く。ゲームの中身は evg-{id}.js（EG.register で登録）
 //   はじめの画面 → 3・2・1 → あそぶ → けっか（点・いちばん・コイン・猫のひとこと・もう1回）
 //   コイン・いちばんの点・はじめてクリアは アプリ（event.js の nyankaloMini.evInfo / evResult）が きめて保存する
-// ゲームから使えるもの（g）：W・H（画面の大きさ）、add(点, x, y)・combo(n)・end()・burst()・pop()・se()・buzz()・cat()・hud()・reduced・time
+// ゲームから使えるもの（g）：W・H（画面の大きさ）、add(点, x, y)・combo(n)・end()・burst()・pop()・se()・buzz()・cat()・hud()・reduced・time・mode（むずかしさ）・addTime(秒)
+//   x・y は 画面の 位置（カメラで うごく ゲームは カメラの分を ひいてから わたす）
 'use strict';
 const EG = (() => {
   const ID = new URLSearchParams(location.search).get('e') || 'school';
@@ -10,8 +12,13 @@ const EG = (() => {
   const gameTime = () => FAST ? 3 : def.time || 0;
   const APP = (() => { try { return window.parent !== window && window.parent.nyankaloMini ? window.parent.nyankaloMini : null; } catch (e) { return null; } })();
   // アプリの外で開いたとき（確認用）
-  const mock = { coins: 1000, plays: 3, best: 0, cleared: false };
-  const info = () => APP ? APP.evInfo(ID) : { ev: (EVENTS.find(e => e.id === ID) || EVENTS[0]), coins: mock.coins, plays: mock.plays, perMax: EV_GAME.max, clearBonus: EV_GAME.clear, cleared: mock.cleared, best: mock.best, sound: true, vibrate: true, bgm: true, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches, cat: { breed: 'tabby' } };
+  const EVD = EVENTS.find(e => e.id === ID) || EVENTS[0];   // data.js の イベント（rec・modes）
+  const MODES = EVD.modes || null;
+  const mock = { coins: 1000, plays: 3, best: {}, rec: {}, cleared: false, mode: '' };
+  const info = m => APP ? APP.evInfo(ID, m) : (() => { const mm = m || mock.mode || (MODES ? MODES[0].id : ''); return { ev: EVD, coins: mock.coins, plays: mock.plays, perMax: EV_GAME.max, clearBonus: EV_GAME.clear, cleared: mock.cleared, best: mock.best[mm] || 0, rec: mock.rec[mm] || 0, mode: mm, sound: true, vibrate: true, bgm: true, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches, cat: { breed: 'tabby' } }; })();
+  // 「14かい ジャンプ（目標 20）」
+  const recText = (n, goal = true) => { const r = EVD.rec || { unit: '', goal: 0 }; return `${n ? fmt(n) + r.unit : '—'}${goal && r.goal ? `（目標 ${r.goal}）` : ''}`; };
+  const modeOf = m => MODES ? (MODES.find(x => x.id === m) || MODES[0]) : null;
   const games = {};
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -19,7 +26,7 @@ const EG = (() => {
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const rnd = (a, b) => a + Math.random() * (b - a);
   let inf, ev, def, cv, ctx, W = 0, H = 0, dpr = 1;
-  let state = 'menu', score = 0, comboN = 0, timeLeft = 0, raf = 0, lastT = 0, stats = {}, playT = 0;
+  let mode = '', state = 'menu', score = 0, comboN = 0, timeLeft = 0, raf = 0, lastT = 0, stats = {}, playT = 0;
   const parts = [], pops = [];
 
   /* ---------- 音（Web Audio で その場で つくる。BGM は イベントの曲） ---------- */
@@ -108,6 +115,8 @@ const EG = (() => {
     }
     ctx.globalAlpha = 1;
   }
+  // 時間を足す（梅雨の「ぴったり」など）。はじめの時間より 多くは ならない
+  function addTime(sec) { if (!gameTime() || state !== 'play') return; timeLeft = Math.min(gameTime(), timeLeft + sec); setTimebar(); }
   const hud = html => { $('egInfo').innerHTML = html || ''; };
   const live = t => { $('egLive').textContent = t; };
 
@@ -124,7 +133,7 @@ const EG = (() => {
   function api() {
     return {
       get W() { return W; }, get H() { return H; }, ctx, rnd, clamp, add, combo, get comboN() { return comboN; }, burst, pop, se, buzz, hud, live,
-      get reduced() { return !!inf.reduced; }, get time() { return playT; }, get timeLeft() { return timeLeft; }, get score() { return score; },
+      get reduced() { return !!inf.reduced; }, get time() { return playT; }, get timeLeft() { return timeLeft; }, get score() { return score; }, get mode() { return mode; }, addTime,
       stats, cat: catSprite, end: endGame, ev
     };
   }
@@ -132,8 +141,8 @@ const EG = (() => {
   /* ---------- 流れ ---------- */
   function panel(html, dim) { const p = $('egPanel'); p.innerHTML = html; p.hidden = false; p.classList.toggle('dim', !!dim); p.scrollTop = 0; }
   function closePanel() { $('egPanel').hidden = true; $('egPanel').innerHTML = ''; }
-  function menu() {
-    state = 'menu'; inf = info(); ev = inf.ev || ev;
+  function menu(focusMode) {
+    state = 'menu'; inf = info(); ev = inf.ev || ev; mode = inf.mode || (MODES ? MODES[0].id : '');
     $('egHud').hidden = true; $('egCombo').textContent = ''; $('egCount').textContent = '';
     $('egSprites').innerHTML = ''; parts.length = 0; pops.length = 0;
     drawIdle();
@@ -143,7 +152,9 @@ const EG = (() => {
         <h1 class="eg-title">${esc(def.title)}</h1>
         <p class="eg-desc">${esc(ev.gameDesc || '')}</p>
         <div class="eg-catbox eg-cat-jump">${catHTML()}</div>
-        <div class="eg-stats"><div><small>いちばん</small><b>${inf.best ? fmt(inf.best) : '—'}</b></div><div><small>はじめてクリア</small><b>${inf.cleared ? '✔' : '+' + inf.clearBonus}</b></div><div><small>コイン きょう</small><b>あと${inf.plays}回</b></div></div>
+        ${MODES ? `<div class="eg-modes" role="group" aria-label="むずかしさ">${MODES.map(m => `<button type="button" class="eg-mode" data-mode="${m.id}" aria-pressed="${m.id === mode}"><b>${esc(m.name)}</b><small>${esc(m.desc)}</small></button>`).join('')}</div>` : ''}
+        <div class="eg-stats"><div><small>いちばんの点</small><b>${inf.best ? fmt(inf.best) : '—'}</b></div><div><small>はじめてクリア</small><b>${inf.cleared ? '✔' : '+' + inf.clearBonus}</b></div><div><small>コイン きょう</small><b>あと${inf.plays}回</b></div></div>
+        <p class="eg-rec" id="egRec">いちばん：<b>${esc(recText(inf.rec))}</b></p>
         <button type="button" class="eg-btn" id="egStart">スタート</button>
         <p class="eg-note">クリアの目標：${esc(def.goal)}</p>
         <ul class="eg-how" aria-label="あそびかた">${def.how.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
@@ -151,7 +162,13 @@ const EG = (() => {
     $('egBack').onclick = quit;
     $('egSnd').onclick = () => { muted = !muted; menu(); };
     $('egStart').onclick = () => { audioInit(); se('tap'); start(); };
-    setTimeout(() => { const b = $('egStart'); if (b) b.focus({ preventScroll: true }); }, 50);
+    document.querySelectorAll('[data-mode]').forEach(b => { b.onclick = () => { audioInit(); se('tap'); setMode(b.dataset.mode); }; });
+    setTimeout(() => { const b = focusMode ? document.querySelector(`[data-mode="${focusMode}"]`) : $('egStart'); if (b) b.focus({ preventScroll: true }); }, 50);
+  }
+  function setMode(m) {
+    if (!MODES) return;
+    if (APP && APP.evMode) APP.evMode(ID, m); else mock.mode = m;
+    menu(m);
   }
   function drawIdle() { ctx.clearRect(0, 0, W, H); }
   function start() {
@@ -211,7 +228,13 @@ const EG = (() => {
     se(cleared ? 'clear' : extra.timeUp ? 'get' : 'bad');
     setTimeout(() => {
       cancelAnimationFrame(raf); bgmPlay(false);
-      const r = APP ? APP.evResult(ID, score, coins, cleared) : (() => { const g = mock.plays > 0 && coins > 0 ? coins : 0; if (g) mock.plays--; const b = cleared && !mock.cleared ? EV_GAME.clear : 0; if (b) mock.cleared = true; const nb = score > mock.best && mock.best > 0; mock.best = Math.max(mock.best, score); mock.coins += g + b; return { given: g, bonus: b, best: mock.best, newBest: nb, plays: mock.plays }; })();
+      const rec = Math.max(0, Math.round(def.rec ? def.rec(stats) || 0 : 0));
+      const r = APP ? APP.evResult(ID, score, coins, cleared, rec, mode) : (() => {
+        const g = mock.plays > 0 && coins > 0 ? coins : 0; if (g) mock.plays--; const b = cleared && !mock.cleared ? EV_GAME.clear : 0; if (b) mock.cleared = true;
+        const ob = mock.best[mode] || 0, or = mock.rec[mode] || 0; mock.best[mode] = Math.max(ob, score); mock.rec[mode] = Math.max(or, rec); mock.coins += g + b;
+        return { given: g, bonus: b, best: mock.best[mode], newBest: score > ob && ob > 0, plays: mock.plays, rec: mock.rec[mode], newRec: rec > or && or > 0 };
+      })();
+      stats.rec = rec;
       showResult(r, cleared, coins);
     }, extra.timeUp ? 300 : 900);
   }
@@ -222,11 +245,12 @@ const EG = (() => {
     $('egHud').hidden = true; $('egCombo').textContent = '';
     panel(`<div class="eg-card">
       <h2 class="eg-title">${stats.timeUp ? 'タイムアップ！' : esc(def.endTitle ? def.endTitle(stats) : 'おしまい！')}</h2>
-      <div class="eg-res-score"><small>スコア</small><b>${fmt(score)}</b>${r.newBest ? '<span class="eg-new">NEW!</span>' : ''}</div>
+      <div class="eg-res-score"><small>スコア${MODES ? `（${esc(modeOf(mode).name)}）` : ''}</small><b>${fmt(score)}</b>${r.newBest ? '<span class="eg-new">NEW!</span>' : ''}</div>
       ${cleared ? `<div class="eg-clear">クリア！ ${esc(def.goal)}</div>` : ''}
       <div class="eg-say">${esc(tier[1].replace('{cat}', (inf.cat || {}).name || '猫'))}</div>
       <div class="eg-catbox${score >= def.tiers[def.tiers.length - 1][0] ? ' eg-cat-jump' : ''}">${catHTML()}</div>
-      <div class="eg-rows"><div><span>いちばん</span><b>${fmt(r.best)}</b></div>
+      <div class="eg-rows"><div><span>きろく</span><b class="eg-recrow">${esc(recText(stats.rec, false))}<small>（いちばん ${r.rec ? fmt(r.rec) : '—'}）</small>${r.newRec ? '<span class="eg-new sm">NEW!</span>' : ''}</b></div>
+        <div><span>いちばんの点</span><b>${fmt(r.best)}</b></div>
         <div><span>コイン</span>${coinRow}</div>
         ${r.bonus ? `<div><span>はじめてクリア</span><b class="plus">+${fmt(r.bonus)}コイン</b></div>` : ''}
         <div><span>コインが もらえる のこり</span><b>きょう あと${r.plays}回</b></div></div>
@@ -260,6 +284,9 @@ const EG = (() => {
     document.addEventListener('visibilitychange', () => { if (document.hidden) { if (state === 'play' || state === 'count') pause(); bgmPlay(false); } });
     window.addEventListener('resize', resize);
   }
+
+  // 自動テスト用（?fast=1 のときだけ）
+  if (FAST) window.EGT = { api: () => api(), get def() { return def; }, get state() { return state; }, get mode() { return mode; }, get timeLeft() { return timeLeft; }, get pops() { return pops; }, get parts() { return parts; } };
 
   return {
     register(id, d) { games[id] = d; },

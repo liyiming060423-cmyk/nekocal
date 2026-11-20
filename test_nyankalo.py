@@ -7,7 +7,7 @@
   python test_nyankalo.py --shots shots        … スクショを shots/ に保存（なしなら保存しない）
   python test_nyankalo.py --browser webkit     … Safari と同じエンジン（python -m playwright install webkit が必要）
   python test_nyankalo.py --app <フォルダ>      … ほかのフォルダのアプリを調べる
-グループ：home tabs tour gacha level coin daily first battle slot sagase font a11y manifest memo migrate achieve stone meal-delete event（v10.3 で memo〜meal-delete、v10.4 で event を追加）
+グループ：home tabs tour gacha level coin daily first battle slot sagase font a11y manifest memo migrate achieve stone meal-delete event event41（v10.3 で memo〜meal-delete、v10.4 で event、v10.4.1 で event41 を追加）
 ※ bump.py は .py をアプリのファイル一覧に入れないので、このファイルを置いたままでよい
 """
 import sys, os, re, json, asyncio, functools, http.server, socketserver, threading, traceback, argparse, tempfile
@@ -837,6 +837,8 @@ async def t_event(b):
             fr = pg.frames[-1]
             m = await fr.evaluate("({t:document.querySelector('.eg-title').innerText, start:!!document.getElementById('egStart'), ban:document.querySelector('.eg-banner').complete&&document.querySelector('.eg-banner').naturalWidth>0, over:document.documentElement.scrollWidth>innerWidth+1})")
             check(m['start'] and m['ban'] and not m['over'], f'{dev} {gid}：はじめの画面（{m}）')
+            rt = await fr.evaluate("document.getElementById('egRec').innerText")
+            check(rt.startswith('いちばん：') and (('目標 ' in rt) == (gid in ('rainy', 'summer', 'xmas', 'newyear'))), f'{dev} {gid}：はじめの画面に 目標の記録（{rt}）')
             if dev == 'ip13' or i == 0: await shot(pg, f'event-{dev}-game-{gid}-menu')
             await fr.click('#egStart'); await pg.wait_for_timeout(2900)
             box = await pg.evaluate("(()=>{const r=document.querySelector('#miniFrame iframe').getBoundingClientRect();return [r.width,r.height]})()")
@@ -847,9 +849,9 @@ async def t_event(b):
             check(h['hud'] and h['cat'], f'{dev} {gid}：あそんでいる画面（{h}）')
             if dev == 'ip13' or i == 0: await shot(pg, f'event-{dev}-game-{gid}-play')
             await pg.wait_for_timeout(2600)
-            res = await fr.evaluate("({res:!!document.getElementById('egAgain'), say:(document.querySelector('.eg-say')||{}).innerText||''})")
-            s = await pg.evaluate(f"(()=>{{const s={SAVED};return {{minis:(s.days[todayStr()]||{{}}).minis||0, best:'{gid}' in s.ev.best}}}})()")
-            check(res['res'] and res['say'] and s['minis'] == 1 and s['best'], f'{dev} {gid}：けっか（{res} {s}）')
+            res = await fr.evaluate("({res:!!document.getElementById('egAgain'), say:(document.querySelector('.eg-say')||{}).innerText||'', rec:(document.querySelector('.eg-recrow')||{}).innerText||''})")
+            s = await pg.evaluate(f"(()=>{{const s={SAVED};return {{minis:(s.days[todayStr()]||{{}}).minis||0, best:'{gid}' in s.ev.best, rec:'{gid}' in s.ev.rec}}}})()")
+            check(res['res'] and res['say'] and 'いちばん' in res['rec'] and s['minis'] == 1 and s['best'] and s['rec'], f'{dev} {gid}：けっか（{res} {s}）')
             if dev == 'ip13' or i == 0: await shot(pg, f'event-{dev}-game-{gid}-result')
             await fr.click('#egHome'); await pg.wait_for_timeout(300); await fr.click('#egBack'); await pg.wait_for_timeout(400)
             e = await fr.evaluate("window.__errs||[]") if not fr.is_detached() else []
@@ -865,12 +867,152 @@ async def t_event(b):
         check('イベントが はじまったよ' in t and (('おもいで' in t) == want103), f'お知らせ（{frm} から）：{t[:60]!r}')
         if frm == '10.3': await shot(pg, 'event-se-news')
         r = await pg.evaluate("({ev:JSON.stringify(S.ev)})")
-        check(r['ev'] == '{"pick":"","best":{},"clear":{}}', f'前の版のデータ：S.ev（{r}）')
+        check(r['ev'] == '{"pick":"","best":{},"clear":{},"rec":{},"mode":{}}', f'前の版のデータ：S.ev（{r}）')
         await ctx.close()
+
+# ===== v10.4.1 イベントのミニゲームの なおし =====
+async def ev_open(b, dev, gid, st=None, mode=None):
+    ctx, pg = await page(b, dev, st or b103(coins=0))
+    await ctx.add_init_script("window.__errs=[];addEventListener('error',e=>__errs.push(String(e.message)))")
+    await start(pg)
+    await pg.evaluate(f"openEvGame('{gid}');document.querySelector('#miniFrame iframe').src+='&fast=1'"); await pg.wait_for_timeout(1500)
+    return ctx, pg, pg.frames[-1]
+
+async def ev_play(fr):
+    await fr.click('#egStart'); await fr.wait_for_function("EGT.state==='play'", timeout=4000)
+
+async def t_event41(b):
+    # 1) アプリ側：記録・むずかしさ（別に保存）・NEW
+    ctx, pg = await page(b, 'ip13', b103(coins=0))
+    r = await pg.evaluate("""(()=>{const m=window.nyankaloMini, o=[];
+      o.push(m.evResult('rainy', 1000, 40, false, 14, 'normal')); o.push(m.evResult('rainy', 1500, 60, false, 9, 'hard')); o.push(m.evResult('rainy', 800, 30, false, 16, 'normal'));
+      o.push(m.evResult('halloween', 900, 20, false, 7)); o.push(m.evResult('newyear', 900, 20, true, 12, 'zzz'));
+      const a=m.evInfo('rainy'), n=m.evInfo('rainy','normal'), h=m.evInfo('rainy','hard');
+      return {o:o.map(x=>[x.rec,x.newRec]), best:S.ev.best, rec:S.ev.rec, mode:S.ev.mode, a:[a.mode,a.best,a.rec], n:[n.mode,n.best,n.rec], h:[h.mode,h.best,h.rec], ny:m.evInfo('newyear').mode}})()""")
+    check(r['o'] == [[14, False], [9, False], [16, True], [7, False], [12, False]] and r['best'] == {'rainy': 1000, 'rainy-hard': 1500, 'halloween': 900, 'newyear': 900}
+          and r['rec'] == {'rainy': 16, 'rainy-hard': 9, 'halloween': 7, 'newyear': 12} and r['mode'] == {'rainy': 'normal'} and r['a'] == ['normal', 1000, 16]
+          and r['n'] == ['normal', 1000, 16] and r['h'] == ['hard', 1500, 9] and r['ny'] == '', f'記録：むずかしさごとに 保存（{r}）')
+    # イベントページ：記録の行（梅雨は ふつう・上級）
+    await start(pg)
+    await pg.evaluate("evPick('rainy');openEventHub()"); await pg.wait_for_timeout(400)
+    t = await pg.evaluate("document.querySelector('#evHub .evh-rows').innerText")
+    check('いちばん（ふつう）' in t and '16かい ジャンプ' in t and 'いちばん（上級）' in t and '1,500点' in t and '9かい ジャンプ' in t, f'イベントページ：梅雨の記録（{t!r}）')
+    await shot(pg, 'ev41-ip13-hub-rainy')
+    await pg.evaluate("evPick('newyear');renderEventHub()"); await pg.wait_for_timeout(200)
+    t = await pg.evaluate("document.querySelector('#evHub .evh-rows').innerText")
+    check('いちばんの記録' in t and '12だん（目標 10）' in t, f'イベントページ：お正月の記録（{t!r}）')
+    # 版の数（10.4.1）
+    r = await pg.evaluate("[verNum('10.4')===verNum('10.4.0'), verNum('10.4.1')>verNum('10.4'), verNum('10.4.1')<verNum('10.5'), verNum('10.10')>verNum('10.9'), verNum('11')>verNum('10.9.9')]")
+    check(all(r), f'verNum：10.4 < 10.4.1 < 10.5（{r}）')
+    await ctx.close()
+    for dev in DEV:
+        # 2) 梅雨：むずかしさ・のれたら コンボ・ぴったり +2秒・上級は 線なし ×1.5
+        ctx, pg, fr = await ev_open(b, dev, 'rainy')
+        n = await fr.evaluate("document.querySelectorAll('[data-mode]').length")
+        await fr.click('[data-mode="hard"]'); await pg.wait_for_timeout(300)
+        r = await fr.evaluate("({p:document.querySelector('[data-mode=\"hard\"]').getAttribute('aria-pressed'), foc:document.activeElement.dataset.mode, start:!!document.getElementById('egStart')})")
+        sv = await pg.evaluate(f"{SAVED}.ev.mode.rainy")
+        check(n == 2 and r == {'p': 'true', 'foc': 'hard', 'start': True} and sv == 'hard', f'{dev} 梅雨：むずかしさを えらぶ（{n} {r} {sv}）')
+        await shot(pg, f'ev41-{dev}-rainy-menu-hard')
+        await ev_play(fr)
+        await pg.mouse.move(150, 300); await pg.mouse.down(); await pg.wait_for_timeout(250)
+        g0 = await fr.evaluate("EGT.def.t.guide"); await fr.evaluate("EGT.def.t.cancel()"); await pg.mouse.up(); await pg.wait_for_timeout(1100)
+        r = await fr.evaluate("""(()=>{const t=EGT.def.t; t.pads.forEach(p=>p.frog=false); 
+          const p1=t.pads[t.at+1]; t.land(p1.w*.3); const a=[EGT.api().score, EGT.api().comboN];
+          const tl0=EGT.timeLeft; t.land(0); const b=[EGT.api().score, EGT.api().comboN, +(EGT.timeLeft-tl0).toFixed(2)];
+          return {mode:EGT.mode, a, b}})()""")
+        check(r['mode'] == 'hard' and g0 == 0 and r['a'] == [150, 1] and r['b'][:2] == [435, 2] and r['b'][2] >= 1.0, f'{dev} 梅雨（上級）：線なし・コンボ・+2秒・×1.5（guide={g0} {r}）')
+        await fr.wait_for_selector('#egAgain', timeout=6000)
+        sv = await pg.evaluate(f"(()=>{{const s={SAVED};return [s.ev.best['rainy-hard'], s.ev.rec['rainy-hard'], 'rainy' in s.ev.best]}})()")
+        txt = await fr.evaluate("document.querySelector('.eg-res-score small').innerText+'|'+document.querySelector('.eg-recrow').innerText")
+        check(sv[0] >= 435 and sv[1] == 2 and not sv[2] and '上級' in txt and '2かい ジャンプ' in txt, f'{dev} 梅雨（上級）：別に保存・けっか（{sv} {txt}）')
+        await shot(pg, f'ev41-{dev}-rainy-result-hard')
+        # ふつうは 線が出る・ぴったりでなくても コンボ
+        await fr.click('#egHome'); await pg.wait_for_timeout(300); await fr.click('[data-mode="normal"]'); await pg.wait_for_timeout(200); await ev_play(fr)
+        await pg.mouse.move(150, 300); await pg.mouse.down(); await pg.wait_for_timeout(250)
+        g1 = await fr.evaluate("EGT.def.t.guide"); await fr.evaluate("EGT.def.t.cancel()"); await pg.mouse.up()
+        r = await fr.evaluate("(()=>{const t=EGT.def.t; t.pads.forEach(p=>p.frog=false); t.land(t.pads[t.at+1].w*.35); t.land(t.pads[t.at+1].w*.35); return [EGT.mode, EGT.api().score, EGT.api().comboN]})()")
+        check(g1 > 0 and r == ['normal', 240, 2], f'{dev} 梅雨（ふつう）：線あり・まん中でなくても コンボ（guide={g1} {r}）')
+        e = await fr.evaluate("window.__errs||[]"); check(not e and not pg.errs, f'{dev} 梅雨 エラーなし {e[:2]} {pg.errs[:2]}')
+        await ctx.close()
+        # 3) お正月：12だん つんでも 点の字が 画面の中
+        ctx, pg, fr = await ev_open(b, dev, 'newyear')
+        await ev_play(fr)
+        r = await fr.evaluate("""(()=>{const t=EGT.def.t; EGT.pops.length=0; t.stack(12); const H=EGT.api().H;
+          const ps=EGT.pops.slice(-3).map(p=>Math.round(p.y)); return {n:t.layers, cam:Math.round(t.cam), ps, H, inside:EGT.pops.slice(-4).every(p=>p.y>40&&p.y<H-40)}})()""")
+        check(r['n'] == 12 and r['cam'] < -100 and r['inside'], f'{dev} お正月：10だんより上でも 点が見える（{r}）')
+        await pg.wait_for_timeout(150); await shot(pg, f'ev41-{dev}-newyear-12')
+        await fr.wait_for_selector('#egAgain', timeout=6000)
+        sv = await pg.evaluate(f"{SAVED}.ev.rec.newyear")
+        check(sv == 12, f'{dev} お正月：記録 12だん（{sv}）')
+        await ctx.close()
+    # 4) 新学年：自動で つくる地図・しかけの きまり
+    ctx, pg, fr = await ev_open(b, 'ip13', 'school')
+    await ev_play(fr)
+    r = await fr.evaluate("""(()=>{const t=EGT.def.t, o=[];
+      for(let lv=0;lv<3;lv++){let fb=0,bad=0,sig=0,ow=0,dog=0,mn=99,mx=0,keys=new Set();
+        for(let i=0;i<200;i++){const m=t.genMap(lv), n=t.solve(m), f=m.grid.flat().join('');
+          if(m.fallback)fb++; if(n===null||n!==m.best)bad++; mn=Math.min(mn,n); mx=Math.max(mx,n); keys.add(f);
+          if(/L/.test(f))sig++; if(/[\\^v<>]/.test(f))ow++; if(m.dog)dog++;}
+        o.push({lv,fb,bad,mn,mx,sig,ow,dog,uniq:keys.size});}
+      return o})()""")
+    ok = all(x['fb'] == 0 and x['bad'] == 0 and x['uniq'] >= 195 and x['mn'] >= [9, 10, 11][x['lv']] and x['mx'] <= 18 and x['sig'] == 200 for x in r) \
+        and r[0]['ow'] == 0 and r[0]['dog'] == 0 and r[1]['ow'] == 200 and r[1]['dog'] == 0 and r[2]['ow'] == 200 and r[2]['dog'] == 200
+    check(ok, f'新学年：地図 600こ ぜんぶ 行ける・だんだん むずかしく・しかけ（{r}）')
+    r = await fr.evaluate("""(()=>{const t=EGT.def.t, mk=(rows,o={})=>Object.assign({grid:rows.map(x=>[...x]),sig:{},dog:null,tp:{}},o), C=6;
+      // 信号（ねこの上が 赤→1歩で 青）
+      const a=mk(['S.....','......','......','......','......','......','..L...','..H...'],{sig:{[6*C+2]:1}});
+      const sig=[t.blockWhy(a,a.grid,7,2,-1,0,0), t.blockWhy(a,a.grid,7,2,-1,0,1), t.stuckWhy(a,a.grid,7,2,0)];
+      const a2=mk(['S.....','......','......','......','......','#.#...','#L#...','#H#...'],{sig:{[6*C+1]:1}});
+      const wait=t.stuckWhy(a2,a2.grid,7,1,0);
+      // 一方通行
+      const b=mk(['S.....','......','......','......','......','......','..^v..','..HH..']);
+      const ow=[t.blockWhy(b,b.grid,7,2,-1,0,0), t.blockWhy(b,b.grid,7,3,-1,0,0), t.blockWhy(b,b.grid,6,3,0,-1,0)];
+      // いぬ（ねこの上の マスに 1歩あとで 来る → もどされる）
+      const c=mk(['S.....','......','......','......','......','......','......','..H...'],{dog:[[6,1],[6,2],[6,3]]}); c.best=t.solve(c);
+      const mv=t.moveRes(c,c.grid,7,2,-1,0,0), dog=[t.dogAt(c,0),t.dogAt(c,2),t.dogAt(c,3),t.dogAt(c,4)];
+      // あそぶ：いぬに ぶつかる → もどる・1歩 つかう
+      t.setMap(c); t.tryMove(-1,0); t.finish();
+      const play=[t.pos.join(), t.steps, EGT.api().stats.bumps];
+      // あそぶ：赤しんごう → 入れない（歩数は へらない）
+      const a3=mk(['S.....','......','......','......','......','......','..L...','..H...'],{sig:{[6*C+2]:1}}); a3.best=t.solve(a3); t.setMap(a3); t.tryMove(-1,0); t.finish();
+      const redPlay=[t.pos.join(), t.steps];
+      return {sig, wait, ow, mv:[mv.bumped, mv.final.join()], dog:dog.map(x=>x.join()), play, redPlay, cbest:c.best}})()""")
+    check(r['sig'] == ['red', '', ''] and r['wait'] == 'wait' and r['ow'] == ['', 'oneway', 'oneway'] and r['mv'] == [True, '7,2'] and r['dog'] == ['6,1', '6,3', '6,2', '6,1']
+          and r['play'] == ['7,2', 1, 1] and r['redPlay'] == ['7,2', 0] and r['cbest'], f'新学年：信号・一方通行・いぬ の きまり（{r}）')
+    await ctx.close()
+    for dev in DEV:   # スクショ：3つめの地図（いぬ・一方通行・信号）
+        ctx, pg, fr = await ev_open(b, dev, 'school')
+        await ev_play(fr)
+        await fr.evaluate("(()=>{const t=EGT.def.t; let m; for(let i=0;i<50;i++){m=t.genMap(2); if(m.dog&&!m.tp.A)break;} t.setMap(m);})()"); await pg.wait_for_timeout(200)
+        await shot(pg, f'ev41-{dev}-school-map3')
+        e = await fr.evaluate("window.__errs||[]"); check(not e and not pg.errs, f'{dev} 新学年 エラーなし {e[:2]} {pg.errs[:2]}')
+        await ctx.close()
+    # 5) 金魚：はなれて およぐ・2秒コンボ・にじいろ金魚
+    ctx, pg, fr = await ev_open(b, 'ip13', 'summer')
+    await ev_play(fr)
+    r = await fr.evaluate("""(()=>{const t=EGT.def.t, d=EGT.def, gaps=[];
+      for(let i=0;i<300;i++){d.update(1/60); if(i%10===9)gaps.push(t.minGap());}
+      const avg=gaps.reduce((a,b)=>a+b,0)/gaps.length;
+      t.rareT=99;
+      const f1=t.fish.find(f=>f.k==='red'); t.catchAt(f1); const c1=EGT.api().comboN;
+      for(let i=0;i<60;i++)d.update(1/60);
+      const f2=t.fish.find(f=>f.k!=='rainbow'); t.catchAt(f2); const c2=EGT.api().comboN;
+      for(let i=0;i<130;i++)d.update(1/60); const c3=EGT.api().comboN;
+      const f3=t.fish.find(f=>f.k!=='rainbow'); t.catchAt(f3); const c4=EGT.api().comboN;
+      t.rareT=.01; d.update(1/60); const warn=!!t.rareWarn;
+      for(let i=0;i<45;i++)d.update(1/60); const rb=t.fish.find(f=>f.k==='rainbow'); const sp=rb?rb.sp:0;
+      for(let i=0;i<260;i++)d.update(1/60); const gone=!t.fish.some(f=>f.k==='rainbow');
+      t.rareT=.01; d.update(1/60); for(let i=0;i<45;i++)d.update(1/60); const rb2=t.fish.find(f=>f.k==='rainbow'); const s0=EGT.api().score; if(rb2)t.catchAt(rb2);
+      return {avg:Math.round(avg), c:[c1,c2,c3,c4], warn, sp, gone, rare:EGT.api().stats.rare, got:EGT.api().score-s0}})()""")
+    check(r['avg'] >= 45 and r['c'] == [1, 2, 0, 1] and r['warn'] and r['sp'] > 100 and r['gone'] and r['rare'] == 1 and r['got'] >= 600, f'金魚：はなれる・2秒コンボ・にじいろ（{r}）')
+    await shot(pg, 'ev41-ip13-summer-rare')
+    e = await fr.evaluate("window.__errs||[]"); check(not e and not pg.errs, f'金魚 エラーなし {e[:2]} {pg.errs[:2]}')
+    await ctx.close()
 
 GROUPS = [('home', t_home), ('tabs', t_tabs), ('tour', t_tour), ('gacha', t_gacha), ('level', t_level), ('coin', t_coin), ('daily', t_daily), ('first', t_first),
           ('battle', t_battle), ('slot', t_slot), ('sagase', t_sagase), ('font', t_font), ('a11y', t_a11y), ('manifest', t_manifest),
-          ('memo', t_memo), ('migrate', t_migrate), ('achieve', t_achieve), ('stone', t_stone), ('meal-delete', t_mealdel), ('event', t_event)]
+          ('memo', t_memo), ('migrate', t_migrate), ('achieve', t_achieve), ('stone', t_stone), ('meal-delete', t_mealdel), ('event', t_event), ('event41', t_event41)]
 
 async def main():
     async with async_playwright() as p:

@@ -84,7 +84,7 @@
     title: 'サンタのそり', time: 60, goal: '10けん 配達',
     how: ['ゆびを 上下に うごかして そりを とばそう', 'えんとつの 上で「なげる」（または タップ）→ プレゼントを 入れよう', '鳥・かみなり雲に ぶつかると ♥が へる。🎁は とんでいる プレゼントで ふえる'],
     tiers: [[0, 'こんどは もっと とどけるにゃ！'], [600, 'みんな よろこんでたにゃ〜'], [1500, 'サンタさんも びっくりの 名ドライバーにゃ！']],
-    coins: (s, sc) => sc / 22, cleared: s => (s.deliver || 0) >= 10,
+    coins: (s, sc) => sc / 22, cleared: s => (s.deliver || 0) >= 10, rec: s => s.deliver,   // v10.4.1：記録は 配達の数
     endTitle: s => s.out ? 'そりが こわれちゃった…' : 'おしまい！',
     init(api) {
       g = api; lives = 3; gifts = 5; houses = []; things = []; drops = []; snow = []; scroll = 0; spawnT = 1.2; hitT = 0; keyDir = 0; downAt = 0;

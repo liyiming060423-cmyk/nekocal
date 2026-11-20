@@ -1,5 +1,6 @@
 // にゃんカロ イベントのミニゲーム：梅雨「カエルぴょん」（v10.4）
 // おして ためて、はなして ジャンプ。はっぱ（はす）の上に のれたら 1てん。まん中なら「ぴったり」。水に おちたら おしまい
+// v10.4.1：つぎの はっぱに のれば コンボ（まん中でなくても）。ぴったりは 時間 +2秒。むずかしさ：ふつう（とどく場所の 線あり）／上級（線なし・点 ×1.5）
 'use strict';
 (() => {
   const L = EG.util.line;
@@ -33,13 +34,16 @@
     c.strokeStyle = 'rgba(255,255,255,.45)'; c.lineWidth = 2;
     for (let i = 0; i < 6; i++) { const x = ((i * 97 - camX * .6) % (g.W + 120) + g.W + 120) % (g.W + 120) - 60; c.beginPath(); c.moveTo(x, waterY + 26 + i * 9); c.quadraticCurveTo(x + 20, waterY + 20 + i * 9, x + 40, waterY + 26 + i * 9); c.stroke(); }
   }
-  const PX = () => g.W * .24;   // ねこの 画面の よこ位置
+  const PX = () => g.W * .24;
+  const PERFECT_TIME = 2;   // ぴったりで ふえる 時間（秒）
+  const hard = () => g.mode === 'hard';
+  const pts = n => hard() ? n * 1.5 : n;   // 上級は 点 ×1.5   // ねこの 画面の よこ位置
 
   EG.register('rainy', {
     title: 'カエルぴょん', time: 60, goal: '20かい ジャンプ',
-    how: ['画面を おしている あいだ パワーが たまる', 'はなすと ジャンプ！ はっぱの まん中に のると「ぴったり」', '水に おちたら おしまい。カエルが いる はっぱは ボーナス'],
+    how: ['画面を おしている あいだ パワーが たまる', 'はなすと ジャンプ！ つぎの はっぱに のれば コンボ', 'まん中に のると「ぴったり」で 時間 +2秒。水に おちたら おしまい'],
     tiers: [[0, 'ぬれちゃったにゃ…でも たのしかったにゃ'], [1000, 'ぴょんぴょん じょうずにゃ！'], [2400, 'カエルさんも びっくりの ジャンプ名人にゃ！']],
-    coins: (s, sc) => sc / 26, cleared: s => (s.jumps || 0) >= 20,
+    coins: (s, sc) => sc / 26, cleared: s => (s.jumps || 0) >= 20, rec: s => s.jumps,
     endTitle: s => s.fall ? 'ポチャン！' : 'おしまい！',
     init(api) {
       g = api; pads = []; at = 0; camX = camT = 0; charge = 0; charging = false; jump = null; rain = []; sink = 0; keyHold = false;
@@ -50,6 +54,8 @@
       for (let i = 0; i < 6; i++) addPad();
       cat = g.cat();
     },
+    // 自動テスト用：つぎの はっぱの まん中（off）に のる・いまの 線
+    t: { guide: 0, cancel() { charging = false; }, land(off = 0) { const p = pads[at + 1], from = padX(pads[at]); jump = { x0: from, d: padX(p) + off - from, t: 0, T: .01, h: 10 }; EGT.def.update(.02); }, get at() { return at; }, get pads() { return pads; } },
     resize() { waterY = g.H * .68; catW = Math.min(76, g.W * .19); },
     down() { if (!jump && !this.splashT) { charging = true; charge = 0; this.t0 = g.time; g.se('tap'); } },
     up() {
@@ -68,16 +74,17 @@
           const lx = jump.x0 + jump.d; jump = null;
           let hit = -1;
           for (let i = at + 1; i < pads.length; i++) if (Math.abs(lx - padX(pads[i])) < pads[i].w / 2 + 4) { hit = i; break; }
-          if (hit < 0 && Math.abs(lx - padX(pads[at])) < pads[at].w / 2) { this.land = lx - padX(pads[at]); g.pop('もどっちゃった', PX(), waterY - 120, '#FFFFFF', 16); return; }
+          if (hit < 0 && Math.abs(lx - padX(pads[at])) < pads[at].w / 2) { this.land = lx - padX(pads[at]); g.combo(0); g.pop('もどっちゃった', PX(), waterY - 120, '#FFFFFF', 16); return; }
           if (hit < 0) { this.fallX = lx; g.burst(PX() + (lx - padX(pads[at])), waterY, '#CFEAFF', 16, 200); g.se('splash'); g.buzz([50, 30, 50]); this.splashT = .01; return; }
           const p = pads[hit], off = lx - padX(p), skip = hit - at - 1; at = hit; this.land = off;
           g.stats.jumps++;
           const perfect = Math.abs(off) < p.w * .16;
-          let pts = 100 + skip * 150;
-          if (perfect) { g.stats.perfect++; const n = g.comboN + 1; g.combo(n); pts += 50 + Math.min(5, n) * 20; g.pop('ぴったり！', PX(), waterY - 140, '#FFFFFF', 20); g.se('coin'); } else { g.combo(0); g.se('get'); }
+          const n = g.comboN + 1; g.combo(n);   // のれたら コンボ（まん中でなくても）
+          let pt = 100 + skip * 150 + (n >= 2 ? Math.min(5, n) * 20 : 0);
+          if (perfect) { g.stats.perfect++; pt += 50; g.addTime(PERFECT_TIME); g.pop('ぴったり！', PX(), waterY - 140, '#FFFFFF', 20); g.pop(`+${PERFECT_TIME}びょう`, PX() + 70, waterY - 118, '#BFE3F8', 17); g.se('coin'); } else g.se('get');
           if (skip) g.pop('とびこし！', PX(), waterY - 170, '#FFE07A', 18);
-          if (p.frog) { pts += 40; p.frogJ = .01; g.pop('ケロッ！', PX() - 30, waterY - 60, '#B8F28A', 18); }
-          g.add(pts, PX(), waterY - 100);
+          if (p.frog) { pt += 40; p.frogJ = .01; g.pop('ケロッ！', PX() - 30, waterY - 60, '#B8F28A', 18); }
+          g.add(pts(pt), PX(), waterY - 100);
           g.live(`${g.stats.jumps}かい`);
           while (pads.length < at + 7) addPad();
         }
@@ -107,10 +114,13 @@
       cat.el.style.clipPath = this.splashT ? `inset(0 0 ${Math.min(100, this.splashT * 140)}% 0)` : '';
       // パワー（とどく場所の めやす）
       if (charging) {
-        const maxD = Math.min(g.W * .78, 330), d = 40 + charge * maxD, h = 60 + charge * 110;
-        c.fillStyle = 'rgba(255,255,255,.9)';
-        for (let i = 1; i <= 9; i++) { const u = i / 10; c.beginPath(); c.arc(x + d * u, waterY + 2 - Math.sin(u * Math.PI) * h - catW * .5, 3.2, 0, 7); c.fill(); }
-        c.strokeStyle = 'rgba(255,255,255,.95)'; c.lineWidth = 3; c.beginPath(); c.ellipse(x + d, waterY + 6, 16, 6, 0, 0, 7); c.stroke();
+        if (!hard()) {   // 上級は とどく場所の 線を 出さない（パワーの メーターだけ）
+          const maxD = Math.min(g.W * .78, 330), d = 40 + charge * maxD, h = 60 + charge * 110;
+          c.fillStyle = 'rgba(255,255,255,.9)';
+          for (let i = 1; i <= 9; i++) { const u = i / 10; c.beginPath(); c.arc(x + d * u, waterY + 2 - Math.sin(u * Math.PI) * h - catW * .5, 3.2, 0, 7); c.fill(); }
+          c.strokeStyle = 'rgba(255,255,255,.95)'; c.lineWidth = 3; c.beginPath(); c.ellipse(x + d, waterY + 6, 16, 6, 0, 0, 7); c.stroke();
+          this.t.guide++;
+        }
         const cx = x, cy = y - catW * 1.55;
         c.lineWidth = 10; c.strokeStyle = 'rgba(255,255,255,.85)'; c.beginPath(); c.arc(cx, cy, 22, Math.PI * .75, Math.PI * 2.25); c.stroke();
         c.strokeStyle = charge > .85 ? '#E0573F' : charge > .5 ? '#F7C64B' : '#4FAE5B'; c.lineWidth = 7; c.beginPath(); c.arc(cx, cy, 22, Math.PI * .75, Math.PI * (.75 + 1.5 * charge)); c.stroke();

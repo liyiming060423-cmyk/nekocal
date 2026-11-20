@@ -29,7 +29,7 @@ function defaultState() {
     ach: {},                          // v10.3 実績：{ 種類: 受けとった段階の数 }
     titles: [], title: '',            // v10.3 実績でもらった称号・つけている称号（'' ＝ レベルの称号）
     memo: [], memoNew: 0,             // v10.3 おもいで・まだ見ていない数
-    ev: { pick: '', best: {}, clear: {} },   // v10.4 イベント：pick＝いま開いているイベント（EVENT_MODE 'all' のとき）・best＝ミニゲームの いちばんの点・clear＝はじめてクリアした日
+    ev: { pick: '', best: {}, clear: {}, rec: {}, mode: {} },   // v10.4 イベント：pick＝いま開いているイベント（EVENT_MODE 'all' のとき）・best＝ミニゲームの いちばんの点・clear＝はじめてクリアした日。v10.4.1：rec＝目標の いちばんの記録・mode＝さいごに えらんだ むずかしさ（best・rec は むずかしさごとに「id-hard」のように 別）
     onboarded: false
   };
 }
@@ -57,7 +57,7 @@ function load() {
     if (!Array.isArray(st.titles)) st.titles = [];
     if (!st.ach || typeof st.ach !== 'object') st.ach = {};
     // v10.4：イベント
-    st.ev = Object.assign({ pick: '', best: {}, clear: {} }, s.ev); st.ev.best = Object.assign({}, st.ev.best); st.ev.clear = Object.assign({}, st.ev.clear);
+    st.ev = Object.assign({ pick: '', best: {}, clear: {}, rec: {}, mode: {} }, s.ev); for (const k of ['best', 'clear', 'rec', 'mode']) st.ev[k] = Object.assign({}, st.ev[k]);
     if (s.news === undefined) st.news = '';   // v10.1：前の版のデータ → メニューが変わったお知らせを1回出す
     // 前の版で骸骨・爆発になっていた猫は、今日から入院（入院費はとらない）
     if (st.cat.dead) {

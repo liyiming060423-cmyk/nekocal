@@ -9,7 +9,8 @@
 const BK_APP = 'nyankalo', DAY_MS = 864e5, BK_NAG_DAYS = 7;
 const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isStandalone = () => navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
-const verNum = v => String(v || '0').split('.').reduce((a, x) => a * 1000 + (parseInt(x, 10) || 0), 0);
+// v10.4.1：「10.4」と「10.4.1」を くらべられるように、いつも 3つ（10.4 → 10.4.0）に そろえて 数にする
+const verNum = v => { const p = String(v || '0').split('.').slice(0, 3); while (p.length < 3) p.push('0'); return p.reduce((a, x) => a * 1000 + (parseInt(x, 10) || 0), 0); };
 // v9.8：ブラウザに「このデータは消さないで」とお願いする（容量が足りないときなどに自動で消されにくくなる）
 async function askPersist() {
   try { if (navigator.storage && navigator.storage.persist && !(await navigator.storage.persisted())) await navigator.storage.persist(); } catch (e) {}

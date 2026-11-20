@@ -1,5 +1,5 @@
 // アプリの版。index.html の ?v= と sw.js の VERSION もこれにそろえる
-const APP_VER = '10.4';
+const APP_VER = '10.4.1';
 const APP_NEWS = '10.4';   // この版のお知らせ（ui.js の showNews）まで見たか。10.1＝メニューが変わった、10.3＝おもいで・ずっとミッション・ダイヤ、10.4＝イベント（次に大きく変えたら、数字をその版にする）
 
 // にゃんカロ データ定義
@@ -184,24 +184,31 @@ const DUP_REFUND = 100;          // かぶったらコインに交換
 const EVENT_MODE = 'all';
 const EVENT_BASE = '2026-11-19';   // rotate のとき、この日が EVENTS の1つめ（ここから日数 ÷ イベントの数 の あまりで決まる）
 // 絵・曲のファイルは id から決まる：ev-{id}-gacha.webp（ガチャの絵）・-home.webp（ホームの背景）・-banner.webp（タイトルの字）・-bag.webp（ホームのボタン）・-bgm.mp3
+// v10.4.1：rec＝ミニゲームの「目標の記録」（unit＝数のあとの字、goal＝目標の数。0 なら 目標は出さない）・modes＝むずかしさ（1つめが ふつう。2つめからは 点・記録を 別に保存）
 // bags＝ガチャの絵の4つの福袋の場所（絵の幅・高さに対する %：左・上・幅・高さ）。on: false にすると そのイベントは出ない
 const EVENTS = [
   { id: 'school',    name: '新学年',     gacha: '新学年ガチャ',       game: 'ねこの通学路',     gameDesc: '遅刻しないように、学校までの道を えらぼう', icon: '🌸', color: '#F48FB1', color2: '#FFE3EE', on: true,
+    rec: { unit: '/3 とうちゃく', goal: 0 },
     bagNames: ['新学年の福袋', '入学の福袋', '進級の福袋', '卒業の福袋'], bags: [[4.4, 53, 22.3, 25], [27.5, 53, 21.1, 25], [51, 53, 21, 25], [73, 53, 22, 25]],
     wears: ['ev_gakuran', 'ev_sailor', 'ev_randoseru', 'ev_hakama'] },
   { id: 'rainy',     name: '梅雨',       gacha: '梅雨イベントガチャ', game: 'カエルぴょん',     gameDesc: 'おして ためて、はなして ジャンプ！ はっぱを わたろう', icon: '☔', color: '#7C8CE0', color2: '#E3E8FF', on: true,
+    rec: { unit: 'かい ジャンプ', goal: 20 }, modes: [{ id: 'normal', name: 'ふつう', desc: 'とどく場所の 線が 見える' }, { id: 'hard', name: '上級', desc: '線なし・点が ×1.5' }],
     bagNames: ['あじさいの福袋', 'てるてるの福袋', 'カエルの福袋', 'にじの福袋'], bags: [[8, 51, 20.9, 30], [30.3, 51, 20.1, 30], [52.6, 51, 19.4, 30], [74.5, 51, 20.1, 30]],
     wears: ['ev_teru', 'ev_snail', 'ev_ajisai', 'ev_raijin'] },
   { id: 'summer',    name: 'サマー',     gacha: 'スイカガチャ',       game: '金魚すくい',       gameDesc: 'ポイが やぶれる前に 金魚を すくおう', icon: '🍉', color: '#2FA7C8', color2: '#DDF4FA', on: true,
+    rec: { unit: 'ひき', goal: 10 },
     bagNames: ['緑のスイカ', '黄色のスイカ', '赤のスイカ', '黒のスイカ'], bags: [[8.8, 55, 19.1, 22.5], [29.5, 55, 19.1, 22.5], [50.2, 55, 18.8, 22.5], [71, 55, 19, 22.5]],
     wears: ['ev_suika', 'ev_aloha', 'ev_yukata', 'ev_shark'] },
   { id: 'halloween', name: 'ハロウィン', gacha: 'ハロウィンガチャ',   game: 'お菓子泥棒',       gameDesc: 'おばけを よけて、おかしを あつめよう', icon: '🎃', color: '#8A4FD0', color2: '#F0E4FF', on: true,
+    rec: { unit: 'コンボ', goal: 0 },
     bagNames: ['むらさきリボンのかぼちゃ', 'しまリボンのかぼちゃ', 'ほしリボンのかぼちゃ', 'くろリボンのかぼちゃ'], bags: [[4.4, 57.5, 23, 21.5], [28, 57.5, 22, 21.5], [50.2, 57.5, 22, 21.5], [72.6, 57.5, 23.4, 21.5]],
     wears: ['ev_pumpkin', 'ev_ghost', 'ev_mummy', 'ev_dracula'] },
   { id: 'xmas',      name: 'クリスマス', gacha: 'クリスマスガチャ',   game: 'サンタのそり',     gameDesc: 'そりで 夜空を とんで、えんとつに プレゼント！', icon: '🎄', color: '#2E8B4E', color2: '#E2F4E6', on: true,
+    rec: { unit: 'けん 配達', goal: 10 },
     bagNames: ['緑のプレゼント', '黄色のプレゼント', '赤のオーナメント', '黒のオーナメント'], bags: [[9.3, 56.5, 18.5, 21], [29.8, 56.5, 19, 21], [50.3, 56.5, 19, 21], [70.8, 56.5, 19, 21]],
     wears: ['ev_reindeer', 'ev_snowman', 'ev_xtree', 'ev_snowqueen'] },
   { id: 'newyear',   name: 'お正月',     gacha: 'お正月ガチャ',       game: '鏡餅タワー',       gameDesc: 'おもちを まっすぐ たかく つみあげよう', icon: '🎍', color: '#D9334A', color2: '#FFE7DF', on: true,
+    rec: { unit: 'だん', goal: 10 },
     bagNames: ['福の福袋', '麻の福袋', '幸の福袋', '財の福袋'], bags: [[8.3, 48, 20, 24], [30.8, 48, 20, 24], [52, 48, 20, 24], [74, 48, 19.7, 24]],
     wears: ['ev_kagami', 'ev_sheep', 'ev_furisode', 'ev_shishi'] }
 ];

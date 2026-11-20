@@ -1,4 +1,4 @@
-/* にゃんカロ イベントのミニゲーム（v10.4）共通の見た目 */
+/* にゃんカロ イベントのミニゲーム（v10.4）共通の見た目（v10.4.1：記録・むずかしさ） */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; width: 100%; height: 100%; height: 100dvh; overflow: hidden; background: #FFF6E6; color: #4A2A1A;
   font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", sans-serif; user-select: none; -webkit-user-select: none; touch-action: none; }
@@ -48,6 +48,18 @@ button { font: inherit; color: inherit; }
 .eg-stats div { background: #FFF6E6; border: 2px solid #F1E1C4; border-radius: 12px; padding: 6px 4px; text-align: center; line-height: 1.25; }
 .eg-stats small { display: block; font-size: 11px; font-weight: 900; color: #7E6150; }
 .eg-stats b { font-size: 16px; }
+.eg-rec { margin: -2px 0 0; text-align: center; font-size: 14px; font-weight: 700; color: #7E6150; }
+.eg-rec b { color: #4A2A1A; }
+/* v10.4.1 むずかしさ */
+.eg-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.eg-mode { min-height: 52px; border: 2.5px solid #4A2A1A; border-radius: 14px; background: #FFFFFF; padding: 4px 6px; display: grid; gap: 1px; line-height: 1.2; box-shadow: 0 3px 0 #4A2A1A; }
+.eg-mode b { font-size: 16px; }
+.eg-mode small { font-size: 11px; font-weight: 700; color: #7E6150; }
+.eg-mode[aria-pressed="true"] { background: var(--c); color: #FFFFFF; }
+.eg-mode[aria-pressed="true"] small { color: #FFFFFF; }
+.eg-mode:active { transform: translateY(2px); box-shadow: 0 1px 0 #4A2A1A; }
+.eg-recrow small { font-size: 12px; color: #7E6150; margin-left: 2px; }
+.eg-new.sm { font-size: 11px; padding: 0 5px; vertical-align: 2px; margin-left: 4px; }
 .eg-catbox { position: relative; width: 104px; margin: -6px auto -4px; }
 .eg-btn { min-height: 54px; border: 3px solid #4A2A1A; border-radius: 16px; background: var(--c); color: #FFFFFF; font-weight: 900; font-size: 20px; text-shadow: 0 1px 0 rgba(0, 0, 0, .35); box-shadow: 0 4px 0 #4A2A1A; letter-spacing: .06em; }
 .eg-btn.white { background: #FFFFFF; color: #4A2A1A; text-shadow: none; font-size: 17px; min-height: 48px; }
@@ -68,5 +80,5 @@ button { font: inherit; color: inherit; }
 .eg-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .eg-cat-jump .pc-idle { animation: egHop .6s ease-in-out infinite alternate; }
 @keyframes egHop { to { transform: translateY(-8%); } }
-@media (max-height: 600px) { .eg-catbox { width: 96px; } .eg-title { font-size: 20px; } .eg-how { font-size: 13px; padding: 8px 10px; } .eg-btn { min-height: 48px; } .eg-res-score b { font-size: 38px; } }
+@media (max-height: 600px) { .eg-card { gap: 8px; } .eg-mode { min-height: 46px; } .eg-modes ~ .eg-stats div { padding: 4px; } .eg-catbox { width: 96px; } .eg-title { font-size: 20px; } .eg-how { font-size: 13px; padding: 8px 10px; } .eg-btn { min-height: 48px; } .eg-res-score b { font-size: 38px; } }
 @media (prefers-reduced-motion: reduce) { .eg-new, .eg-combo.pop, .eg-cat-jump .pc-idle { animation: none; } }

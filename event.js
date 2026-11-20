@@ -1,4 +1,4 @@
-// にゃんカロ イベント（v10.4）
+// にゃんカロ イベント（v10.4。v10.4.1：ミニゲームの 目標の記録・むずかしさ）
 // 6つのイベント（新学年・梅雨・サマー・ハロウィン・クリスマス・お正月）：ホームの背景・タイトルの字・BGM・イベントページ・イベントガチャ・ミニゲーム
 // 数字・名前・絵の場所は data.js の EVENTS / EVENT_MODE / EV_GAME。ミニゲームの中身は evgame.html（evgame.js ＋ 各ゲーム）
 // （読みこむ順番は index.html：train.js のあと。ほかのファイルの関数・変数はそのまま使える）
@@ -25,6 +25,15 @@ function evPick(id) {
   save(); evTheme();
 }
 const evLeft = e => e.wears.filter(k => !S.owned.includes(k));          // まだ持っていない きせかえ
+// v10.4.1 むずかしさ・目標の記録（data.js の EVENTS の modes・rec）。1つめの むずかしさは id のまま（前の版の いちばんの点も そのまま）、ほかは「id-hard」のように 別に保存
+const evModes = e => (e && e.modes) || null;
+const evModeOf = (e, m) => { const L = evModes(e); return L ? (L.find(x => x.id === m) || L[0]).id : ''; };
+const evKey = (e, m) => { const L = evModes(e), mm = evModeOf(e, m); return L && mm !== L[0].id ? `${e.id}-${mm}` : e.id; };
+// 「14かい ジャンプ（目標 20）」
+function evRecText(e, n, goal = true) {
+  const r = e.rec || { unit: '', goal: 0 };
+  return `${n ? fmt(n) + r.unit : '—'}${goal && r.goal ? `（目標 ${r.goal}）` : ''}`;
+}
 const evPlaysLeft = () => Math.max(0, EV_GAME.plays - (day().evPlays || 0));   // きょう コインがもらえる のこり回数（6つのゲーム あわせて）
 
 /* ---------- 見た目（ホームの背景・タイトル画面） ---------- */
@@ -72,7 +81,9 @@ function evHubHTML() {
     <div class="card evh-card">
       <div class="evh-ct"><span class="evh-ico" aria-hidden="true">🎮</span><div><b>${esc(e.game)}</b><small>${esc(e.gameDesc)}</small></div></div>
       <div class="evh-rows">
-        <div><span>いちばんの点</span><b class="num">${best ? fmt(best) : '—'}</b></div>
+        ${evModes(e) ? evModes(e).map(m => { const k = evKey(e, m.id), b = S.ev.best[k] || 0; return `<div><span>いちばん（${esc(m.name)}）</span><b>${b ? `<span class="num">${fmt(b)}</span>点・` : ''}${esc(evRecText(e, S.ev.rec[k] || 0, !b))}</b></div>`; }).join('')
+          : `<div><span>いちばんの点</span><b class="num">${best ? fmt(best) : '—'}</b></div>
+        <div><span>いちばんの記録</span><b>${esc(evRecText(e, S.ev.rec[e.id] || 0))}</b></div>`}
         <div><span>はじめてクリア</span><b>${cleared ? '✔ クリアずみ' : `+${EV_GAME.clear}コイン`}</b></div>
         <div><span>きょう コインがもらえる</span><b>${plays ? `あと <span class="num">${plays}</span> 回` : 'あしたまで おやすみ'}</b></div>
       </div>
@@ -174,25 +185,32 @@ function openEvGame(id) {
 }
 // evgame.js から呼ぶ（train.js の window.nyankaloMini に足す）
 Object.assign(window.nyankaloMini, {
-  evInfo: id => {
+  // v10.4.1：mode＝むずかしさ（なしなら さいごに えらんだもの）。best・rec は その むずかしさの分
+  evInfo: (id, mode) => {
     const e = evById(id) || EVENTS.find(x => x.id === id);
+    const m = e ? evModeOf(e, mode || S.ev.mode[id]) : '', k = e ? evKey(e, m) : id;
     return Object.assign(window.nyankaloMini.info(), {
       ev: e ? { id: e.id, name: e.name, game: e.game, color: e.color, color2: e.color2 } : null,
-      plays: evPlaysLeft(), perMax: EV_GAME.max, clearBonus: EV_GAME.clear, cleared: !!S.ev.clear[id], best: S.ev.best[id] || 0,
+      plays: evPlaysLeft(), perMax: EV_GAME.max, clearBonus: EV_GAME.clear, cleared: !!S.ev.clear[id], best: S.ev.best[k] || 0, rec: S.ev.rec[k] || 0, mode: m,
       bgm: S.settings.bgm !== false, reduced: !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)
     });
   },
   // 1回あそんだ結果：score＝点、coins＝点から決めたコイン（ゲームの中で計算）、cleared＝クリアの条件をみたしたか
-  evResult: (id, score, coins, cleared) => {
-    const e = evById(id); if (!e) return { given: 0, bonus: 0, best: 0, newBest: false, plays: 0 };
+  // むずかしさを えらんだ（つぎに開いたときも それから）
+  evMode: (id, mode) => { const e = evById(id); if (!e || !evModes(e)) return; S.ev.mode[id] = evModeOf(e, mode); save(); },
+  // v10.4.1：rec＝目標の記録（ジャンプの回数など）、mode＝むずかしさ
+  evResult: (id, score, coins, cleared, rec, mode) => {
+    const e = evById(id); if (!e) return { given: 0, bonus: 0, best: 0, newBest: false, plays: 0, rec: 0, newRec: false };
     const d = day(); bumpMini(d);   // ミッション・ずっとミッションの「ミニゲーム」に数える
-    score = Math.max(0, Math.round(score || 0));
-    const old = S.ev.best[id] || 0, newBest = score > old; S.ev.best[id] = Math.max(old, score);
+    score = Math.max(0, Math.round(score || 0)); rec = Math.max(0, Math.round(rec || 0));
+    const k = evKey(e, mode); if (evModes(e)) S.ev.mode[id] = evModeOf(e, mode);
+    const old = S.ev.best[k] || 0, newBest = score > old; S.ev.best[k] = Math.max(old, score);
+    const oldR = S.ev.rec[k] || 0, newRec = rec > oldR; S.ev.rec[k] = Math.max(oldR, rec);
     let given = 0, bonus = 0;
     coins = Math.max(0, Math.min(EV_GAME.max, Math.round(coins || 0)));
     if (coins > 0 && (d.evPlays || 0) < EV_GAME.plays) { d.evPlays = (d.evPlays || 0) + 1; given = coins; }
     if (cleared && !S.ev.clear[id]) { S.ev.clear[id] = todayStr(); bonus = EV_GAME.clear; }
     S.coins += given + bonus; save();
-    return { given, bonus, best: Math.max(old, score), newBest: newBest && old > 0, plays: evPlaysLeft() };
+    return { given, bonus, best: Math.max(old, score), newBest: newBest && old > 0, plays: evPlaysLeft(), rec: Math.max(oldR, rec), newRec: newRec && oldR > 0 };
   }
 });
