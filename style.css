@@ -883,3 +883,50 @@ body.sos::after { content: ""; position: fixed; inset: 0; z-index: 80; pointer-e
 .g10-cell small { font-size: 9.5px; font-weight: 900; color: var(--orange-d); }
 .g10-cell.dup small { color: var(--muted); }
 @media (max-width: 360px) { .g10-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* ===== v10.7 ねこのアドバイス・先週のまとめ・今週のチャレンジ（weekly.js） ===== */
+.adv-card { margin-top: 10px; padding: 10px 14px 8px; }
+.adv-head { display: flex; align-items: center; gap: 8px; font-size: 16px; margin-bottom: 6px; }
+.adv-cat svg { width: 30px; height: 30px; display: block; }
+.adv-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.adv-list li { display: flex; gap: 8px; align-items: flex-start; }
+.adv-ic { font-size: 20px; line-height: 1.25; flex: none; }
+.adv-list b { display: block; font-size: 14.5px; line-height: 1.4; }
+.adv-list small { display: block; font-size: 12.5px; color: var(--muted); font-weight: 700; line-height: 1.45; }
+.adv-good { margin: 7px 0 0; padding: 5px 10px; border-radius: 10px; background: #FFF1C9; font-weight: 900; font-size: 14px; display: flex; gap: 6px; align-items: baseline; }
+.adv-note { margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 700; }
+.wk-link { margin-top: 8px; min-height: 44px; }
+.wk-sum { gap: 8px; }
+.wk-sum .adv-list small { line-height: 1.38; }
+.wk-grid { display: grid; grid-template-columns: .8fr 1.25fr 1fr 1fr; gap: 5px; }
+.wk-grid > div { background: var(--white); border: 3px solid var(--ink); border-radius: 12px; padding: 4px 2px; text-align: center; line-height: 1.2; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.wk-grid small { display: block; font-size: 11px; color: var(--muted); font-weight: 700; white-space: nowrap; }
+.wk-grid b { font-size: 18px; white-space: nowrap; }
+.wk-grid b span { font-size: 10.5px; margin-left: 1px; }
+.wk-body { padding: 0 4px; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; font-weight: 700; font-size: 14px; }
+.wk-body > span:first-child { color: var(--muted); font-size: 12.5px; margin-right: 2px; }
+.wk-chs, .wk-next { padding: 8px 12px; }
+.wk-sec { font-weight: 900; font-size: 14px; margin-bottom: 4px; display: flex; justify-content: space-between; }
+.wk-ch { display: flex; gap: 6px; font-size: 13.5px; font-weight: 700; line-height: 1.5; color: var(--muted); }
+.wk-ch.ok { color: var(--ink); }
+.wk-pay { margin: 6px 0 0; font-size: 13.5px; font-weight: 700; }
+.wk-next { display: flex; flex-wrap: wrap; gap: 6px; }
+.wk-next .wk-sec { width: 100%; margin-bottom: 0; }
+.wk-next { margin-top: 10px; }
+.wk-next { padding: 6px 10px 8px; gap: 5px; }
+.wk-next .chip { min-height: 26px; font-size: 12px; display: inline-flex; align-items: center; padding: 1px 7px; }
+.wk-next + .btn { margin-top: 10px; }
+.wk-sum .adv-card { margin-top: 0; padding: 8px 12px 6px; }
+.wk-sum .adv-head { font-size: 14.5px; margin-bottom: 4px; }
+.wk-sum .adv-cat svg { width: 24px; height: 24px; }
+.wk-sum .adv-list b { font-size: 14px; }
+.wk-sum .adv-list small { font-size: 12px; }
+.wk-sum .adv-good { margin-top: 5px; padding: 3px 10px; font-size: 13.5px; }
+.wk-mark { font-size: 20px; }
+.wk-all { margin-top: 10px; padding: 8px 12px; display: flex; gap: 8px; align-items: center; font-weight: 900; font-size: 14px; }
+.wk-all.got { background: #E3F4FF; }
+.mis-seg button { padding: 0 4px; }
+@media (max-height: 620px) {
+  .wk-sum { gap: 8px; }
+  .adv-list b { font-size: 14px; }
+}

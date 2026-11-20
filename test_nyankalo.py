@@ -7,7 +7,7 @@
   python test_nyankalo.py --shots shots        … スクショを shots/ に保存（なしなら保存しない）
   python test_nyankalo.py --browser webkit     … Safari と同じエンジン（python -m playwright install webkit が必要）
   python test_nyankalo.py --app <フォルダ>      … ほかのフォルダのアプリを調べる
-グループ：home tabs tour gacha level coin daily first battle slot sagase font a11y manifest memo migrate achieve stone meal-delete event event41 v105 v106（v10.3 で memo〜meal-delete、v10.4 で event、v10.4.1 で event41、v10.5 で v105、v10.6 で v106 を追加）
+グループ：home tabs tour gacha level coin daily first battle slot sagase font a11y manifest memo migrate achieve stone meal-delete event event41 v105 v106 v107（v10.3 で memo〜meal-delete、v10.4 で event、v10.4.1 で event41、v10.5 で v105、v10.6 で v106、v10.7 で v107 を追加）
 ※ bump.py は .py をアプリのファイル一覧に入れないので、このファイルを置いたままでよい
 """
 import sys, os, re, json, asyncio, functools, http.server, socketserver, threading, traceback, argparse, tempfile
@@ -46,7 +46,8 @@ def base(**kw):
          "settled": "2026-11-16", "streak": {"n": 2, "pass": ""}, "resultQ": [], "login": {"last": "2026-11-17", "streak": 1},
          "claimed": {"date": "2026-11-17", "ids": []},
          "settings": {"sound": False, "bgm": False, "vibrate": False, "notify": False, "lang": "ja", "remind": []},
-         "onboarded": True, "lastBackup": NOW_MS, "backupNag": NOW_MS, "news": APP_NEWS, "lvRw": 0}
+         "onboarded": True, "lastBackup": NOW_MS, "backupNag": NOW_MS, "news": APP_NEWS, "lvRw": 0,
+         "weekSeen": "2026-11-09"}   # v10.7：先週のまとめは 見たことに（v107 で しらべる）
     for k, v in kw.items():
         if '.' in k: a, b = k.split('.'); s[a][b] = v
         elif v is None: s.pop(k, None)
@@ -1155,11 +1156,11 @@ async def t_v105(b):
     await shot(pg, 'v105-noevent-tour')
     check(not pg.errs, f'イベントなし エラーなし {pg.errs[:2]}')
     await ctx.close()
-    # お知らせ（10.4 の人）：5行・SE でも OK が見える
+    # お知らせ（10.4 の人）：6行（v10.7 の1行を足した）・SE でも OK が見える
     ctx, pg = await page(b, 'se', base(news='10.4'))
     await start(pg); await pg.wait_for_timeout(400)
     r = await pg.evaluate("({n:document.querySelectorAll('.news-list > div').length, t:document.getElementById('modalTitle').textContent, ok:document.getElementById('nwOk').getBoundingClientRect().bottom <= innerHeight})")
-    check(r == {'n': 5, 't': 'あたらしくなったよ', 'ok': True}, f'お知らせ：10.4 の人に 5行（v10.6 の4行＋10.5 の1行）（{r}）')
+    check(r == {'n': 6, 't': 'あたらしくなったよ', 'ok': True}, f'お知らせ：10.4 の人に 6行（v10.7 の1行＋v10.6 の4行＋10.5 の1行）（{r}）')
     await shot(pg, 'v105-news-se')
     await ctx.close()
 
@@ -1332,9 +1333,173 @@ async def t_v106(b):
     check(not pg.errs, f'まとめて・セット エラーなし {pg.errs[:2]}')
     await ctx.close()
 
+# ===================== v10.7 =====================
+def lastweek():
+    # 先週（11/9〜15）：記録5日・朝ぬき3日・食べすぎ3日・ちょうどいい2日・歩数なし（目安 1,568kcal）
+    M = lambda i, sl, k: meal(i, sl, kcal=k)
+    days = {'2026-11-09': dayrec([M('a1', 'noon', 900), M('a2', 'night', 900)]),
+            '2026-11-10': dayrec([M('b1', 'noon', 800), M('b2', 'night', 1000)]),
+            '2026-11-11': dayrec([M('c0', 'morning', 400), M('c1', 'noon', 600), M('c2', 'night', 1000)]),
+            '2026-11-13': dayrec([M('d1', 'noon', 700), M('d2', 'night', 900)]),
+            '2026-11-15': dayrec([M('e0', 'morning', 300), M('e1', 'noon', 500), M('e2', 'night', 700)])}
+    hist = [{"date": "2026-11-09", "intake": 1800, "target": 1568, "diff": 232, "change": 12, "idx": 22},
+            {"date": "2026-11-15", "intake": 1500, "target": 1568, "diff": -68, "change": -4, "idx": 18}]
+    return days, hist
+
+async def t_v107(b):
+    days, hist = lastweek()
+    WK = "(()=>{const s=JSON.parse(localStorage.getItem('nyankalo-v1'));return {coins:s.coins, stones:s.stones||0, wk:s.wk, prev:s.wkPrev, seen:s.weekSeen}})()"
+    # アドバイスの しらべかた
+    ctx, pg = await page(b, 'ip13', base(start='2026-11-01', days=days, history=hist))
+    await start(pg)
+    a = await pg.evaluate("(()=>{const a=wkAdvice('2026-11-09');return {tips:a.tips.map(t=>t.id), good:a.good.id, hit:a.hit, rec:a.rec}})()")
+    check(a['tips'] == ['over', 'morning'] and a['good'] == 'thanks' and a['rec'] == 5, f'アドバイス：食べすぎ・朝ぬき（上から2つ）・ほめる（{a}）')
+    check(a['hit'] == {'over': 3, 'morning': 3, 'steps': 0}, f'アドバイス：当てはまる数（{a["hit"]}）')
+    w = await pg.evaluate("S.wk")
+    check(w['mon'] == '2026-11-16' and w['ids'] == ['morning4', 'just3', 'steps15k'] and w['goals'] == [4, 3, 15000], f'今週のチャレンジ：先週の アドバイスに あわせる（{w}）')
+    # 栄養・おやつ・夜・少なめ
+    r = await pg.evaluate("""(()=>{const D=S.days;Object.keys(D).forEach(k=>delete D[k]);
+      ['2026-11-09','2026-11-10','2026-11-11','2026-11-12','2026-11-13'].forEach((d,i)=>{D[d]={meals:[
+        {id:'m'+i,slot:'morning',name:'a',kcal:150,carbs:20,protein:5,fat:30},{id:'n'+i,slot:'noon',name:'b',kcal:150,carbs:30,protein:5,fat:20},
+        {id:'s'+i,slot:'snack',name:'c',kcal:250},{id:'x'+i,slot:'night',name:'d',kcal:600}],steps:6000}});
+      const a=wkAdvice('2026-11-09');return {tips:a.tips.map(t=>t.id), hit:a.hit, good:a.good.id}})()""")
+    check(r['tips'] == ['under', 'late'] and r['hit'].get('pfcF') and r['hit'].get('snack') == 22 and r['good'] == 'three', f'アドバイス：少なめ・夜・脂質（1つだけ）・おやつ・ほめる（朝昼夜）（{r}）')
+    check('pfcP' not in r['hit'] and 'pfcC' not in r['hit'], '栄養のアドバイスは いちばん はなれた 1つだけ')
+    # しんちょく
+    p = await pg.evaluate("['rec5','morning4','three3','late3','steps15k','walk3','prot2'].map(id=>wkProg(id,'2026-11-09'))")
+    check(p == [5, 5, 5, 0, 30000, 5, 0], f'しんちょく：先週の数（{p}）')
+    check(not pg.errs, f'アドバイス エラーなし {pg.errs[:2]}')
+    await ctx.close()
+
+    # 先週のまとめ（月曜に はじめて開いた かわりに、火曜で まだ 見ていない）
+    for dev in DEV:
+        ctx, pg = await page(b, dev, base(start='2026-11-01', days=days, history=hist, weekSeen=''))
+        await start(pg)
+        t = await pg.evaluate("document.getElementById('modalBody').innerText")
+        check('先週のまとめ' in t and '11/9（月）〜11/15（日）' in t, f'{dev} まとめ：先週の はんい（{t[:40]!r}）')
+        check('5/7日' in t and '1,740' in t and '目安 1,568' in t, f'{dev} まとめ：記録した日・平均（{t[:120]!r}）')
+        check('ちょうどいい' in t and 'ぽっちゃり' in t and '+8' in t, f'{dev} まとめ：体型 ちょうどいい → ぽっちゃり（+8）')
+        check('食べすぎの日' in t and '朝ごはん' in t and '目安です' in t, f'{dev} まとめ：ねこのアドバイス')
+        check('今週のチャレンジ' in t and '朝ごはん 4日' in t and 'ちょうどいい 3日' in t, f'{dev} まとめ：今週のチャレンジ')
+        check('受けとっていない' not in t, f'{dev} まとめ：先週は チャレンジなし（前の版から）')
+        sc = await pg.evaluate("(()=>{const s=document.querySelector('.sheet');return [s.scrollHeight,s.clientHeight]})()")
+        await shot(pg, f'v107-sum-{dev}')
+        await pg.evaluate("document.getElementById('wsOk').scrollIntoView()"); await pg.wait_for_timeout(200)
+        ok = await pg.evaluate("(()=>{const b=document.getElementById('wsOk').getBoundingClientRect();return b.bottom<=innerHeight&&b.top>=0})()")
+        check(ok, f'{dev} まとめ：OK が 見える（シート {sc[0]}/{sc[1]}）')
+        if dev == 'ip13': check(sc[0] <= sc[1] + 2, f'ip13 まとめ：スクロールなし（{sc}）')
+        await pg.click('#wsOk'); await pg.wait_for_timeout(600)
+        s = await pg.evaluate(WK)
+        check(s['seen'] == '2026-11-09' and await pg.evaluate("document.getElementById('modal').hidden"), f'{dev} まとめ：1回だけ（{s["seen"]}）')
+        await pg.reload(); await pg.wait_for_timeout(700); await start(pg)
+        check(await pg.evaluate("document.getElementById('modal').hidden"), f'{dev} まとめ：もう 出ない')
+        check(not pg.errs, f'{dev} まとめ エラーなし {pg.errs[:2]}')
+        await ctx.close()
+
+    # 先週の チャレンジ：受けとっていない分を まとめで わたす（3つ ぜんぶで 💎）
+    st = base(start='2026-11-01', days=days, history=hist, weekSeen='',
+              wk={'mon': '2026-11-09', 'ids': ['rec5', 'three3', 'late3'], 'goals': [5, 1, 2], 'got': ['late3'], 'allGot': False})
+    ctx, pg = await page(b, 'ip13', st)
+    await start(pg)
+    t = await pg.evaluate("document.getElementById('modalBody').innerText")
+    s = await pg.evaluate(WK)
+    check(s['coins'] == 1850 + 200 and s['stones'] == 10, f'まとめ：のこり2つ（+200コイン）・3つ ぜんぶで 💎+10（{s["coins"]} {s["stones"]}）')
+    check('コイン +200' in t and '💎+10' in t and '2 / 3' in t, f'まとめ：チャレンジの けっか（{t[:200]!r}）')
+    check(s['prev']['mon'] == '2026-11-09' and s['prev']['paid'] and s['wk']['mon'] == '2026-11-16', f'まとめ：先週は wkPrev・今週は 新しく（{s["prev"]["mon"]} {s["wk"]["mon"]}）')
+    await shot(pg, 'v107-sum-pay')
+    await pg.click('#wsOk'); await pg.wait_for_timeout(400)
+    await pg.evaluate("UI.histWeek=-1;setTab('history')"); await pg.wait_for_timeout(300)
+    await pg.click('[data-wksum]'); await pg.wait_for_timeout(400)
+    t = await pg.evaluate("document.getElementById('modalBody').innerText"); s2 = await pg.evaluate(WK)
+    check('この週のまとめ' in t and '受けとっていない' not in t and s2['coins'] == s['coins'], f'きろく：この週のまとめ（ごほうびは 1回だけ）')
+    check(not pg.errs, f'まとめ ごほうび エラーなし {pg.errs[:2]}')
+    await ctx.close()
+
+    # 今週のチャレンジ（📋 の「今週」）
+    for dev in DEV:
+        st = base(wk={'mon': '2026-11-16', 'ids': ['rec5', 'just3', 'train5'], 'goals': [1, 1, 1], 'got': [], 'allGot': False},
+                  days={'2026-11-16': dayrec([meal('a', 'morning', kcal=800), meal('b', 'noon', kcal=800)], trains=1)})
+        ctx, pg = await page(b, dev, st)
+        await start(pg)
+        check(await pg.evaluate("!document.getElementById('dotMission').hidden && wkCanAny()"), f'{dev} 今週：ホームの📋に 赤い点')
+        await pg.click('#btnMission'); await pg.wait_for_timeout(300)
+        await pg.click('[data-mt="week"]'); await pg.wait_for_timeout(300)
+        r = await pg.evaluate("({n:document.querySelectorAll('[data-wkc]:not([disabled])').length, seg:[...document.querySelectorAll('.mis-seg button')].map(b=>b.scrollWidth<=b.clientWidth+1), dot:!!document.querySelector('[data-mt=week] .seg-dot')})")
+        check(r['n'] == 3 and all(r['seg']) and r['dot'], f'{dev} 今週：3つ 受けとれる・タブの字が 入る（{r}）')
+        await shot(pg, f'v107-week-{dev}')
+        for _ in range(3):
+            await pg.click('[data-wkc]:not([disabled])'); await pg.wait_for_timeout(250)
+        s = await pg.evaluate(WK); tt = await pg.evaluate("document.getElementById('toast').innerText")
+        check(s['coins'] == 1850 + 300 and s['stones'] == 10 and s['wk']['allGot'] and 'ダイヤ +10' in tt, f'{dev} 今週：+300コイン・💎+10（{s["coins"]} {s["stones"]} {tt!r}）')
+        t = await pg.evaluate("document.getElementById('modalBody').innerText")
+        check(t.count('受けとり済み') == 3 and '3つ ぜんぶ クリア' in t, f'{dev} 今週：受けとり済み')
+        await shot(pg, f'v107-week-done-{dev}')
+        await pg.evaluate("closeModal()"); await pg.wait_for_timeout(200)
+        check(await pg.evaluate("!wkCanAny()"), f'{dev} 今週：受けとったら 点なし')
+        check(not pg.errs, f'{dev} 今週 エラーなし {pg.errs[:2]}')
+        await ctx.close()
+
+    # きろく：ねこのアドバイス（今週・先週）
+    for dev in DEV:
+        ctx, pg = await page(b, dev, base(start='2026-11-01', days=days, history=hist))
+        await start(pg)
+        await pg.click('.tabbar [data-tab="history"]'); await pg.wait_for_timeout(300)
+        t = await pg.evaluate("document.querySelector('#histBody .adv-card').innerText")
+        check('記録が すくない' in t, f'{dev} きろく 今週：きのうまでの 記録で（{t[:40]!r}）')
+        check(await pg.evaluate("!!document.querySelector('[data-wkch]')"), f'{dev} きろく 今週：チャレンジへの ボタン')
+        await pg.click('[data-wk="-1"]'); await pg.wait_for_timeout(300)
+        t = await pg.evaluate("document.querySelector('#histBody .adv-card').innerText")
+        check('食べすぎ' in t and '朝ごはん' in t, f'{dev} きろく 先週：アドバイス（{t[:60]!r}）')
+        wide = await pg.evaluate("document.documentElement.scrollWidth<=innerWidth")
+        check(wide, f'{dev} きろく：よこに はみ出ない')
+        await pg.evaluate("document.querySelector('#histBody .adv-card').scrollIntoView({block:'center'})"); await pg.wait_for_timeout(200)
+        await shot(pg, f'v107-hist-{dev}')
+        await pg.click('[data-wk="1"]'); await pg.wait_for_timeout(300)
+        await pg.click('[data-wkch]'); await pg.wait_for_timeout(300)
+        check(await pg.evaluate("document.querySelector('[data-mt=week]').getAttribute('aria-selected')") == 'true', f'{dev} きろく → ミッションの「今週」')
+        check(not pg.errs, f'{dev} きろく アドバイス エラーなし {pg.errs[:2]}')
+        await ctx.close()
+
+    # はじめた週は 目標を へらす・まとめは 出さない／日曜日が 締まるまで まつ／こわれた データ／2週より前の分
+    ctx, pg = await page(b, 'ip13', base(start='2026-11-19', settled='2026-11-19', last='2026-11-20', weekSeen=''), t='2026-11-20T13:00:00+09:00')
+    await start(pg)
+    r = await pg.evaluate("[S.wk.goals, wkGoals('2026-11-16',['rec5','steps15k']), weekSumDue(), document.getElementById('modal').hidden]")
+    check(r[1] == [3, 9000] and r[2] is False and r[3], f'はじめた週：目標を へらす（{r[1]}）・まとめは なし')
+    await ctx.close()
+    ctx, pg = await page(b, 'ip13', base(start='2026-11-01', settled='2026-11-21', last='2026-11-22', closeAsk='2026-11-22', weekSeen='2026-11-09'), t='2026-11-23T10:00:00+09:00')
+    await start(pg)
+    r = await pg.evaluate("[weekSumDue(), document.getElementById('modal').hidden, S.wk.mon]")
+    check(r == [False, True, '2026-11-23'], f'日曜日が 締まるまで まとめは まつ（{r}）')
+    r = await pg.evaluate("(()=>{S.settled='2026-11-22';return weekSumDue()})()")
+    check(r is True, '日曜日を 締めたら まとめ')
+    await ctx.close()
+    ctx, pg = await page(b, 'ip13', base(wk={'mon': '2026-11-16', 'ids': ['xx', 'rec5', 'walk3'], 'got': []}))
+    await start(pg)
+    r = await pg.evaluate("S.wk.ids.every(id=>WEEK_CH.some(c=>c.id===id)) && S.wk.ids.length===3")
+    check(r, 'こわれた チャレンジは 作りなおす')
+    r = await pg.evaluate("(()=>{S.days['2026-11-03']={meals:[{id:'q',slot:'noon',name:'a',kcal:500}]};S.start='2026-10-01';S.wk={mon:'2026-11-02',ids:['rec5','three3','walk3'],goals:[1,1,1],got:[],allGot:false};S.wkPrev=null;const c=S.coins;weekRoll();return [S.wkPrev.mon,S.wkPrev.paid,S.coins-c,S.wk.mon]})()")
+    check(r == ['2026-11-02', True, 100, '2026-11-16'], f'2週より前の チャレンジは その場で わたす（{r}）')
+    # 写真つきの 印
+    await record(pg, photo=True)
+    check(await pg.evaluate(f"{SAVED}.days[todayStr()].meals.slice(-1)[0].cam") == 1, '写真つきの記録に 印（cam）')
+    check(await pg.evaluate("wkProg('photo5','2026-11-16')") == 1, '写真つき：チャレンジに 数える')
+    check(not pg.errs, f'はじめた週など エラーなし {pg.errs[:2]}')
+    await ctx.close()
+
+    # お知らせ（10.6 から）
+    for dev in DEV:
+        ctx, pg = await page(b, dev, base(news='10.6'))
+        await start(pg)
+        t = await pg.evaluate("document.querySelector('.news-list').innerText")
+        n = await pg.evaluate("document.querySelectorAll('.news-list > div').length")
+        ok = await pg.evaluate("(()=>{const b=document.getElementById('nwOk').getBoundingClientRect();return b.bottom<=innerHeight})()")
+        check(n == 2 and 'アドバイス' in t and '今週' in t and ok, f'{dev} お知らせ 10.7：2行・OK が見える（{n} {t[:50]!r}）')
+        await shot(pg, f'v107-news-{dev}')
+        await ctx.close()
+
 GROUPS = [('home', t_home), ('tabs', t_tabs), ('tour', t_tour), ('gacha', t_gacha), ('level', t_level), ('coin', t_coin), ('daily', t_daily), ('first', t_first),
           ('battle', t_battle), ('slot', t_slot), ('sagase', t_sagase), ('font', t_font), ('a11y', t_a11y), ('manifest', t_manifest),
-          ('memo', t_memo), ('migrate', t_migrate), ('achieve', t_achieve), ('stone', t_stone), ('meal-delete', t_mealdel), ('event', t_event), ('event41', t_event41), ('v105', t_v105), ('v106', t_v106)]
+          ('memo', t_memo), ('migrate', t_migrate), ('achieve', t_achieve), ('stone', t_stone), ('meal-delete', t_mealdel), ('event', t_event), ('event41', t_event41), ('v105', t_v105), ('v106', t_v106), ('v107', t_v107)]
 
 async def main():
     async with async_playwright() as p:

@@ -59,6 +59,7 @@ function rollover() {
     Object.keys(S.days).forEach(k => { if (daysBetween(k, t) > 7) S.days[k].meals.forEach(m => { m.photo = null; }); if (daysBetween(k, t) > 60) delete S.days[k]; });
   }
   if (settleDue(false)) changed = true;
+  if (weekRoll()) changed = true;   // v10.7：月曜に 今週のチャレンジ（weekly.js）
   if (changed) save();
   return changed;
 }

@@ -200,9 +200,13 @@ function showNews() {
   const old103 = verNum(from) < verNum('10.3'), old104 = verNum(from) < verNum('10.4');
   const row = (i, t) => `<div><b>${i}</b><span>${t}</span></div>`;
   // v10.6：10.4 より あとの人には くわしく、もっと前の人には みじかく（SE でも OK が見えるように）。前の記録で とれた メダルも ここで知らせる
+  const old106 = verNum(from) < verNum('10.6');   // v10.7
+  // 10.1 より前の人は 行が 多いので 出さない（SE で OK が見えるように）。10.6 より前の人は 1行
+  const v107 = menu ? '' : old106 ? row('🐾', 'きろくに 猫の アドバイス・📋に 今週の チャレンジ・月曜に 先週のまとめ')
+    : row('🐾', 'きろくに「ねこのアドバイス」：1週間の 記録から 猫が ひとこと') + row('📋', 'ミッションに「今週」：3つの チャレンジ（ぜんぶで 💎）。月曜に 先週のまとめ');
   const old105 = verNum(from) < verNum('10.5'), mo = S.medalOld; if (mo) { delete S.medalOld; save(); }
   const heart = '<span style="color:#E8577A">♥</span>', moTxt = mo ? `いままでの記録で ${mo.n}枚（💎+${mo.stones}）` : '';
-  const v106 = old104 ? row(heart, `ミニゲームは ♥で あそぶ・メダル（とると ダイヤ）・福袋の ${GACHA_MULTI.n}連${mo ? '。メダルは ' + moTxt : ''}`)
+  const v106 = !old106 ? '' : old104 ? row(heart, `ミニゲームは ♥で あそぶ・メダル（とると ダイヤ）・福袋の ${GACHA_MULTI.n}連${mo ? '。メダルは ' + moTxt : ''}`)
     : row(heart, `ミニゲームは ♥で あそぶ（${RULE.heartMin}分で 1つ・写真で +1）。1日の回数は なくなった`) +
       row('🏅', `ミニゲームに メダル（とると ダイヤ）${mo ? '。' + moTxt : ''}`) +
       row('🎁', `福袋の ${GACHA_MULTI.n}連（1割 おトク）・イベントの セットボーナス`) +
@@ -211,7 +215,7 @@ function showNews() {
   const v104 = old104 ? row('🎉', 'イベントが はじまったよ！ ホームの右下の「イベント」から') : '';
   const v103 = old103 ? row('📖', 'おもいで・ずっとミッション・ダイヤ（ねこ・📋・ショップ）') : '';
   openModal(`<h2 id="modalTitle">${menu ? 'メニューが かわったよ' : 'あたらしくなったよ'}</h2><div class="stack">
-    <div class="card news-list">${menu ? row('ねこ', 'ステータスと きせかえ（前の更衣室）') + row('あそぶ', 'ジム・ミニゲーム・対戦（前のトレーニング）') + row('きろく', '1週間のごはんの記録（前のりれき）') + row('⚙', 'せってい は ホームの右上') : ''}${v106}${v105}${v104}${v103}</div>
+    <div class="card news-list">${menu ? row('ねこ', 'ステータスと きせかえ（前の更衣室）') + row('あそぶ', 'ジム・ミニゲーム・対戦（前のトレーニング）') + row('きろく', '1週間のごはんの記録（前のりれき）') + row('⚙', 'せってい は ホームの右上') : ''}${v107}${v106}${v105}${v104}${v103}</div>
     <button class="btn block" id="nwOk">OK</button></div>`, root => { root.querySelector('#nwOk').onclick = closeModal; }, () => setTimeout(maybeShowDaily, 300));
 }
 

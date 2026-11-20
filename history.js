@@ -78,7 +78,7 @@ function renderHistory() {
     const add = edit ? `<button class="btn white block add-meal" data-addmeal="1">＋ ${sel === t ? 'ごはんを記録' : 'わすれたごはんを追加'}</button>` : (sel < t ? '<p class="hint" style="margin:10px 4px 0">この日はもう しめたので、直せません</p>' : '');
     $('histBody').innerHTML = `<div class="hist-week"><button class="btn small white" data-wk="-1" ${off <= -WEEKS_BACK ? 'disabled' : ''} aria-label="前の週">◀ 前の週</button><b>${off === 0 ? '今週' : `${mdw(dates[0])}〜`}</b><button class="btn small white" data-wk="1" ${off >= 0 ? 'disabled' : ''} aria-label="次の週">次の週 ▶</button></div>
       <div class="card chart-card" style="margin-top:8px">${chartSVG(dates)}</div>
-      <div class="chips hist-days">${dates.map(d => `<button class="chip" data-day="${d}" ${d > t ? 'disabled' : ''} style="${d === sel ? 'background:var(--yellow)' : ''}" aria-label="${mdw(d)} ${intake(d) ? fmt(intake(d)) + 'kcal' : '記録なし'}"><b>${WEEK[parseYmd(d).getDay()]}</b><span class="num">${intake(d) ? fmt(intake(d)) : '-'}</span></button>`).join('')}</div>
+      <div class="chips hist-days">${dates.map(d => `<button class="chip" data-day="${d}" ${d > t ? 'disabled' : ''} style="${d === sel ? 'background:var(--yellow)' : ''}" aria-label="${mdw(d)} ${intake(d) ? fmt(intake(d)) + 'kcal' : '記録なし'}"><b>${WEEK[parseYmd(d).getDay()]}</b><span class="num">${intake(d) ? fmt(intake(d)) : '-'}</span></button>`).join('')}</div>${histAdviceHTML(off, dates)}
       <div class="section-title">${sel === t ? '本日' : `${sdt.getMonth() + 1}/${sdt.getDate()}（${WEEK[sdt.getDay()]}）`}</div>
       <div class="meals3">${cards}</div>
       <div class="card" style="margin-top:12px;padding:10px 14px;display:flex;justify-content:space-between;font-weight:900"><span>合計</span><span class="num">${fmt(intake(sel))} / ${fmt(target(S.user))} kcal</span></div>${edit ? predHTML(sel) : ''}${pfcCard(sd.meals)}${list}${add}`;
@@ -88,6 +88,8 @@ $('histBody').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.day) { UI.histDate = b.dataset.day; renderHistory(); }
   else if (b.dataset.wk) { UI.histWeek = clamp((UI.histWeek || 0) + +b.dataset.wk, -WEEKS_BACK, 0); UI.histDate = null; se('tap'); renderHistory(); }
+  else if (b.dataset.wksum) { se('tap'); showWeekSum(b.dataset.wksum, true); }   // v10.7：この週のまとめ（weekly.js）
+  else if (b.dataset.wkch) { se('tap'); UI.misTab = 'week'; openMissions(); }
   else if (b.dataset.edit) openMealEdit(UI.histDate, b.dataset.edit);
   else if (b.dataset.addmeal) { if (UI.histDate === todayStr()) openCapture(); else openCapture({ date: UI.histDate }); }
 });

@@ -118,7 +118,7 @@ function renderHome() {
   $('bodyPill').style.background = st[1];
   $('tab-home').classList.toggle('hosp', !!S.cat.hospital);
   $('dotLogin').hidden = S.login.last === t;
-  $('dotMission').hidden = !MISSIONS.some(m => m.check(d) >= m.goal && !claimedToday().includes(m.id)) && !achAnyCan();   // v10.3：ずっとミッションも
+  $('dotMission').hidden = !MISSIONS.some(m => m.check(d) >= m.goal && !claimedToday().includes(m.id)) && !achAnyCan() && !wkCanAny();   // v10.3：ずっとミッションも。v10.7：今週のチャレンジも
   $('dotCat').hidden = !S.memoNew; $('dotMemo').hidden = !S.memoNew;
   coinSync();   // v10.1：コインの数字がふえた・へったら動かす（fx.js）
 }
@@ -302,16 +302,23 @@ function openMissions() {
     }).join('')}</div><p class="hint" style="margin-top:10px">ずっとミッションは なくなりません。能力は上がりませんが、コイン・アイテム・きせかえ・称号・ダイヤがもらえます。</p>`;
   };
   const draw = () => {
-    const tab = UI.misTab === 'ever' ? 'ever' : 'today', dEver = achAnyCan(), d = day(), cl = claimedToday();
-    const dToday = MISSIONS.some(m => m.check(d) >= m.goal && !cl.includes(m.id));
+    const tab = ['ever', 'week'].includes(UI.misTab) ? UI.misTab : 'today', dEver = achAnyCan(), d = day(), cl = claimedToday();
+    const dToday = MISSIONS.some(m => m.check(d) >= m.goal && !cl.includes(m.id)), dWeek = wkCanAny(), dot = '<span class="dot seg-dot"></span>';
     return `<h2 id="modalTitle">ミッション</h2>
-      <div class="seg mis-seg" role="tablist"><button role="tab" data-mt="today" aria-selected="${tab === 'today'}">きょう${dToday ? '<span class="dot seg-dot"></span>' : ''}</button><button role="tab" data-mt="ever" aria-selected="${tab === 'ever'}">ずっと${dEver ? '<span class="dot seg-dot"></span>' : ''}</button></div>
-      ${tab === 'today' ? today() : ever()}`;
+      <div class="seg mis-seg" role="tablist"><button role="tab" data-mt="today" aria-selected="${tab === 'today'}">きょう${dToday ? dot : ''}</button><button role="tab" data-mt="week" aria-selected="${tab === 'week'}">今週${dWeek ? dot : ''}</button><button role="tab" data-mt="ever" aria-selected="${tab === 'ever'}">ずっと${dEver ? dot : ''}</button></div>
+      ${tab === 'today' ? today() : tab === 'week' ? wkMissionHTML() : ever()}`;   // v10.7：今週（weekly.js）
   };
   openModal(draw(), root => {
     root.addEventListener('click', e => {
       const tb = e.target.closest('[data-mt]');
       if (tb) { UI.misTab = tb.dataset.mt; se('tap'); root.innerHTML = draw(); const f = root.querySelector(`[data-mt="${UI.misTab}"]`); if (f) f.focus({ preventScroll: true }); return; }
+      const wb = e.target.closest('[data-wkc]');   // v10.7：今週のチャレンジ
+      if (wb) {
+        const r = wkClaim(wb.dataset.wkc); if (!r) return;
+        se('get'); buzz([40, 30, 60]); coinFx(r.coins, wb);
+        if (r.stones) toast(`3つ ぜんぶ クリア！ ダイヤ +${r.stones}`);
+        root.innerHTML = draw(); renderHome(); return;
+      }
       const ab = e.target.closest('[data-a]');
       if (ab) {
         const a = ACHIEVE.find(x => x.id === ab.dataset.a), i = achStep(a), r = a.rw[i] || {}, coins = achClaim(a.id);
@@ -383,6 +390,7 @@ function openCapture(opt = {}) {
       const meal = { id: Math.random().toString(36).slice(2, 9), slot: slotV, name, kcal, photo: cap ? cap.thumb : null, time: past ? 'あとから' : `${pad(now.getHours())}:${pad(now.getMinutes())}` };
       const pc = g('#capC'), pp = g('#capP'), pf = g('#capF');
       if (pc != null || pp != null || pf != null) Object.assign(meal, { carbs: pc || 0, protein: pp || 0, fat: pf || 0 });
+      if (cap) meal.cam = 1;   // v10.7：写真つき（写真は 7日で 消えるので、今週のチャレンジ用に 印を のこす）
       d.meals.push(meal);
       tallyAdd('meals'); if (cap) tallyAdd('photos'); memoAdd('meal1', null, date);   // v10.3：ずっとの回数・おもいで
       let msg = `${name}（${kcal} kcal）を記録`;

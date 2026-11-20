@@ -31,6 +31,7 @@ function defaultState() {
     memo: [], memoNew: 0,             // v10.3 おもいで・まだ見ていない数
     heart: { n: RULE.heartMax, t: Date.now() },   // v10.6 ♥（rules.js の heartSync）。S.medal（メダル）は achieve.js の medalMigrate が つくる
     ev: { pick: '', best: {}, clear: {}, rec: {}, mode: {} },   // v10.4 イベント：pick＝いま開いているイベント（EVENT_MODE 'all' のとき）・best＝ミニゲームの いちばんの点・clear＝はじめてクリアした日。v10.4.1：rec＝目標の いちばんの記録・mode＝さいごに えらんだ むずかしさ（best・rec は むずかしさごとに「id-hard」のように 別）
+    wk: null, wkPrev: null, weekSeen: '',   // v10.7 今週のチャレンジ・先週のチャレンジ・先週のまとめを見せた週の月曜日（weekly.js）
     onboarded: false
   };
 }
@@ -63,6 +64,10 @@ function load() {
     st.ev = Object.assign({ pick: '', best: {}, clear: {}, rec: {}, mode: {} }, s.ev); for (const k of ['best', 'clear', 'rec', 'mode']) st.ev[k] = Object.assign({}, st.ev[k]);
     // v10.6：♥（前の版から遊んでいる人は いっぱいから）
     if (!s.heart || typeof s.heart.n !== 'number') st.heart = { n: RULE.heartMax, t: Date.now() };
+    // v10.7：今週のチャレンジ（こわれていたら 作りなおす）
+    const wkOk = w => w && typeof w.mon === 'string' && Array.isArray(w.ids) && w.ids.length === 3 && w.ids.every(id => WEEK_CH.some(c => c.id === id)) && Array.isArray(w.got);
+    if (!wkOk(st.wk)) st.wk = null; if (!wkOk(st.wkPrev)) st.wkPrev = null;
+    if (typeof st.weekSeen !== 'string') st.weekSeen = '';
     if (s.news === undefined) st.news = '';   // v10.1：前の版のデータ → メニューが変わったお知らせを1回出す
     // 前の版で骸骨・爆発になっていた猫は、今日から入院（入院費はとらない）
     if (st.cat.dead) {

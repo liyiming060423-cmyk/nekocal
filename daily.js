@@ -15,6 +15,7 @@ function maybeShowDaily() {
   if (S.resultQ.length) { showResults(); return; }
   const y = addDays(todayStr(), -1);
   if (pendingYesterday() && S.closeAsk !== y) { S.closeAsk = y; save(); openCloseDay(); return; }
+  if (weekSumDue()) { showWeekSum(); return; }   // v10.7：先週のまとめ（週に1回。先週の日曜日が 締まってから）
   if (levelUpTry()) return;   // v10.1：レベルアップ・レベルのごほうび（fx.js）
   checkCrisis(); setTimeout(checkBackupNag, 900);
 }
